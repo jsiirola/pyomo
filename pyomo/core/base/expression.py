@@ -20,8 +20,8 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.indexed_component import (
-    IndexedComponent,
-    UnindexedComponent_set, )
+    IndexedComponent, UnindexedComponent_set, UnindexedComponent_index
+)
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
@@ -332,19 +332,11 @@ class Expression(IndexedComponent):
     #
     # takes as input a (index, value) dictionary for updating this
     # Expression.  if check=True, then both the index and value are
-    # checked through the __getitem__ method of this class.
+    # checked through the __setitem__ method of this class.
     #
     def store_values(self, new_values):
-
-        if (self.is_indexed() is False) and \
-           (not None in new_values):
-            raise KeyError(
-                "Cannot store value for scalar Expression"
-                "="+self.name+"; no value with index "
-                "None in input new values map.")
-
         for index, new_value in iteritems(new_values):
-            self._data[index].set_value(new_value)
+            self[index].set_value(new_value)
 
     def _getitem_when_not_present(self, index):
         # TBD: Is this desired behavior?  I can see implicitly setting
@@ -376,7 +368,7 @@ class Expression(IndexedComponent):
         #self._init_rule = None
 
         if not self.is_indexed():
-            self._data[None] = self
+            self._data[UnindexedComponent_index] = self
 
         #
         # Construct and initialize members
@@ -392,7 +384,7 @@ class Expression(IndexedComponent):
                                  self._parent(),
                                  key))
             else:
-                self.add(None, _init_rule(self._parent()))
+                self.add(UnindexedComponent_index, _init_rule(self._parent()))
         else:
             # construct and initialize with a value
             if _init_expr.__class__ is dict:
@@ -491,11 +483,11 @@ class SimpleExpression(_GeneralExpressionData, Expression):
     #
     def add(self, index, expr):
         """Add an expression with a given index."""
-        if index is not None:
+        if index is not UnindexedComponent_index:
             raise KeyError(
                 "SimpleExpression object '%s' does not accept "
-                "index values other than None. Invalid value: %s"
-                % (self.name, index))
+                "index values other than '%s'. Invalid value: %s"
+                % (self.name, UnindexedComponent_index, index))
         if (type(expr) is tuple) and \
            (expr == Expression.Skip):
             raise ValueError(

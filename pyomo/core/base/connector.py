@@ -20,7 +20,9 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.common.plugin import Plugin, implements
 
 from pyomo.core.base.component import ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_index
+)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
 from pyomo.core.base.plugin import ModelComponentFactory, \
@@ -184,8 +186,8 @@ class Connector(IndexedComponent):
         if self.is_indexed():
             self._initialize_members(self._index)
         else:
-            self._data[None] = self
-            self._initialize_members([None])
+            self._data[UnindexedComponent_index] = self
+            self._initialize_members([UnindexedComponent_index])
         timer.report()
 
     def _initialize_members(self, initSet):

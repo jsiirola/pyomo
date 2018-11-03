@@ -26,6 +26,7 @@ import pyutilib.services
 import pyutilib.th as unittest
 
 from pyomo.environ import *
+from pyomo.core.base.indexed_component import UnindexedComponent_index
 from pyomo.core.base.param import _NotValid
 
 from six import iteritems, itervalues, StringIO
@@ -133,7 +134,8 @@ class ParamTester(object):
 
     def test_setitem_preexisting(self):
         keys = self.instance.A.sparse_keys()
-        if not keys or None in keys:
+        if not keys or ( UnindexedComponent_index in keys
+                         and not self.instance.A.is_indexed() ):
             return
 
         idx = sorted(keys)[0]

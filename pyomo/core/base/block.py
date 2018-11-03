@@ -29,8 +29,10 @@ from pyomo.core.base.sets import Set,  _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
-from pyomo.core.base.indexed_component import IndexedComponent, \
-    ActiveIndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, ActiveIndexedComponent, 
+    UnindexedComponent_set, UnindexedComponent_index
+)
 import collections
 
 from pyomo.opt.base import ProblemFormat, guess_format
@@ -1804,7 +1806,7 @@ class Block(ActiveIndexedComponent):
             # Ensure the _data dictionary is populated for singleton
             # blocks
             if not self.is_indexed():
-                self[None]
+                self[UnindexedComponent_index]
             timer.report()
             return
         # If we have a rule, fire the rule for all indices.
@@ -1904,7 +1906,7 @@ class SimpleBlock(_BlockData, Block):
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
-        self._data[None] = self
+        self._data[UnindexedComponent_index] = self
 
     def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
         """

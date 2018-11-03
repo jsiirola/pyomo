@@ -26,8 +26,11 @@ from pyomo.core.expr.numvalue import value
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
-from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
-                                               UnindexedComponent_set)
+from pyomo.core.base.indexed_component import (
+    ActiveIndexedComponent,
+    UnindexedComponent_set,
+    UnindexedComponent_index
+)
 from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
@@ -348,7 +351,8 @@ class Objective(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-            if self._setitem_when_not_present(None, tmp) is not None:
+            if self._setitem_when_not_present(
+                    UnindexedComponent_index, tmp) is not None:
                 self.set_sense(_init_sense)
 
         else:
@@ -542,9 +546,9 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
                 % (self.name))
 
         if len(self._data) == 0:
-            self._data[None] = self
-        if self._check_skip_add(None, expr) is None:
-            del self[None]
+            self._data[UnindexedComponent_index] = self
+        if self._check_skip_add(UnindexedComponent_index, expr) is None:
+            del self[UnindexedComponent_index]
             return None
         return _GeneralObjectiveData.set_value(self, expr)
 
@@ -552,7 +556,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
         """Set the sense (direction) of this objective."""
         if self._constructed:
             if len(self._data) == 0:
-                self._data[None] = self
+                self._data[UnindexedComponent_index] = self
             return _GeneralObjectiveData.set_sense(self, sense)
         raise ValueError(
             "Setting the sense of objective '%s' "

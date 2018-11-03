@@ -21,6 +21,7 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 
 from pyomo.environ import *
+from pyomo.core.base.indexed_component import UnindexedComponent_index
 
 class TestSimpleObj(unittest.TestCase):
 
@@ -116,7 +117,7 @@ class TestSimpleObj(unittest.TestCase):
         model.obj = Objective(expr=0.0)
         self.assertEqual(model.obj(), 0.0)
         self.assertEqual(value(model.obj), 0.0)
-        self.assertEqual(value(model.obj._data[None]), 0.0)
+        self.assertEqual(value(model.obj._data[UnindexedComponent_index]), 0.0)
 
     def test_mutable_param_expr(self):
         """Test expr option with a single mutable param"""
@@ -126,7 +127,7 @@ class TestSimpleObj(unittest.TestCase):
 
         self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
-        self.assertEqual(value(model.obj._data[None]), 1.0)
+        self.assertEqual(value(model.obj._data[UnindexedComponent_index]), 1.0)
 
     def test_immutable_param_expr(self):
         """Test expr option a single immutable param"""
@@ -136,7 +137,7 @@ class TestSimpleObj(unittest.TestCase):
 
         self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
-        self.assertEqual(value(model.obj._data[None]), 1.0)
+        self.assertEqual(value(model.obj._data[UnindexedComponent_index]), 1.0)
 
     def test_var_expr(self):
         """Test expr option with a single var"""
@@ -146,7 +147,7 @@ class TestSimpleObj(unittest.TestCase):
 
         self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
-        self.assertEqual(value(model.obj._data[None]), 1.0)
+        self.assertEqual(value(model.obj._data[UnindexedComponent_index]), 1.0)
 
     def test_expr1_option(self):
         """Test expr option"""
@@ -160,7 +161,7 @@ class TestSimpleObj(unittest.TestCase):
 
         self.assertEqual(model.obj(), 8)
         self.assertEqual(value(model.obj), 8)
-        self.assertEqual(value(model.obj._data[None]), 8)
+        self.assertEqual(value(model.obj._data[UnindexedComponent_index]), 8)
 
     def test_expr2_option(self):
         """Test expr option"""
@@ -170,7 +171,7 @@ class TestSimpleObj(unittest.TestCase):
 
         self.assertEqual(model.obj(), 2)
         self.assertEqual(value(model.obj), 2)
-        self.assertEqual(value(model.obj._data[None]), 2)
+        self.assertEqual(value(model.obj._data[UnindexedComponent_index]), 2)
 
     def test_rule_option(self):
         """Test rule option"""
@@ -185,7 +186,7 @@ class TestSimpleObj(unittest.TestCase):
 
         self.assertEqual(model.obj(), 8)
         self.assertEqual(value(model.obj), 8)
-        self.assertEqual(value(model.obj._data[None]), 8)
+        self.assertEqual(value(model.obj._data[UnindexedComponent_index]), 8)
 
     def test_arguments(self):
         """Test that arguments notare of type SimpleSet"""
@@ -225,8 +226,8 @@ class TestSimpleObj(unittest.TestCase):
             return 1
         model.obj = Objective(rule=rule)
 
-        self.assertEqual(list(model.obj.keys()),[None])
-        self.assertEqual(id(model.obj), id(model.obj[None]))
+        self.assertEqual(list(model.obj.keys()),[UnindexedComponent_index])
+        self.assertEqual(id(model.obj), id(model.obj[UnindexedComponent_index]))
 
     def test_len(self):
         """Test len method"""

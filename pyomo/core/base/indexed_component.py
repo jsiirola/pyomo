@@ -12,15 +12,18 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
+from pyomo.common import DeveloperError
+from pyomo.common.deprecation import deprecation_warning
+
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
-from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems
 
-UnindexedComponent_set = set([None])
+UnindexedComponent_index = tuple()
+UnindexedComponent_set = set([UnindexedComponent_index])
 
 def normalize_index(index):
     """
@@ -479,6 +482,11 @@ You can silence this warning by one of three ways:
         # Generate different errors, depending on the state of the index.
         #
         if not self.is_indexed():
+            if idx is None:
+                deprecation_warning(
+                    "'None' has been replaced by '%s' as the implicit index "
+                    "for scalar components" % (UnindexedComponent_index,))
+                return UnindexedComponent_index
             raise KeyError(
                 "Cannot treat the scalar component '%s'"
                 "as an indexed component" % ( self.name, ))
@@ -655,8 +663,8 @@ value() function.""" % ( self.name, i ))
         #
         # If we are a scalar, then idx will be None (_validate_index ensures
         # this)
-        if index is None and not self.is_indexed():
-            obj = self._data[index] = self
+        if index is UnindexedComponent_index and not self.is_indexed():
+            obj = self._data[UnindexedComponent_index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         try:

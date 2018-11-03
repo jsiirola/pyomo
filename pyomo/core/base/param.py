@@ -18,8 +18,9 @@ from weakref import ref as weakref_ref
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent, \
-    UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, UnindexedComponent_index
+)
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, native_types, value
 from pyomo.core.base.set_types import Any
@@ -314,7 +315,7 @@ class Param(IndexedComponent):
             # The parameter is a scalar, so we need to create a temporary
             # dictionary using the value for this parameter.
             #
-            return { None: self() }
+            return { UnindexedComponent_index: self() }
         else:
             #
             # The parameter is not mutable, so iteritems() can be
@@ -346,7 +347,7 @@ class Param(IndexedComponent):
             # The parameter is a scalar, so we need to create a temporary
             # dictionary using the value for this parameter.
             #
-            return { None: self() }
+            return { UnindexedComponent_index: self() }
         else:
             #
             # The parameter is not mutable, so sparse_iteritems() can be
@@ -412,14 +413,21 @@ class Param(IndexedComponent):
             # Initialize a scalar
             #
             if _isDict:
-                if None not in new_values:
+                if UnindexedComponent_index in new_values:
+                    new_values = new_values[UnindexedComponent_index]
+                elif None in new_values:
+                    deprecation_warning(
+                        "'None' has been replaced by '%s' as the implicit "
+                        "index for scalar components"
+                        % (UnindexedComponent_index,))
+                    new_values = new_values[None]
+                else:
                     raise RuntimeError(
                         "Cannot store value for scalar Param %s:\n\tNo value "
-                        "with index None in the new values dict."
-                        % (self.name,))
-                new_values = new_values[None]
+                        "with index %s in the new values dict."
+                        % (self.name,UnindexedComponent_index))
             # scalars have to be handled differently
-            self[None] = new_values
+            self[UnindexedComponent_index] = new_values
 
     def set_default(self, val):
         """
@@ -582,15 +590,17 @@ class Param(IndexedComponent):
         # Set the value depending on the type of param value.
         #
         try:
-            if index is None and not self.is_indexed():
-                self._data[None] = self
-                self.set_value(value, index)
+            if index is UnindexedComponent_index and not self.is_indexed():
+                self._data[UnindexedComponent_index] = self
+                self.set_value(value, UnindexedComponent_index)
                 return self
             elif self._mutable:
+                assert self.is_indexed()
                 obj = self._data[index] = _ParamData(self)
                 obj.set_value(value, index)
                 return obj
             else:
+                assert self.is_indexed()
                 self._data[index] = value
                 # Because we do not have a _ParamData, we cannot rely on the
                 # validation that occurs in _ParamData.set_value()
@@ -644,7 +654,8 @@ class Param(IndexedComponent):
                 # A scalar value has a single value.
                 # We call __setitem__, which does checks on the value.
                 #
-                self._setitem_when_not_present(None, _init(self.parent_block()))
+                self._setitem_when_not_present(
+                    UnindexedComponent_index, _init(self.parent_block()))
                 return
             else:
                 #
@@ -731,8 +742,8 @@ class Param(IndexedComponent):
         elif isinstance(_init, NumericValue):
             #
             # Reduce NumericValues to scalars.  This allows us to treat
-            # scalar components as numbers and not
-            # as indexed components with a index set of [None]
+            # scalar components as numbers and not as indexed components
+            # with a index set of [UnindexedComponent_index]
             #
             _init = _init()
 
@@ -961,11 +972,11 @@ class SimpleParam(_ParamData, Param):
                 if self._mutable:
                     # This will trigger populating the _data dict and setting
                     # the _default, if applicable
-                    self[None]
+                    self[UnindexedComponent_index]
                 else:
                     # Immutable Param defaults never get added to the
                     # _data dict
-                    return self[None]
+                    return self[UnindexedComponent_index]
             return super(SimpleParam, self).__call__(exception=exception)
         if exception:
             raise ValueError(

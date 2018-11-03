@@ -581,14 +581,14 @@ class NumericValue(object):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """
         If this is a component, return the component's name on the owning
         block; otherwise return the value converted to a string
         """
         _base = super(NumericValue, self)
         if hasattr(_base,'getname'):
-            return _base.getname(fully_qualified, name_buffer)
+            return _base.getname(fully_qualified, name_buffer, relative_to)
         else:
             return str(type(self))
 

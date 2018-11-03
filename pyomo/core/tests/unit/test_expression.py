@@ -625,6 +625,7 @@ E : Size=2
         model.ec = Expression([1,2,3],initialize=1.0)
         model.obj = Objective(rule=lambda m: 1.0+sum_product(m.ec,index=[1,2,3]))
         inst = model.create_instance()
+        inst.pprint()
         self.assertEqual(inst.obj.expr(),4.0)
         inst.ec[1].set_value(2.0)
         self.assertEqual(inst.obj.expr(),5.0)

@@ -14,11 +14,15 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
+from pyomo.common.deprecation import deprecation_warning
+
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, UnindexedComponent_index
+)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.sets import Set
 from pyomo.core.base.util import is_functor
@@ -592,8 +596,8 @@ class Var(IndexedComponent):
         # Construct _VarData objects for all index values
         #
         if not self.is_indexed():
-            self._data[None] = self
-            self._initialize_members((None,))
+            self._data[UnindexedComponent_index] = self
+            self._initialize_members((UnindexedComponent_index,))
         elif self._dense:
             # This loop is optimized for speed with pypy.
             # Calling dict.update((...) for ...) is roughly
@@ -618,7 +622,7 @@ class Var(IndexedComponent):
     #
     def _getitem_when_not_present(self, index):
         """Returns the default component data value."""
-        if index is None and not self.is_indexed():
+        if index is UnindexedComponent_index and not self.is_indexed():
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(
@@ -708,9 +712,19 @@ class Var(IndexedComponent):
                     # dictionary. This arises when
                     # initializing VarList objects with a
                     # dictionary.
-                    if not key in self._value_init_value:
-                        continue
-                    val = self._value_init_value[key]
+                    if key in self._value_init_value:
+                        val = self._value_init_value[key]
+                    else:
+                        if ( key is UnindexedComponent_index
+                             and not self.is_indexed()
+                             and None in self._value_init_value ):
+                            deprecation_warning(
+                                "'None' has been replaced by '%s' as the "
+                                "implicit index for scalar components"
+                                % (UnindexedComponent_index,))
+                            val = self._value_init_value[None]
+                        else:
+                            continue
                     vardata = self._data[key]
                     vardata.set_value(val)
             else:

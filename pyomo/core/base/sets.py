@@ -23,13 +23,15 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule, \
     apply_parameterized_indexed_rule, sorted_robust
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import Component, ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent, \
-    UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, UnindexedComponent_index
+)
 from pyomo.core.base.numvalue import native_numeric_types
 
 from six import itervalues, iteritems, string_types
@@ -847,7 +849,7 @@ class SimpleSetBase(Set):
              ("Domain", None if self.domain is None else self.domain.name),
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
-            iteritems( {None: self} ),
+            iteritems( {UnindexedComponent_index: self} ),
             None, #("Members",),
             lambda k, v: [
                 "Virtual" if not self.concrete or v.virtual \
@@ -1137,7 +1139,17 @@ class SimpleSetBase(Set):
             #
             # TODO: verify that values is not a list
             #
-            for val in values[None]:
+            if UnindexedComponent_index in values:
+                src_values = values[UnindexedComponent_index]
+            elif None in values:
+                deprecation_warning(
+                    "'None' has been replaced by '%s' as the implicit index "
+                    "for scalar components" % (UnindexedComponent_index,))
+                src_values = values[None]
+            else:
+                # raise the exception
+                src_values = values[UnindexedComponent_index]
+            for val in src_values:
                 #
                 # Skip the value if it is filtered
                 #

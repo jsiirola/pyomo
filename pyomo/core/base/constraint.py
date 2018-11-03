@@ -27,10 +27,12 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       _sub)
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
-from pyomo.core.base.indexed_component import \
-    ( ActiveIndexedComponent,
-      UnindexedComponent_set,
-      _get_indexed_component_data_name, )
+from pyomo.core.base.indexed_component import (
+    ActiveIndexedComponent,
+    UnindexedComponent_set,
+    UnindexedComponent_index,
+    _get_indexed_component_data_name,
+)
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.sets import Set
@@ -750,7 +752,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-            self._setitem_when_not_present(None, tmp)
+            self._setitem_when_not_present(UnindexedComponent_index, tmp)
 
         else:
             if _init_expr is not None:
@@ -1043,9 +1045,9 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
                 % (self.name))
 
         if len(self._data) == 0:
-            self._data[None] = self
-        if self._check_skip_add(None, expr) is None:
-            del self[None]
+            self._data[UnindexedComponent_index] = self
+        if self._check_skip_add(UnindexedComponent_index, expr) is None:
+            del self[UnindexedComponent_index]
             return None
         return super(SimpleConstraint, self).set_value(expr)
 
