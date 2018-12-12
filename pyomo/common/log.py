@@ -48,11 +48,13 @@ class LoggingIntercept(object):
 
     Examples:
         >>> import six, logging
-        >>> from pyomo.common.log import LoggingInercept
+        >>> from pyomo.common.log import LoggingIntercept
         >>> buf = six.StringIO()
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
         ...     logging.getLogger('pyomo.core').warn('a simple message')
-        >>> buf.getvalue()
+        >>> print(buf.getvalue().strip())
+        a simple message
+
     """
 
     def __init__(self, output, module=None, level=logging.WARNING):
