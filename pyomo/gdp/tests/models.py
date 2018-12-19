@@ -1,7 +1,18 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param,
-                        Set, Var, inequality)
+                        Set, Var, inequality, maximize)
 from pyomo.gdp import Disjunct, Disjunction
 
+
+def oneVarDisj():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 10))
+    m.disj1 = Disjunct()
+    m.disj1.xTrue = Constraint(expr=m.x==1)
+    m.disj2 = Disjunct()
+    m.disj2.xFalse = Constraint(expr=m.x==0)
+    m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+    m.obj = Objective(expr=m.x)
+    return m
 
 def makeTwoTermDisj():
     m = ConcreteModel()
@@ -89,6 +100,26 @@ def makeTwoTermDisj_IndexedConstraints_BoundedVars():
             disjunct.c = Constraint(m.s, rule=false_rule)
     m.disjunct = Disjunct([0, 1], rule=d_rule)
     m.disjunction = Disjunction(expr=[m.disjunct[0], m.disjunct[1]])
+    return m
+
+
+def makeTwoTermDisj_boxes():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0,5))
+    m.y = Var(bounds=(0,5))
+    def d_rule(disjunct, flag):
+        m = disjunct.model()
+        if flag:
+            disjunct.c1 = Constraint(expr=inequality(1, m.x, 2))
+            disjunct.c2 = Constraint(expr=inequality(3, m.y, 4))
+        else:
+            disjunct.c1 = Constraint(expr=inequality(3, m.x, 4))
+            disjunct.c2 = Constraint(expr=inequality(1, m.y, 2))
+    m.d = Disjunct([0,1], rule=d_rule)
+    def disj_rule(m):
+        return [m.d[0], m.d[1]]
+    m.disjunction = Disjunction(rule=disj_rule)
+    m.obj = Objective(expr=m.x + 2*m.y)
     return m
 
 
@@ -425,4 +456,118 @@ def makeDuplicatedNestedDisjunction():
     m.outerdisjunct = Disjunct([0, 1], rule=outerdisj_rule)
     m.disjunction = Disjunction(expr=[m.outerdisjunct[0],
                                       m.outerdisjunct[1]])
+    return m
+
+
+##########################
+# Grossman lecture models
+##########################
+
+def grossmann_oneDisj():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0,20))
+    m.y = Var(bounds=(0, 20))
+    m.disjunct1 = Disjunct()
+    m.disjunct1.constraintx = Constraint(expr=inequality(0, m.x, 2))
+    m.disjunct1.constrainty = Constraint(expr=inequality(7, m.y, 10))
+
+    m.disjunct2 = Disjunct()
+    m.disjunct2.constraintx = Constraint(expr=inequality(8, m.x, 10))
+    m.disjunct2.constrainty = Constraint(expr=inequality(0, m.y, 3))
+
+    m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
+
+    m.objective = Objective(expr=m.x + 2*m.y, sense=maximize)
+
+    return m
+
+def to_break_constraint_tolerances():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 130))
+    m.y = Var(bounds=(0, 130))
+    m.disjunct1 = Disjunct()
+    m.disjunct1.constraintx = Constraint(expr=inequality(0, m.x, 2))
+    m.disjunct1.constrainty = Constraint(expr=inequality(117, m.y, 127))
+
+    m.disjunct2 = Disjunct()
+    m.disjunct2.constraintx = Constraint(expr=inequality(118, m.x, 120))
+    m.disjunct2.constrainty = Constraint(expr=inequality(0, m.y, 3))
+
+    m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
+
+    m.objective = Objective(expr=m.x + 2*m.y, sense=maximize)
+
+    return m
+
+def grossmann_twoDisj():
+    m = grossmann_oneDisj()
+
+    m.disjunct3 = Disjunct()
+    m.disjunct3.constraintx = Constraint(expr=inequality(1, m.x, 2.5))
+    m.disjunct3.constrainty = Constraint(expr=inequality(6.5, m.y, 8))
+    
+    m.disjunct4 = Disjunct()
+    m.disjunct4.constraintx = Constraint(expr=inequality(9, m.x, 11))
+    m.disjunct4.constrainty = Constraint(expr=inequality(2, m.y, 3.5))
+
+    m.disjunction2 = Disjunction(expr=[m.disjunct3, m.disjunct4])
+    
+    return m
+
+def twoDisj_twoCircles_easy():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0,8))
+    m.y = Var(bounds=(0,10))
+
+    m.upper_circle = Disjunct()
+    m.upper_circle.cons = Constraint(expr=(m.x - 1)**2 + (m.y - 6)**2 <= 2)
+    m.lower_circle = Disjunct()
+    m.lower_circle.cons = Constraint(expr=(m.x - 4)**2 + (m.y - 2)**2 <= 2)
+
+    m.disjunction = Disjunction(expr=[m.upper_circle, m.lower_circle])
+    
+    m.obj = Objective(expr=m.x + m.y, sense=maximize)
+    return m
+
+def fourCircles():
+    m = twoDisj_twoCircles_easy()
+
+    # and add two more overlapping circles, a la the Grossmann test case with
+    # the rectangles. (but not change my nice integral optimal solution...)
+    m.upper_circle2 = Disjunct()
+    m.upper_circle2.cons = Constraint(expr=(m.x - 2)**2 + (m.y - 7)**2 <= 1)
+
+    m.lower_circle2 = Disjunct()
+    m.lower_circle2.cons = Constraint(expr=(m.x - 5)**2 + (m.y - 3)**2 <= 2)
+
+    m.disjunction2 = Disjunction(expr=[m.upper_circle2, m.lower_circle2])
+
+    return m
+
+# TODO: these are things to use to test targets. Because I think you should be
+# able to solve m.b below and get what you expect, not have all the constraints
+# from your disjunctions get moved onto the model.
+def gdp_on_block():
+    m = ConcreteModel()
+    m.b = Block()
+    m.b.x = Var(bounds=(0,10))
+    m.b.y = Var(bounds=(-5, 5))
+    m.b.disjunct1 = Disjunct()
+    m.b.disjunct1.cons1 = Constraint(expr=(7, m.b.x, 9))
+    m.b.disjunct1.cons2 = Constraint(expr=(2, m.b.y, 5))
+    m.b.disjunct2 = Disjunct()
+    m.b.disjunct2.cons1 = Constraint(expr=(0, m.b.x, 1))
+    m.b.disjunct2.cons2 = Constraint(expr=(-4, m.b.y, 0))
+    m.b.disjunction = Disjunction(expr=[m.b.disjunct1, m.b.disjunct2])
+
+    return m
+
+def gdps_on_indexedBlock():
+    m = ConcreteModel()
+
+    # put the entire gdp on each of two blockDatas
+    @m.Block([1,2])
+    def b(m, i):
+        return gdp_on_block()
+    
     return m

@@ -31,7 +31,6 @@ from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
-
 def _to_dict(val):
     if val is None:
         return val
