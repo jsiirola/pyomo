@@ -1,88 +1,104 @@
 """Transformation to convert explicit bounds to variable bounds."""
+
 from __future__ import division
+
 import textwrap
+from math import fabs
 
+from pyomo.core.base.plugin import TransformationFactory
+from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
+                                 add_docstring_list)
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.kernel.numvalue import value
+from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
-from pyomo.repn.canonical_repn import generate_canonical_repn
-
-__author__ = "Qi Chen <https://github.com/qtothec>"
+from pyomo.repn import generate_standard_repn
 
 
+@TransformationFactory.register('contrib.constraints_to_var_bounds',
+          doc="Change constraints to be a bound on the variable.")
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """Change constraints to be a bound on the variable.
 
-    Looks for constraints of form k*v + c1 <= c2. Changes bound on v to match
-    (c2 - c1)/k if it results in a tighter bound. Also does the same thing for
-    lower bounds.
+    Looks for constraints of form: :math:`k*v + c_1 \\leq c_2`. Changes
+    variable lower bound on :math:`v` to match :math:`(c_2 - c_1)/k` if it
+    results in a tighter bound. Also does the same thing for lower bounds.
+
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
 
     """
 
-    alias('contrib.constraints_to_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    CONFIG = ConfigBlock("ConstraintToVarBounds")
+    CONFIG.declare("tolerance", ConfigValue(
+        default=1E-13, domain=NonNegativeFloat,
+        description="tolerance on bound equality (:math:`LB = UB`)"
+    ))
+    CONFIG.declare("detect_fixed", ConfigValue(
+        default=True, domain=bool,
+        description="If True, fix variable when "
+        ":math:`| LB - UB | \\leq tolerance`."
+    ))
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the transformation."""
-        super(ConstraintToVarBoundTransform, self).__init__(*args, **kwargs)
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
-    def _create_using(self, model):
-        """Create new model, applying transformation."""
-        m = model.clone()
-        self._apply_to(m)
-        return m
+    def _apply_to(self, model, **kwds):
+        config = self.CONFIG(kwds)
 
-    def _apply_to(self, model):
-        """Apply the transformation to the given model."""
-        m = model
-
-        for constr in m.component_data_objects(ctype=Constraint,
-                                               active=True,
-                                               descend_into=True):
+        for constr in model.component_data_objects(
+                ctype=Constraint, active=True, descend_into=True):
             # Check if the constraint is k * x + c1 <= c2 or c2 <= k * x + c1
-            if constr.body.polynomial_degree() == 1:
-                repn = generate_canonical_repn(constr.body)
-                if repn.variables is not None and len(repn.variables) == 1:
-                    var = repn.variables[0]
-                    const = repn.constant if repn.constant is not None else 0
-                    coef = float(repn.linear[0])
-                    if coef == 0:
-                        # This can happen when a one element of a bilinear term
-                        # is fixed to zero. Obviously, do not divide by zero.
-                        pass
-                    else:
-                        if constr.upper is not None:
-                            newbound = (value(constr.upper) - const) / coef
-                            if coef > 0:
-                                var.setub(min(var.ub, newbound)
-                                          if var.ub is not None
-                                          else newbound)
-                            elif coef < 0:
-                                var.setlb(max(var.lb, newbound)
-                                          if var.lb is not None
-                                          else newbound)
-                        if constr.lower is not None:
-                            newbound = (value(constr.lower) - const) / coef
-                            if coef > 0:
-                                var.setlb(max(var.lb, newbound)
-                                          if var.lb is not None
-                                          else newbound)
-                            elif coef < 0:
-                                var.setub(min(var.ub, newbound)
-                                          if var.ub is not None
-                                          else newbound)
-                    constr.deactivate()
-                    # Sometimes deactivating the constraint will remove a
-                    # variable from all active constraints, so that it won't be
-                    # updated during the optimization. Therefore, we need to
-                    # shift the value of var as necessary in order to keep it
-                    # within its implied bounds, as the constraint we are
-                    # deactivating is not an invalid constraint, but rather we
-                    # are moving its implied bound directly onto the variable.
-                    if (var.has_lb() and var.value is not None
-                            and var.value < var.lb):
-                        var.set_value(var.lb)
-                    if (var.has_ub() and var.value is not None
-                            and var.value > var.ub):
-                        var.set_value(var.ub)
+            repn = generate_standard_repn(constr.body)
+            if not repn.is_linear() or len(repn.linear_vars) != 1:
+                # Skip nonlinear constraints, trivial constraints, and those
+                # that involve more than one variable.
+                continue
+            else:
+                var = repn.linear_vars[0]
+                const = repn.constant
+                coef = float(repn.linear_coefs[0])
+
+            if coef == 0:
+                # Skip trivial constraints
+                continue
+            elif coef > 0:
+                if constr.has_ub():
+                    new_ub = (value(constr.upper) - const) / coef
+                    var_ub = float('inf') if var.ub is None else var.ub
+                    var.setub(min(var_ub, new_ub))
+                if constr.has_lb():
+                    new_lb = (value(constr.lower) - const) / coef
+                    var_lb = float('-inf') if var.lb is None else var.lb
+                    var.setlb(max(var_lb, new_lb))
+            elif coef < 0:
+                if constr.has_ub():
+                    new_lb = (value(constr.upper) - const) / coef
+                    var_lb = float('-inf') if var.lb is None else var.lb
+                    var.setlb(max(var_lb, new_lb))
+                if constr.has_lb():
+                    new_ub = (value(constr.lower) - const) / coef
+                    var_ub = float('inf') if var.ub is None else var.ub
+                    var.setub(min(var_ub, new_ub))
+
+            if var is not None and var.value is not None:
+                _adjust_var_value_if_not_feasible(var)
+
+            if (config.detect_fixed and var.has_lb() and var.has_ub() and
+                    fabs(value(var.lb) - value(var.ub)) <= config.tolerance):
+                var.fix(var.lb)
+
+            constr.deactivate()
+
+
+def _adjust_var_value_if_not_feasible(var):
+    # Sometimes deactivating the constraint will remove a
+    # variable from all active constraints, so that it won't be
+    # updated during the optimization. Therefore, we need to
+    # shift the value of var as necessary in order to keep it
+    # within its implied bounds, as the constraint we are
+    # deactivating is not an invalid constraint, but rather we
+    # are moving its implied bound directly onto the variable.
+    if var.has_lb():
+        var_value = max(var.value, var.lb)
+    if var.has_ub():
+        var_value = min(var.value, var.ub)
+    var.set_value(var_value)

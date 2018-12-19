@@ -1,12 +1,21 @@
 #!/usr/bin/env python
 
 import pyutilib.th as unittest
+from pyutilib.misc.config import ConfigBlock
 
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr.current import identify_variables
 from pyomo.environ import *
 from pyomo.opt import check_available_solvers
-from pyomo.contrib.trustregion.PyomoInterface import *
 
+try:
+    import numpy
+    numpy_available = True
+    from pyomo.contrib.trustregion.PyomoInterface import *
+except:
+    numpy_available = False
+
+
+@unittest.skipIf(numpy_available==False, "Skipping pyomo.contrib.trustregion tests because numpy is not installed.")
 class TestPyomoInterfaceInitialization(unittest.TestCase):
     def setUp(self):
         m = ConcreteModel()
@@ -31,7 +40,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         bb = ExternalFunction(blackbox)
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0],m.x[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,2)
         self.assertEqual(pI.ly,1)
         self.assertEqual(pI.lz,3)
@@ -49,7 +58,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         bb = ExternalFunction(blackbox)
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0]-m.x[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,1)
         self.assertEqual(pI.ly,1)
         self.assertEqual(pI.lz,5)
@@ -70,7 +79,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.x[1]) == 2*sqrt(2.0))
         m.c3 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.z[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,3)
         self.assertEqual(pI.ly,2)
         self.assertEqual(pI.lz,2)
@@ -91,7 +100,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.x[1]) == 2*sqrt(2.0))
         m.c3 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.z[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,3)
         self.assertEqual(pI.ly,2)
         self.assertEqual(pI.lz,2)

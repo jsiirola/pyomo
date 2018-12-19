@@ -21,20 +21,18 @@ import logging
 from weakref import ref as weakref_ref
 import inspect
 
-from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base.numvalue import as_numeric, value
-from pyomo.core.base.plugin import register_component
+from pyomo.common.timing import ConstructionTimer
+from pyomo.core.expr.numvalue import value
+from pyomo.core.expr import current as EXPR
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
-from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent,
-    UnindexedComponent_set,
-    _get_indexed_component_data_name,
-)
+from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
+                                               UnindexedComponent_set)
 from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
-from pyomo.core.kernel import minimize, maximize
+from pyomo.core.base import minimize, maximize
 
 from six import iteritems
 
@@ -224,6 +222,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
                              "'minimize' (%s) or 'maximize' (%s). Invalid "
                              "value: %s'" % (minimize, maximize, sense))
 
+@ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
     """
     This modeling component defines an objective expression.
@@ -232,31 +231,45 @@ class Objective(ActiveIndexedComponent):
     objectives to be used as part of expressions.
 
     Constructor arguments:
-        expr            A Pyomo expression for this objective
-        rule            A function that is used to construct objective
-                            expressions
-        sense           Indicate whether minimizing (the default) or maximizing
-        doc             A text string describing this component
-        name            A name for this component
+        expr            
+            A Pyomo expression for this objective
+        rule            
+            A function that is used to construct objective expressions
+        sense           
+            Indicate whether minimizing (the default) or maximizing
+        doc             
+            A text string describing this component
+        name            
+            A name for this component
 
     Public class attributes:
-        doc             A text string describing this component
-        name            A name for this component
-        active          A boolean that is true if this component will be
-                            used to construct a model instance
-        rule            The rule used to initialize the objective(s)
-        sense           The objective sense
+        doc             
+            A text string describing this component
+        name            
+            A name for this component
+        active          
+            A boolean that is true if this component will be used to construct 
+            a model instance
+        rule            
+            The rule used to initialize the objective(s)
+        sense           
+            The objective sense
 
     Private class attributes:
-        _constructed        A boolean that is true if this component has been
-                                constructed
-        _data               A dictionary from the index set to component data
-                                objects
-        _index              The set of valid indices
-        _implicit_subsets   A tuple of set objects that represents the index set
-        _model              A weakref to the model that owns this component
-        _parent             A weakref to the parent block that owns this component
-        _type               The class type for the derived subclass
+        _constructed        
+            A boolean that is true if this component has been constructed
+        _data               
+            A dictionary from the index set to component data objects
+        _index              
+            The set of valid indices
+        _implicit_subsets   
+            A tuple of set objects that represents the index set
+        _model              
+            A weakref to the model that owns this component
+        _parent             
+            A weakref to the parent block that owns this component
+        _type               
+            The class type for the derived subclass
     """
 
     _ComponentDataClass = _GeneralObjectiveData
@@ -588,6 +601,8 @@ class IndexedObjective(Objective):
         """Add an objective with a given index."""
         return self.__setitem__(index, expr)
 
+
+@ModelComponentFactory.register("A list of objective expressions.")
 class ObjectiveList(IndexedObjective):
     """
     An objective component that represents a list of objectives.
@@ -673,7 +688,3 @@ class ObjectiveList(IndexedObjective):
             ans.set_sense(sense)
         return ans
 
-register_component(Objective,
-                   "Expressions that are minimized or maximized.")
-register_component(ObjectiveList,
-                   "A list of objective expressions.")

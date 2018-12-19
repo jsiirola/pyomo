@@ -37,7 +37,7 @@ from pyutilib.pyro.util import find_unused_port
 from pyutilib.services import TempfileManager
 import pyutilib.common
 from pyomo.opt.base import ConverterError
-from pyomo.util.plugin import (ExtensionPoint,
+from pyomo.common.plugin import (ExtensionPoint,
                                SingletonPlugin)
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
@@ -408,16 +408,12 @@ def launch_command(command,
 
     return rc
 
-def _poll(proc, running=True):
+def _poll(proc):
     if proc is None:
         return
     proc.poll()
-    if running:
-        if proc.returncode is not None:
-            raise OSError
-    else:
-        if proc.returncode:
-            raise OSError
+    if proc.returncode:
+        raise OSError
 
 def _kill(proc):
     if proc is None:

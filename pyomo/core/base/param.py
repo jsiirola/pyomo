@@ -15,8 +15,8 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base.plugin import register_component
+from pyomo.common.timing import ConstructionTimer
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
@@ -109,12 +109,15 @@ class _ParamData(ComponentData, NumericValue):
         Return the value of this object.
         """
         if self._value is _NotValid:
-            raise ValueError(
-                "Error evaluating Param value (%s):\n\tThe Param value is "
-                "currently set to an invalid value.  This is\n\ttypically "
-                "from a scalar Param or mutable Indexed Param without\n"
-                "\tan initial or default value."
-                % ( self.name, ))
+            if exception:
+                raise ValueError(
+                    "Error evaluating Param value (%s):\n\tThe Param value is "
+                    "currently set to an invalid value.  This is\n\ttypically "
+                    "from a scalar Param or mutable Indexed Param without\n"
+                    "\tan initial or default value."
+                    % ( self.name, ))
+            else:
+                return None
         return self._value
 
     @property
@@ -139,13 +142,29 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
-    def _potentially_variable(self):
+    def is_parameter_type(self):
+        """
+        Returns True because this is a parameter object.
+        """
+        return True
+
+    def is_variable_type(self):
+        """
+        Returns False because this is not a variable object.
+        """
+        return False
+
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
+
+    def is_potentially_variable(self):
         """
         Returns False because this object can never reference variables.
         """
         return False
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         """
         Returns 0 because this object can never reference variables.
         """
@@ -157,25 +176,31 @@ class _ParamData(ComponentData, NumericValue):
 
     __bool__ = __nonzero__
 
+
+@ModelComponentFactory.register("Parameter data that is used to define a model instance.")
 class Param(IndexedComponent):
     """
     A parameter value, which may be defined over an index.
 
     Constructor Arguments:
-       name        The name of this parameter
-       index       The index set that defines the distinct parameters.
-                     By default, this is None, indicating that there
-                     is a single parameter.
-       domain      A set that defines the type of values that
-                     each parameter must be.
-       within      A set that defines the type of values that
-                     each parameter must be.
-       validate    A rule for validating this parameter w.r.t. data
-                     that exists in the model
-       default     A scalar, rule, or dictionary that defines default
-                     values for this parameter
-       initialize  A dictionary or rule for setting up this parameter
-                     with existing model data
+        name        
+            The name of this parameter
+        index       
+            The index set that defines the distinct parameters. By default, 
+            this is None, indicating that there is a single parameter.
+        domain      
+            A set that defines the type of values that each parameter must be.
+        within      
+            A set that defines the type of values that each parameter must be.
+        validate    
+            A rule for validating this parameter w.r.t. data that exists in 
+            the model
+        default     
+            A scalar, rule, or dictionary that defines default values for 
+            this parameter
+        initialize  
+            A dictionary or rule for setting up this parameter with existing 
+            model data
     """
 
     DefaultMutable = False
@@ -235,6 +260,10 @@ class Param(IndexedComponent):
         if self._default_val is _NotValid:
             return self._data.__iter__()
         return self._index.__iter__()
+
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
 
     #
     # These are "sparse equivalent" access / iteration methods that
@@ -416,11 +445,14 @@ class Param(IndexedComponent):
         Return the value of the parameter default.
 
         Possible values:
-            None            No default value is provided.
-            Numeric         A constant value that is the default value for all
-                                undefined parameters.
-            Function        f(model, i) returns the value for the default value
-                                for parameter i
+            None            
+                No default value is provided.
+            Numeric         
+                A constant value that is the default value for all undefined 
+                parameters.
+            Function        
+                f(model, i) returns the value for the default value for 
+                parameter i
         """
         return self._default_val
 
@@ -975,4 +1007,3 @@ class IndexedParam(Param):
             raise TypeError('Cannot compute the value of an indexed Param (%s)'
                             % (self.name,) )
 
-register_component(Param, "Parameter data that is used to define a model instance.")

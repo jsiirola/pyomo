@@ -23,10 +23,10 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule, \
     apply_parameterized_indexed_rule, sorted_robust
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
@@ -141,11 +141,12 @@ class _SetData(_SetDataBase):
         bounds      A tuple of bounds for set values: (lower, upper)
 
     Public Class Attributes:
-        value       The set values
+        value_list  The list of values
+        value       The set of values
         _bounds     The tuple of bound values
     """
 
-    __slots__ = ('value', '_bounds')
+    __slots__ = ('value_list', 'value', '_bounds')
 
     def __init__(self, owner, bounds):
         #
@@ -202,6 +203,7 @@ class _SetData(_SetDataBase):
         Reset the set data
         """
         self.value = set()
+        self.value_list = []
 
     def _add(self, val, verify=True):
         """
@@ -211,14 +213,27 @@ class _SetData(_SetDataBase):
         """
         if verify:
             self._component()._verify(val)
-        self.value.add(val)
+        if not val in self.value:
+            self.value.add(val)
+            self.value_list.append(val)
 
     def _discard(self, val):
         """
         Discard an element of this set.  This does not return an error
         if the element does not already exist.
+
+        NOTE: This operation is probably expensive, as it should require a walk through a list.  An
+        OrderedDict object might be more efficient, but it's notoriously slow in Python 2.x
+
+        NOTE: We could make this more efficient by mimicing the logic in the _OrderedSetData class.
+        But that would make the data() method expensive (since it is creating a set).  It's
+        not obvious which is the better choice.
         """
-        self.value.discard(val)
+        try:
+            self.value.remove(val)
+            self.value_list.remove(val)
+        except KeyError:
+            pass
 
     def __len__(self):
         """
@@ -230,7 +245,7 @@ class _SetData(_SetDataBase):
         """
         Return an iterator for the set.
         """
-        return self.value.__iter__()
+        return self.value_list.__iter__()
 
     def __contains__(self, val):
         """
@@ -563,6 +578,7 @@ class _IndexedOrderedSetData(_OrderedSetData):
         self._discard(val)
 
 
+@ModelComponentFactory.register("Set data that is used to define a model instance.")
 class Set(IndexedComponent):
     """
     A set object that is used to index other Pyomo objects.
@@ -573,43 +589,63 @@ class Set(IndexedComponent):
     can be initialized by the load() method.
 
     Constructor Arguments:
-        name            The name of the set
-        doc             A text string describing this component
-        within          A set that defines the type of values that can
-                            be contained in this set
-        domain          A set that defines the type of values that can
-                            be contained in this set
-        initialize      A dictionary or rule for setting up this set
-                            with existing model data
-        validate        A rule for validating membership in this set. This has
-                            the functional form:
-                                f: data -> bool
-                            and returns true if the data belongs in the set
-        dimen           Specify the set's arity, or None if no arity is enforced
-        virtual         If true, then this is a virtual set that does not
-                            store data using the class dictionary
-        bounds          A 2-tuple that specifies the range of possible set values.
-        ordered         Specifies whether the set is ordered. Possible values are:
-                            False           Unordered
-                            True            Ordered by insertion order
-                            InsertionOrder  Ordered by insertion order
-                            SortedOrder     Ordered by sort order
-                            <function>      Ordered with this comparison function
-        filter          A function that is used to filter set entries.
+        name            
+            The name of the set
+        doc             
+            A text string describing this component
+        within          
+            A set that defines the type of values that can be 
+            contained in this set
+        domain          
+            A set that defines the type of values that can be 
+            contained in this set
+        initialize      
+            A dictionary or rule for setting up this set with 
+            existing model data
+        validate        
+            A rule for validating membership in this set. This 
+            has the functional form: f(data) -> bool, and 
+            returns true if the data belongs in the set
+        dimen           
+            Specify the set's arity, or None if no arity is enforced
+        virtual         
+            If true, then this is a virtual set that does not
+            store data using the class dictionary
+        bounds          
+            A 2-tuple that specifies the range of possible set values.
+        ordered         
+            Specifies whether the set is ordered. Possible values are
+                
+            * False:           Unordered
+            * True:            Ordered by insertion order
+            * InsertionOrder:  Ordered by insertion order
+            * SortedOrder:     Ordered by sort order
+            * <function>:      Ordered with this comparison function
+        filter          
+            A function that is used to filter set entries.
 
     Public class attributes:
-        concrete        If True, then this set contains elements.(TODO)
-        dimen           The dimension of the data in this set.
-        doc             A text string describing this component
-        domain          A set that defines the type of values that can
-                            be contained in this set
-        filter          A function that is used to filter set entries.
-        initialize      A dictionary or rule for setting up this set
-                            with existing model data
-        ordered         Specifies whether the set is ordered.
-        validate        A rule for validating membership in this set.
-        virtual         If True, then this set does not store data using the class
-                             dictionary
+        concrete        
+            If True, then this set contains elements.(TODO)
+        dimen           
+            The dimension of the data in this set.
+        doc             
+            A text string describing this component
+        domain          
+            A set that defines the type of values that can be 
+            contained in this set
+        filter          
+            A function that is used to filter set entries.
+        initialize      
+            A dictionary or rule for setting up this set with 
+            existing model data
+        ordered         
+            Specifies whether the set is ordered.
+        validate        
+            A rule for validating membership in this set.
+        virtual         
+            If True, then this set does not store data using 
+            the class dictionary
     """
 
     End             = (1003,)
@@ -1280,6 +1316,7 @@ class OrderedSimpleSet(SimpleSetBase,_OrderedSetData):
 
 # REVIEW - START
 
+@ModelComponentFactory.register("Define a Pyomo Set component using an iterable data object.")
 class SetOf(SimpleSet):
     """
     A derived SimpleSet object that creates a set from external
@@ -1665,7 +1702,7 @@ class IndexedSet(Set):
         # Create a _SetData object if one doesn't already exist
         #
         if key in self._data:
-            self._data[key].value.clear()
+            self._data[key].clear()
         else:
             self._data[key] = self._SetData(self, self._bounds)
         #
@@ -1795,6 +1832,4 @@ class IndexedSet(Set):
         timer.report()
 
 
-register_component(SetOf, "Define a Pyomo Set component using an iterable data object.")
-register_component(Set, "Set data that is used to define a model instance.")
 

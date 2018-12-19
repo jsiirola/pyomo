@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -11,6 +11,7 @@
 import os
 import pyutilib.th as unittest
 
+from pyomo.common.getGSL import find_GSL
 from pyomo.core.base import IntegerSet
 from pyomo.environ import *
 from pyomo.core.base.external import (PythonCallbackFunction,
@@ -75,33 +76,47 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertEqual(M.m.f.getname(), "f")
         self.assertEqual(M.m.f.getname(True), "m.f")
 
-    def getGSL(self):
-        # Find the GSL DLL
-        DLL = None
-        for path in [os.getcwd()] + os.environ['PATH'].split(os.pathsep):
-            test = os.path.join(path, 'amplgsl.dll')
-            if os.path.isfile(test):
-                DLL = test
-                break
-        print("GSL found here: %s" % DLL)
-        return DLL
-
     def test_eval_gsl_function(self):
-        DLL = self.getGSL()
+        DLL = find_GSL()
         if not DLL:
-            self.skipTest("Could not find the amplgsl.dll library in the PATH")
+            self.skipTest("Could not find the amplgsl.dll library")
         model = ConcreteModel()
-        model.z_func = ExternalFunction(library=DLL, function="gsl_sf_gamma")
+        model.gamma = ExternalFunction(
+            library=DLL, function="gsl_sf_gamma")
+        model.bessel = ExternalFunction(
+            library=DLL, function="gsl_sf_bessel_Jnu")
         model.x = Var(initialize=3, bounds=(1e-5,None))
-        model.o = Objective(expr=model.z_func(model.x))
+        model.o = Objective(expr=model.gamma(model.x))
         self.assertAlmostEqual(value(model.o), 2.0, 7)
+
+        f = model.bessel.evaluate((0.5, 2.0,))
+        self.assertAlmostEqual(f, 0.5130161365618272, 7)
+
+    def test_eval_fgh_gsl_function(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.gamma = ExternalFunction(
+            library=DLL, function="gsl_sf_gamma")
+        model.bessel = ExternalFunction(
+            library=DLL, function="gsl_sf_bessel_Jnu")
+        f,g,h = model.gamma.evaluate_fgh((2.0,))
+        self.assertAlmostEqual(f, 1.0, 7)
+        self.assertAlmostEqual(g, [0.422784335098467], 7)
+        self.assertAlmostEqual(h, [0.8236806608528794], 7)
+
+        f,g,h = model.bessel.evaluate_fgh((2.5, 2.0,), fixed=[1,0])
+        self.assertAlmostEqual(f, 0.223924531469, 7)
+        self.assertAlmostEqual(g, [0.0, 0.21138811435101745], 7)
+        self.assertAlmostEqual(h, [0.0, 0.0, 0.02026349177575621], 7)
 
     @unittest.skipIf(not check_available_solvers('ipopt'),
                      "The 'ipopt' solver is not available")
     def test_solve_gsl_function(self):
-        DLL = self.getGSL()
+        DLL = find_GSL()
         if not DLL:
-            self.skipTest("Could not find the amplgsl.dll library in the PATH")
+            self.skipTest("Could not find the amplgsl.dll library")
         model = ConcreteModel()
         model.z_func = ExternalFunction(library=DLL, function="gsl_sf_gamma")
         model.x = Var(initialize=3, bounds=(1e-5,None))
