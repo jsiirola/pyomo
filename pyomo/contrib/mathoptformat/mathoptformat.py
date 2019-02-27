@@ -12,7 +12,11 @@
 # Problem Writer for MathOptFormat JSON files
 #
 
-import json
+try:
+    import ujson as json
+except:
+    import json
+
 import logging
 from six import itervalues
 
