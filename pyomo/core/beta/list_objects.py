@@ -41,15 +41,17 @@ logger = logging.getLogger('pyomo.core')
 
 class ComponentList(collections_MutableSequence):
 
-    def __init__(self, interface_datatype, *args):
-        self._interface_datatype = interface_datatype
+    def __init__(self, *args, **kwds):
+        self._interface_datatype = kwds.pop('_interface_datatype')
+        _args = kwds.pop('_args')
+        super(ComponentList, self).__init__(*args, **kwds)
         self._data = []
-        if len(args) > 0:
-            if len(args) > 1:
+        if len(_args) > 0:
+            if len(_args) > 1:
                 raise TypeError(
                     "ComponentList expected at most 1 arguments, "
-                    "got %s" % (len(args)))
-            for item in args[0]:
+                    "got %s" % (len(_args)))
+            for item in _args[0]:
                 self.append(item)
 
     def construct(self, data=None):
@@ -227,47 +229,27 @@ class ComponentList(collections_MutableSequence):
 class XVarList(ComponentList, IndexedVar):
 
     def __init__(self, *args, **kwds):
-        IndexedVar.__init__(self, Any, **kwds)
-        # Constructor for ComponentList needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentList.__init__(self,
-                               _VarData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _VarData
+        kwds['_args'] = args
+        super(XVarList, self).__init__(Any, **kwds)
 
 class XConstraintList(ComponentList, IndexedConstraint):
 
     def __init__(self, *args, **kwds):
-        IndexedConstraint.__init__(self, Any, **kwds)
-        # Constructor for ComponentList needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentList.__init__(self,
-                               _ConstraintData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _ConstraintData
+        kwds['_args'] = args
+        super(XConstraintList, self).__init__(Any, **kwds)
 
 class XObjectiveList(ComponentList, IndexedObjective):
 
     def __init__(self, *args, **kwds):
-        IndexedObjective.__init__(self, Any, **kwds)
-        # Constructor for ComponentList needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentList.__init__(self,
-                               _ObjectiveData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _ObjectiveData
+        kwds['_args'] = args
+        super(XObjectiveList, self).__init__(Any, **kwds)
 
 class XExpressionList(ComponentList, IndexedExpression):
 
     def __init__(self, *args, **kwds):
-        IndexedExpression.__init__(self, Any, **kwds)
-        # Constructor for ComponentList needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentList.__init__(self,
-                               _ExpressionData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _ExpressionData
+        kwds['_args'] = args
+        super(XExpressionList, self).__init__(Any, **kwds)

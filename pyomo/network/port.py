@@ -47,15 +47,8 @@ class _PortData(ComponentData):
 
     __slots__ = ('vars', '_arcs', '_sources', '_dests', '_rules', '_splitfracs')
 
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
-
+    def __init__(self, **kwds):
+        super(_PortData, self).__init__(**kwds)
         self.vars = {}
         self._arcs = []
         self._sources = []
@@ -327,7 +320,7 @@ class Port(IndexedComponent):
         self._implicit = kwd.pop('implicit', {})
         self._extends = kwd.pop('extends', None)
         kwd.setdefault('ctype', Port)
-        IndexedComponent.__init__(self, *args, **kwd)
+        super(Port, self).__init__(*args, **kwd)
 
     # This method must be defined on subclasses of
     # IndexedComponent that support implicit definition
@@ -687,8 +680,8 @@ class Port(IndexedComponent):
 class SimplePort(Port, _PortData):
 
     def __init__(self, *args, **kwd):
-        _PortData.__init__(self, component=self)
-        Port.__init__(self, *args, **kwd)
+        kwd.setdefault('component', self)
+        super(SimplePort, self).__init__(**kwd)
 
 
 class IndexedPort(Port):

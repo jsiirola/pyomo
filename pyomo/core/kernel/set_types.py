@@ -27,12 +27,21 @@ class _VirtualSet(object):
     """
 
     def __init__(self, name=None, doc=None, bounds=None, validate=None):
-        self.name = name
-        self.doc = doc
-        self._bounds = bounds
-        if self._bounds is None:
-            self._bounds = (None, None)
-        self.validate = validate
+        # This is effectively reproducing the Component __init__.
+        # However, several classes inherit from both this class *and*
+        # Component, so this class needs to be careful to not
+        # accidentally overwrite attributes set by the
+        # Component.__init__
+        if not hasattr(self, 'name') or name:
+            self.name = name
+        if not hasattr(self, 'doc') or doc:
+            self.doc = doc
+        if not hasattr(self, '_bounds') or bounds:
+            self._bounds = bounds
+            if self._bounds is None:
+                self._bounds = (None, None)
+        if not hasattr(self, 'validate') or validate:
+            self.validate = validate
 
         global _virtual_sets
         _virtual_sets.append(self)

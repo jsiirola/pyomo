@@ -161,7 +161,7 @@ class DerivativeVar(Var):
         else:
             arg = tuple(sVar._implicit_subsets)
 
-        Var.__init__(self,*arg,**kwds)
+        super(DerivativeVar, self).__init__(*arg,**kwds)
 
     def get_continuousset_list(self):
         """ Return the a list of :py:class:`ContinuousSet` components the

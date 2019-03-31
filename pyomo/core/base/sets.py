@@ -137,7 +137,7 @@ class _SetData(_SetDataBase):
     This class defines the data for an unordered set.
 
     Constructor Arguments:
-        owner       The Set object that owns this data.
+        component   The Set object that owns this data.
         bounds      A tuple of bounds for set values: (lower, upper)
 
     Public Class Attributes:
@@ -148,15 +148,12 @@ class _SetData(_SetDataBase):
 
     __slots__ = ('value_list', 'value', '_bounds')
 
-    def __init__(self, owner, bounds):
-        #
-        # The following is equivalent to calling
-        # the base ComponentData constructor.
-        #
-        self._component = weakref_ref(owner)
-        #
+    def __init__(self, **kwds):
+        # The following is problemmatic, as both the container and the
+        # Data attempt to process the "bounds" keyword
+        self._bounds = kwds.pop("bounds", getattr(self, '_bounds',None))
+        super(_SetData, self).__init__(**kwds)
         self._clear()
-        self._bounds = bounds
 
     def __getstate__(self):
         """
@@ -281,14 +278,11 @@ class _OrderedSetData(_SetDataBase):
 
     __slots__ = ('value', 'order_dict', '_bounds', '_is_sorted')
 
-    def __init__(self, owner, bounds):
-        #
-        # The following is equivalent to calling
-        # the base ComponentData constructor.
-        #
-        self._component = weakref_ref(owner)
-        #
-        self._bounds = bounds
+    def __init__(self, **kwds):
+        # The following is problemmatic, as both the container and the
+        # Data attempt to process the "bounds" keyword
+        self._bounds = kwds.pop("bounds", getattr(self, '_bounds',None))
+        super(_OrderedSetData, self).__init__(**kwds)
         if self.parent_component().ordered is Set.InsertionOrder:
             self._is_sorted = 0
         else:
@@ -675,9 +669,16 @@ class Set(IndexedComponent):
         self.filter     = kwds.pop("filter", None)
         self.domain     = kwds.pop("within", None)
         self.domain     = kwds.pop('domain', self.domain )
+        # The following is problemmatic, as both the container and the
+        # Data attempt to process the "bounds" keyword
+        self._bounds    = kwds.pop("bounds", getattr(self, '_bounds',None))
         #
         if self.ordered is True:
             self.ordered = Set.InsertionOrder
+
+        kwds.setdefault('ctype', Set)
+        kwd_dimen = kwds.pop("dimen", 0)
+        super(Set, self).__init__(*args, **kwds)
 
         # We can't access self.dimen after its been written, so we use
         # tmp_dimen until the end of __init__
@@ -690,7 +691,6 @@ class Set(IndexedComponent):
             self._bounds = copy.copy(self.domain._bounds)
 
         # Make sure dimen and implied dimensions don't conflict
-        kwd_dimen = kwds.pop("dimen", 0)
         if kwd_dimen != 0:
             if self.domain is not None and tmp_dimen != kwd_dimen:
                 raise ValueError(\
@@ -699,9 +699,6 @@ class Set(IndexedComponent):
                        (str(kwd_dimen), str(self.domain.name), str(tmp_dimen)))
             else:
                 tmp_dimen = kwd_dimen
-
-        kwds.setdefault('ctype', Set)
-        IndexedComponent.__init__(self, *args, **kwds)
 
         if tmp_dimen == 0:
             # We set the default to 1
@@ -777,7 +774,7 @@ class SimpleSetBase(Set):
     def __init__(self, *args, **kwds):
         self.virtual    = kwds.pop("virtual", False)
         self.concrete   = not self.virtual
-        Set.__init__(self, *args, **kwds)
+        super(SimpleSetBase, self).__init__(*args, **kwds)
 
     def valid_model_component(self):
         """
@@ -1273,9 +1270,8 @@ class SimpleSetBase(Set):
 class SimpleSet(SimpleSetBase,_SetData):
 
     def __init__(self, *args, **kwds):
-        self._bounds = kwds.pop('bounds', None)
-        SimpleSetBase.__init__(self, *args, **kwds)
-        _SetData.__init__(self, self, self._bounds)
+        kwds.setdefault('component', self)
+        super(SimpleSet, self).__init__(**kwds)
 
     def __getitem__(self, key):
         """
@@ -1296,9 +1292,8 @@ class SimpleSet(SimpleSetBase,_SetData):
 class OrderedSimpleSet(SimpleSetBase,_OrderedSetData):
 
     def __init__(self, *args, **kwds):
-        self._bounds = kwds.pop('bounds', None)
-        SimpleSetBase.__init__(self, *args, **kwds)
-        _OrderedSetData.__init__(self, self, self._bounds)
+        kwds.setdefault('component', self)
+        super(OrderedSimpleSet, self).__init__(**kwds)
 
     def __getitem__(self, key):
         """
@@ -1327,7 +1322,7 @@ class SetOf(SimpleSet):
         if len(args) > 1:
             raise TypeError("Only one set data argument can be specified")
         self.dimen = 0
-        SimpleSet.__init__(self,**kwds)
+        super(SetOf, self).__init__(**kwds)
         if len(args) == 1:
             self._elements = args[0]
         else:
@@ -1408,7 +1403,7 @@ class _SetOperator(SimpleSet):
         dimen_test = kwds.get('dimen_test',True)
         if 'dimen_test' in kwds:
             del kwds['dimen_test']
-        SimpleSet.__init__(self,**kwds)
+        super(_SetOperator, self).__init__(**kwds)
         self.value = None
         self._constructed = True
         self.virtual = True
@@ -1462,9 +1457,6 @@ class _SetOperator(SimpleSet):
 
 class _SetUnion(_SetOperator):
 
-    def __init__(self, *args, **kwds):
-        _SetOperator.__init__(self, *args, **kwds)
-
     def __iter__(self):
         for elt in self._setA:
             yield elt
@@ -1477,9 +1469,6 @@ class _SetUnion(_SetOperator):
 
 class _SetIntersection(_SetOperator):
 
-    def __init__(self, *args, **kwds):
-        _SetOperator.__init__(self, *args, **kwds)
-
     def __iter__(self):
         for elt in self._setA:
             if elt in self._setB:
@@ -1490,9 +1479,6 @@ class _SetIntersection(_SetOperator):
 
 class _SetDifference(_SetOperator):
 
-    def __init__(self, *args, **kwds):
-        _SetOperator.__init__(self, *args, **kwds)
-
     def __iter__(self):
         for elt in self._setA:
             if not elt in self._setB:
@@ -1502,9 +1488,6 @@ class _SetDifference(_SetOperator):
         return elt in self._setA and not elt in self._setB
 
 class _SetSymmetricDifference(_SetOperator):
-
-    def __init__(self, *args, **kwds):
-        _SetOperator.__init__(self, *args, **kwds)
 
     def __iter__(self):
         for elt in self._setA:
@@ -1534,7 +1517,7 @@ class _SetProduct(_SetOperator):
                 except TypeError:
                     raise TypeError("Each input argument to a _SetProduct constructor must be iterable")
 
-        _SetOperator.__init__(self, *args, **kwd)
+        super(_SetProduct, self).__init__(*args, **kwd)
         # the individual index sets definining the product set.
         if isinstance(self._setA,_SetProduct):
             self.set_tuple = self._setA.set_tuple
@@ -1646,9 +1629,12 @@ class IndexedSet(Set):
     An array of sets, which are indexed by other sets
     """
 
-    def __init__(self, *args, **kwds):      #pragma:nocover
-        self._bounds = kwds.pop("bounds", None)
-        Set.__init__(self, *args, **kwds)
+    def __init__(self, *args, **kwds):
+        # The following is problemmatic, as both the container and the
+        # Data attempt to process the "bounds" keyword
+        self._bounds = kwds.pop("bounds", getattr(self, '_bounds',None))
+        super(IndexedSet, self).__init__(*args, **kwds)
+
         if 'virtual' in kwds:                                       #pragma:nocover
             raise TypeError("It doesn't make sense to create a virtual set array")
         if self.ordered:
@@ -1689,7 +1675,8 @@ class IndexedSet(Set):
 
         This returns an exception.
         """
-        tmp = self._data[index] = self._SetData(self, self._bounds)
+        tmp = self._SetData(component=self, bounds=self._bounds)
+        self._data[index] = tmp
         return tmp
 
     def __setitem__(self, key, vals):
@@ -1704,7 +1691,7 @@ class IndexedSet(Set):
         if key in self._data:
             self._data[key].clear()
         else:
-            self._data[key] = self._SetData(self, self._bounds)
+            self._data[key] = self._SetData(component=self, bounds=self._bounds)
         #
         # Add the elements in vals to the _SetData object
         #
@@ -1774,7 +1761,7 @@ class IndexedSet(Set):
                     tmpkey=key
                 if tmpkey not in self._index:
                     raise KeyError("Cannot construct index "+str(tmpkey)+" in array set "+self.name)
-                tmp = self._SetData(self, self._bounds)
+                tmp = self._SetData(component=self, bounds=self._bounds)
                 for val in values[key]:
                     tmp._add(val)
                 self._data[tmpkey] = tmp
@@ -1785,7 +1772,7 @@ class IndexedSet(Set):
             if self._parent is None:
                 raise ValueError("Need parent block to construct a set array with a function")
             for key in self._index:
-                tmp = self._SetData(self, self._bounds)
+                tmp = self._SetData(component=self, bounds=self._bounds)
                 self._data[key] = tmp
                 #
                 if isinstance(key,tuple):
@@ -1819,13 +1806,13 @@ class IndexedSet(Set):
         elif self.initialize is not None:
             if type(self.initialize) is not dict:
                 for key in self._index:
-                    tmp = self._SetData(self, self._bounds)
+                    tmp = self._SetData(component=self, bounds=self._bounds)
                     for val in self.initialize:
                         tmp._add(val)
                     self._data[key] = tmp
             else:
                 for key in self.initialize:
-                    tmp = self._SetData(self, self._bounds)
+                    tmp = self._SetData(component=self, bounds=self._bounds)
                     for val in self.initialize[key]:
                         tmp._add(val)
                     self._data[key] = tmp

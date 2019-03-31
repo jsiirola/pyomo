@@ -201,15 +201,6 @@ class _PiecewiseData(_BlockData):
     and piecewise constraint generators..
     """
 
-    def __init__(self,parent):
-        _BlockData.__init__(self, parent)
-        self._constructed = True
-        self._bound_type = None
-        self._domain_pts = None
-        self._range_pts = None
-        self._x = None
-        self._y = None
-
     def updateBoundType(self, bound_type):
         self._bound_type = bound_type
 
@@ -1076,6 +1067,9 @@ class Piecewise(Block):
         warn_domain_coverage = kwds.pop('warn_domain_coverage',True)
         unbounded_domain_var = kwds.pop('unbounded_domain_var',False)
 
+        # retrieve any positional arguments "hidden" in the kwds
+        args = args + kwds.pop('_positional_args', ())
+
         # all but the last two args should go to Block
         try:
             # Blocks have special handling when calling
@@ -1102,7 +1096,7 @@ class Piecewise(Block):
         #       blocks as simply Blocks.
         #
         #kwds.setdefault('ctype', Piecewise)
-        Block.__init__(self,*args,**kwds)
+        super(Piecewise, self).__init__(*args,**kwds)
 
         # Check that the variables args are actually Pyomo Vars
         if not( isinstance(self._domain_var,_VarData) or \
@@ -1172,7 +1166,6 @@ class Piecewise(Block):
         """
         generate_debug_messages \
             = __debug__ and logger.isEnabledFor(logging.DEBUG)
-
         if self._constructed:
             return
         timer = ConstructionTimer(self)
@@ -1196,7 +1189,7 @@ class Piecewise(Block):
         timer.report()
 
     def _getitem_when_not_present(self, idx):
-        return self._data.setdefault(idx, _PiecewiseData(self))
+        return self._data.setdefault(idx, _PiecewiseData(component=self))
 
     def add(self, index, _is_indexed=None):
 
@@ -1360,7 +1353,7 @@ class Piecewise(Block):
                     raise ValueError(msg % (self.name, index, self._pw_rep))
 
         if _is_indexed:
-            comp = _PiecewiseData(self)
+            comp = _PiecewiseData(component=self)
         else:
             comp = self
         self._data[index] = comp
@@ -1371,13 +1364,11 @@ class Piecewise(Block):
 class SimplePiecewise(_PiecewiseData,Piecewise):
 
     def __init__(self, *args, **kwds):
-        _PiecewiseData.__init__(self,self)
-        Piecewise.__init__(self, *args, **kwds)
+        kwds.setdefault('component', self)
+        kwds.setdefault('_positional_args', args)
+        super(SimplePiecewise, self).__init__(**kwds)
 
 class IndexedPiecewise(Piecewise):
-
-    def __init__(self,*args,**kwds):
-        Piecewise.__init__(self,*args,**kwds)
 
     def __str__(self):
         return str(self.name)

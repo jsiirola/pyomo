@@ -174,17 +174,6 @@ class _ConstraintData(ActiveComponentData):
     # in linear canonical form
     _linear_canonical_form = False
 
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _ConstraintData,
-        #   - ActiveComponentData
-        #   - ComponentData
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
-        self._active = True
-
     #
     # Interface
     #
@@ -313,21 +302,17 @@ class _GeneralConstraintData(_ConstraintData):
 
     __slots__ = ('_body', '_lower', '_upper', '_equality')
 
-    def __init__(self,  expr=None, component=None):
+    def __init__(self, **kwds):
         #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _ConstraintData,
-        #   - ActiveComponentData
-        #   - ComponentData
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
-        self._active = True
-
         self._body = None
         self._lower = None
         self._upper = None
         self._equality = False
+        if kwds.get('component', None) is not self:
+            expr = kwds.pop('expr', None)
+        else:
+            expr = None
+        super(_GeneralConstraintData, self).__init__(**kwds)
         if expr is not None:
             self.set_value(expr)
 
@@ -691,7 +676,7 @@ class Constraint(ActiveIndexedComponent):
         #if self.rule is None and self._init_expr is None:
         #    raise ValueError("A simple Constraint component requires a 'rule' or 'expr' option")
         kwargs.setdefault('ctype', Constraint)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
+        super(Constraint, self).__init__(*args, **kwargs)
 
     #
     # TODO: Ideally we would not override these methods and instead add
@@ -912,10 +897,8 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralConstraintData.__init__(self,
-                                        component=self,
-                                        expr=None)
-        Constraint.__init__(self, *args, **kwds)
+        kwds.setdefault('component', self)
+        super(SimpleConstraint, self).__init__(**kwds)
 
     #
     # Since this class derives from Component and
@@ -1105,7 +1088,7 @@ class ConstraintList(IndexedConstraint):
         if 'expr' in kwargs:
             raise ValueError(
                 "ConstraintList does not accept the 'expr' keyword")
-        Constraint.__init__(self, *args, **kwargs)
+        super(ConstraintList, self).__init__(*args, **kwargs)
 
     def construct(self, data=None):
         """

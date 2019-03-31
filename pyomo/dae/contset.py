@@ -86,13 +86,10 @@ class ContinuousSet(OrderedSimpleSet):
 
         kwds.setdefault('ctype', ContinuousSet)
         kwds.setdefault('ordered', Set.SortedOrder)
-        self._type = ContinuousSet
         self._changed = False
-        self.concrete = True
-        self.virtual = False
         self._fe = []
         self._discretization_info = {}
-        OrderedSimpleSet.__init__(self, **kwds)
+        super(ContinuousSet, self).__init__(*args, **kwds)
 
     def get_finite_elements(self):
         """ Returns the finite element points

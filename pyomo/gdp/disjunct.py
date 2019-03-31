@@ -74,8 +74,8 @@ class _Initializer(object):
 
 class _DisjunctData(_BlockData):
 
-    def __init__(self, component):
-        _BlockData.__init__(self, component)
+    def __init__(self, **kwds):
+        super(_DisjunctData, self).__init__(**kwds)
         self.indicator_var = Var(within=Binary)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
@@ -129,14 +129,8 @@ class Disjunct(Block):
             return IndexedDisjunct.__new__(IndexedDisjunct)
 
     def __init__(self, *args, **kwargs):
-        if kwargs.pop('_deep_copying', None):
-            # Hack for Python 2.4 compatibility
-            # Deep copy will copy all items as necessary, so no need to
-            # complete parsing
-            return
-
         kwargs.setdefault('ctype', Disjunct)
-        Block.__init__(self, *args, **kwargs)
+        super(Disjunct, self).__init__(*args, **kwargs)
 
     # For the time being, this method is not needed.
     #
@@ -166,14 +160,8 @@ class Disjunct(Block):
 class SimpleDisjunct(_DisjunctData, Disjunct):
 
     def __init__(self, *args, **kwds):
-        ## FIXME: This is a HACK to get around a chicken-and-egg issue
-        ## where _BlockData creates the indicator_var *before*
-        ## Block.__init__ declares the _defer_construction flag.
-        self._defer_construction = True
-        self._suppress_ctypes = set()
-
-        _DisjunctData.__init__(self, self)
-        Disjunct.__init__(self, *args, **kwds)
+        kwds.setdefault('component', self)
+        super(SimpleDisjunct, self).__init__(**kwds)
         self._data[None] = self
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
@@ -189,16 +177,8 @@ class _DisjunctionData(ActiveComponentData):
     __slots__ = ('disjuncts','xor')
     _NoArgument = (0,)
 
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _ConstraintData,
-        #   - ActiveComponentData
-        #   - ComponentData
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
-        self._active = True
+    def __init__(self, **kwds):
+        super(_DisjunctionData, self).__init__(**kwds)
         self.disjuncts = []
         self.xor = True
 
@@ -404,8 +384,8 @@ class Disjunction(ActiveIndexedComponent):
 class SimpleDisjunction(_DisjunctionData, Disjunction):
 
     def __init__(self, *args, **kwds):
-        _DisjunctionData.__init__(self, component=self)
-        Disjunction.__init__(self, *args, **kwds)
+        kwds.setdefault('component', self)
+        super(SimpleDisjunction, self).__init__(**kwds)
 
     #
     # Singleton disjunctions are strange in that we want them to be

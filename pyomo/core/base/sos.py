@@ -45,12 +45,12 @@ class _SOSConstraintData(ActiveComponentData):
 
     __slots__ = ('_variables', '_weights', '_level')
 
-    def __init__(self, owner):
+    def __init__(self, **kwds):
         """ Constructor """
         self._level = None
         self._variables = []
         self._weights = []
-        ActiveComponentData.__init__(self, owner)
+        super(_SOSConstraintData, self).__init__(**kwds)
 
     def __getstate__(self):
         """
@@ -212,7 +212,7 @@ class SOSConstraint(ActiveIndexedComponent):
         # Construct the base class
         #
         kwargs.setdefault('ctype', SOSConstraint)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
+        super(SOSConstraint, self).__init__(*args, **kwargs)
 
     def construct(self, data=None):
         """
@@ -303,7 +303,7 @@ class SOSConstraint(ActiveIndexedComponent):
             # because SimpleSOSConstraint already makes an _SOSConstraintData instance
             soscondata = self
         else:
-            soscondata = _SOSConstraintData(self)
+            soscondata = _SOSConstraintData(component=self)
         self._data[index] = soscondata
 
         soscondata.level = self._sosLevel
@@ -346,12 +346,10 @@ class SOSConstraint(ActiveIndexedComponent):
 class SimpleSOSConstraint(SOSConstraint, _SOSConstraintData):
 
     def __init__(self, *args, **kwd):
-        _SOSConstraintData.__init__(self, self)
-        SOSConstraint.__init__(self, *args, **kwd)
+        kwd.setdefault('component', self)
+        super(SimpleSOSConstraint, self).__init__(*args, **kwd)
 
 
 class IndexedSOSConstraint(SOSConstraint):
-
-    def __init__(self, *args, **kwds):
-        super(IndexedSOSConstraint,self).__init__(*args, **kwds)
+    pass
 

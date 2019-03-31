@@ -130,7 +130,7 @@ class IndexedComponent(Component):
         from pyomo.core.base.sets import process_setarg
         #
         kwds.pop('noruleinit', None)
-        Component.__init__(self, **kwds)
+        super(IndexedComponent, self).__init__(**kwds)
         #
         self._data = {}
         #
@@ -723,7 +723,7 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
     """
 
     def __init__(self, *args, **kwds):
-        IndexedComponent.__init__(self, *args, **kwds)
+        super(ActiveIndexedComponent, self).__init__(*args, **kwds)
         # Replicate the ActiveComponent.__init__() here.  We don't want
         # to use super, because that will run afoul of certain
         # assumptions for derived SimpleComponents' __init__()

@@ -66,16 +66,8 @@ class _ParamData(ComponentData, NumericValue):
 
     __slots__ = ('_value',)
 
-    def __init__(self, component):
-        #
-        # The following is equivalent to calling
-        # the base ComponentData constructor.
-        #
-        self._component = weakref_ref(component)
-        #
-        # The following is equivalent to calling the
-        # base NumericValue constructor.
-        #
+    def __init__(self, **kwds):
+        super(_ParamData, self).__init__(**kwds)
         self._value = _NotValid
 
     def __getstate__(self):
@@ -225,13 +217,13 @@ class Param(IndexedComponent):
         #
         if 'repn' in kwd:
             logger.error(
-                "The 'repn' keyword is not a validate keyword argument for Param")
+                "The 'repn' keyword is not a valid keyword argument for Param")
         #
         if self.domain is None:
             self.domain = Any
         #
         kwd.setdefault('ctype', Param)
-        IndexedComponent.__init__(self, *args, **kwd)
+        super(Param, self).__init__(*args, **kwd)
 
     def __len__(self):
         """
@@ -394,14 +386,14 @@ class Param(IndexedComponent):
                 # instead of incurring the penalty of checking.
                 for index, new_value in iteritems(new_values):
                     if index not in self._data:
-                        self._data[index] = _ParamData(self)
+                        self._data[index] = _ParamData(component=self)
                     self._data[index]._value = new_value
             else:
                 # For scalars, we will choose an approach based on
                 # how "dense" the Param is
                 if not self._data: # empty
                     for index in self._index:
-                        p = self._data[index] = _ParamData(self)
+                        p = self._data[index] = _ParamData(component=self)
                         p._value = new_values
                 elif len(self._data) == len(self._index):
                     for index in self._index:
@@ -409,7 +401,7 @@ class Param(IndexedComponent):
                 else:
                     for index in self._index:
                         if index not in self._data:
-                            self._data[index] = _ParamData(self)
+                            self._data[index] = _ParamData(component=self)
                         self._data[index]._value = new_values
         else:
             #
@@ -470,7 +462,7 @@ class Param(IndexedComponent):
             # reasonable values produces an informative error.
             if self._mutable:
                 # Note: _ParamData defaults to _NotValid
-                ans = self._data[index] = _ParamData(self)
+                ans = self._data[index] = _ParamData(component=self)
                 return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)
@@ -594,7 +586,7 @@ class Param(IndexedComponent):
                 self.set_value(value, index)
                 return self
             elif self._mutable:
-                obj = self._data[index] = _ParamData(self)
+                obj = self._data[index] = _ParamData(component=self)
                 obj.set_value(value, index)
                 return obj
             else:
@@ -947,8 +939,8 @@ This has resulted in the conversion of the source to dense form.
 class SimpleParam(_ParamData, Param):
 
     def __init__(self, *args, **kwds):
-        Param.__init__(self, *args, **kwds)
-        _ParamData.__init__(self, component=self)
+        kwds.setdefault('component', self)
+        super(SimpleParam, self).__init__(*args, **kwds)
 
     #
     # Since this class derives from Component and Component.__getstate__

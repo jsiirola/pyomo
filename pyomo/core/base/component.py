@@ -75,6 +75,16 @@ class _ComponentBase(object):
     """
     __slots__ = ()
 
+    def __init__(self, **kwds):
+        super(_ComponentBase, self).__init__(**kwds)
+        if kwds:
+            raise ValueError(
+                "Unexpected keyword options found while constructing '%s':\n"
+                "\t%s"
+                % ( type(self).__name__, ','.join(sorted(kwds.keys())) )
+            )
+
+
     def __deepcopy__(self, memo):
         # The problem we are addressing is when we want to clone a
         # sub-block in a model.  In that case, the block can have
@@ -280,10 +290,6 @@ class Component(_ComponentBase):
         self._type = kwds.pop('ctype', None)
         self.doc   = kwds.pop('doc', None)
         self._name  = kwds.pop('name', str(type(self).__name__))
-        if kwds:
-            raise ValueError(
-                "Unexpected keyword options found while constructing '%s':\n\t%s"
-                % ( type(self).__name__, ','.join(sorted(kwds.keys())) ))
         #
         # Verify that ctype has been specified.
         #
@@ -294,6 +300,7 @@ class Component(_ComponentBase):
         #
         self._constructed   = False
         self._parent        = None    # Must be a weakref
+        super(Component, self).__init__(**kwds)
 
     def __getstate__(self):
         """
@@ -577,7 +584,7 @@ class ComponentData(_ComponentBase):
     __pickle_slots__ = ('_component',)
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
-    def __init__(self, component):
+    def __init__(self, **kwds):
         #
         # ComponentData objects are typically *private* objects for
         # indexed / sparse indexed components.  As such, the (derived)
@@ -585,7 +592,9 @@ class ComponentData(_ComponentBase):
         # passed as the owner (and that owner is never None).  Not validating
         # this assumption is significantly faster.
         #
-        self._component = weakref_ref(component)
+        c = kwds.pop('component', None)
+        self._component = weakref_ref(c) if c is not None else c
+        super(ComponentData, self).__init__(**kwds)
 
     def __getstate__(self):
         """Prepare a picklable state of this instance for pickling.
@@ -843,8 +852,8 @@ class ActiveComponentData(ComponentData):
 
     __slots__ = ( '_active', )
 
-    def __init__(self, component):
-        super(ActiveComponentData, self).__init__(component)
+    def __init__(self, **kwds):
+        super(ActiveComponentData, self).__init__(**kwds)
         self._active = True
 
     def __getstate__(self):

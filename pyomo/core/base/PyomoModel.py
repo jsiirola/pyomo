@@ -594,7 +594,7 @@ use the AbstractModel or ConcreteModel class instead.""")
         # Model and Block objects as the same.  Similarly, this avoids
         # the requirement to import PyomoModel.py in the block.py file.
         #
-        SimpleBlock.__init__(self, **kwargs)
+        super(Model, self).__init__(**kwargs)
         self._name = name
         self.statistics = Container()
         self.config = PyomoConfig()
@@ -998,7 +998,7 @@ class ConcreteModel(Model):
 
     def __init__(self, *args, **kwds):
         kwds['concrete'] = True
-        Model.__init__(self, *args, **kwds)
+        super(ConcreteModel, self).__init__(*args, **kwds)
 
 
 @ModelComponentFactory.register('An abstract optimization model that defers construction of components.')
@@ -1007,9 +1007,7 @@ class AbstractModel(Model):
     An abstract optimization model that defers construction of
     components.
     """
-
-    def __init__(self, *args, **kwds):
-        Model.__init__(self, *args, **kwds)
+    pass
 
 
 #

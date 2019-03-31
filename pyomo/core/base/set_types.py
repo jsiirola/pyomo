@@ -16,7 +16,7 @@ from pyomo.core.base.sets import SimpleSet
 # we probably do not need _VirtualSet as a base class in this case
 class _AMLVirtualSet(SimpleSet, _VirtualSet):
     def __init__(self, *args, **kwds):
-        SimpleSet.__init__(self, *args, **kwds)
+        super(_AMLVirtualSet, self).__init__(*args, **kwds)
         self.virtual=True
         self.concrete=False
 
@@ -26,19 +26,11 @@ class _AMLVirtualSet(SimpleSet, _VirtualSet):
 class _AnySet(_AMLVirtualSet):
     """A virtual set that allows any value"""
 
-    def __init__(self,*args,**kwds):
-        """Constructor"""
-        _AMLVirtualSet.__init__(self,*args,**kwds)
-
     def __contains__(self, element):
         return True
 
 class _EmptySet(_AMLVirtualSet):
     """A virtual set that allows no values"""
-
-    def __init__(self,*args,**kwds):
-        """Constructor"""
-        _AMLVirtualSet.__init__(self,*args,**kwds)
 
     def __contains__(self, element):
         return False

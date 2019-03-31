@@ -475,7 +475,7 @@ class _BlockData(ActiveComponentData):
     """
     _Block_reserved_words = set()
 
-    def __init__(self, component):
+    def __init__(self, **kwds):
         #
         # BLOCK DATA ELEMENTS
         #
@@ -509,7 +509,6 @@ class _BlockData(ActiveComponentData):
         # marking entries as None and just periodically rebuild the list
         # as opposed to maintaining the list without any holes).
         #
-        ActiveComponentData.__init__(self, component)
         # Note: call super() here to bypass the Block __setattr__
         #   _ctypes:      { ctype -> [1st idx, last idx, count] }
         #   _decl:        { name -> idx }
@@ -517,6 +516,7 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
+        super(_BlockData, self).__init__(**kwds)
 
     def __getstate__(self):
         # Note: _BlockData is NOT slot-ized, so we must pickle the
@@ -1765,7 +1765,7 @@ class Block(ActiveIndexedComponent):
         self._options = kwargs.pop('options', None)
         _concrete = kwargs.pop('concrete', False)
         kwargs.setdefault('ctype', Block)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
+        super(Block,self).__init__(*args, **kwargs)
         if _concrete:
             # Call self.construct() as opposed to just setting the _constructed
             # flag so that the base class construction procedure fires (this
@@ -1909,8 +1909,8 @@ class Block(ActiveIndexedComponent):
 class SimpleBlock(_BlockData, Block):
 
     def __init__(self, *args, **kwds):
-        _BlockData.__init__(self, component=self)
-        Block.__init__(self, *args, **kwds)
+        kwds.setdefault('component', self)
+        super(SimpleBlock, self).__init__(**kwds)
         self._data[None] = self
 
     def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
@@ -1927,9 +1927,7 @@ class SimpleBlock(_BlockData, Block):
 
 
 class IndexedBlock(Block):
-
-    def __init__(self, *args, **kwds):
-        Block.__init__(self, *args, **kwds)
+    pass
 
 
 def generate_cuid_names(block,

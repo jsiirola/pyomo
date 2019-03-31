@@ -60,15 +60,6 @@ class _VarData(ComponentData, NumericValue):
 
     __slots__ = ()
 
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
-
     #
     # Interface
     #
@@ -309,15 +300,9 @@ class _GeneralVarData(_VarData):
 
     __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale')
 
-    def __init__(self, domain=Reals, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _VarData
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
+    def __init__(self, **kwds):
+        domain = kwds.pop('_domain_value', Reals)
+        super(_GeneralVarData, self).__init__(**kwds)
         self._value = None
         #
         # The type of the lower and upper bound attributes can either
@@ -504,7 +489,7 @@ class Var(IndexedComponent):
         # Initialize the base class
         #
         kwd.setdefault('ctype', Var)
-        IndexedComponent.__init__(self, *args, **kwd)
+        super(Var, self).__init__(*args, **kwd)
         #
         # Determine if the domain argument is a functor or other object
         #
@@ -599,11 +584,9 @@ class Var(IndexedComponent):
             # This loop is optimized for speed with pypy.
             # Calling dict.update((...) for ...) is roughly
             # 30% slower
-            self_weakref = weakref_ref(self)
             for ndx in self._index:
                 cdata = self._ComponentDataClass(
-                    domain=self._domain_init_value, component=None)
-                cdata._component = self_weakref
+                    _domain_value=self._domain_init_value, component=self)
                 self._data[ndx] = cdata
                 #self._initialize_members((ndx,))
             self._initialize_members(self._index)
@@ -623,7 +606,7 @@ class Var(IndexedComponent):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(
-                self._domain_init_value, component=self)
+                _domain_value=self._domain_init_value, component=self)
         self._initialize_members((index,))
         return obj
 
@@ -770,10 +753,8 @@ class SimpleVar(_GeneralVarData, Var):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
-        _GeneralVarData.__init__(self,
-                                 domain=None,
-                                 component=self)
-        Var.__init__(self, *args, **kwd)
+        kwd.setdefault('component', self)
+        super(SimpleVar, self).__init__(**kwd)
 
     #
     # Since this class derives from Component and Component.__getstate__
@@ -955,8 +936,7 @@ class VarList(IndexedVar):
 
     def __init__(self, **kwds):
         #kwds['dense'] = False
-        args = (Set(),)
-        IndexedVar.__init__(self, *args, **kwds)
+        super(VarList, self).__init__(Set(), **kwds)
 
     def construct(self, data=None):
         """Construct this component."""

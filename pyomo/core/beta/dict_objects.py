@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -43,15 +43,17 @@ logger = logging.getLogger('pyomo.core')
 
 class ComponentDict(collections_MutableMapping):
 
-    def __init__(self, interface_datatype, *args):
-        self._interface_datatype = interface_datatype
+    def __init__(self, *args, **kwds):
+        self._interface_datatype = kwds.pop('_interface_datatype')
+        _args = kwds.pop('_args')
+        super(ComponentDict, self).__init__(*args, **kwds)
         self._data = {}
-        if len(args) > 0:
-            if len(args) > 1:
+        if len(_args) > 0:
+            if len(_args) > 1:
                 raise TypeError(
                     "ComponentDict expected at most 1 arguments, "
-                    "got %s" % (len(args)))
-            self.update(args[0])
+                    "got %s" % (len(_args)))
+            self.update(_args[0])
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -183,47 +185,27 @@ class ComponentDict(collections_MutableMapping):
 class VarDict(ComponentDict, IndexedVar):
 
     def __init__(self, *args, **kwds):
-        IndexedVar.__init__(self, Any, **kwds)
-        # Constructor for ComponentDict needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentDict.__init__(self,
-                               _VarData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _VarData
+        kwds['_args'] = args
+        super(VarDict, self).__init__(Any, **kwds)
 
 class ConstraintDict(ComponentDict, IndexedConstraint):
 
     def __init__(self, *args, **kwds):
-        IndexedConstraint.__init__(self, Any, **kwds)
-        # Constructor for ComponentDict needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentDict.__init__(self,
-                               _ConstraintData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _ConstraintData
+        kwds['_args'] = args
+        super(ConstraintDict, self).__init__(Any, **kwds)
 
 class ObjectiveDict(ComponentDict, IndexedObjective):
 
     def __init__(self, *args, **kwds):
-        IndexedObjective.__init__(self, Any, **kwds)
-        # Constructor for ComponentDict needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentDict.__init__(self,
-                               _ObjectiveData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _ObjectiveData
+        kwds['_args'] = args
+        super(ObjectiveDict, self).__init__(Any, **kwds)
 
 class ExpressionDict(ComponentDict, IndexedExpression):
 
     def __init__(self, *args, **kwds):
-        IndexedExpression.__init__(self, Any, **kwds)
-        # Constructor for ComponentDict needs to
-        # go last in order to handle any initialization
-        # iterable as an argument
-        ComponentDict.__init__(self,
-                               _ExpressionData,
-                               *args,
-                               **kwds)
+        kwds['_interface_datatype'] = _ExpressionData
+        kwds['_args'] = args
+        super(ExpressionDict, self).__init__(Any, **kwds)

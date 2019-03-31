@@ -153,7 +153,7 @@ class Complementarity(Block):
         #
         # The attribute _rule is initialized here.
         #
-        Block.__init__(self, *args, **kwargs)
+        super(Complementarity, self).__init__(*args, **kwargs)
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
@@ -277,8 +277,8 @@ Error thrown for Complementarity "%s"
 class SimpleComplementarity(_ComplementarityData, Complementarity):
 
     def __init__(self, *args, **kwds):
-        _ComplementarityData.__init__(self, self)
-        Complementarity.__init__(self, *args, **kwds)
+        kwds.setdefault('component', self)
+        super(SimpleComplementarity, self).__init__(**kwds)
         self._data[None] = self
 
     def pprint(self, **kwargs):
@@ -288,7 +288,7 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
 class IndexedComplementarity(Complementarity):
 
     def _getitem_when_not_present(self, idx):
-        return self._data.setdefault(idx, _ComplementarityData(self))
+        return self._data.setdefault(idx, _ComplementarityData(component=self))
 
 
 @ModelComponentFactory.register("A list of complementarity conditions.")
@@ -303,9 +303,8 @@ class ComplementarityList(IndexedComplementarity):
 
     def __init__(self, **kwargs):
         """Constructor"""
-        args = (Set(),)
         self._nconditions = 0
-        Complementarity.__init__(self, *args, **kwargs)
+        super(ComplementarityList, self).__init__(Set(), **kwargs)
 
     def add(self, expr):
         """
