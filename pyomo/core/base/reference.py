@@ -518,6 +518,14 @@ def Reference(reference, ctype=_NotSpecified):
         pass
     elif isinstance(reference, Component):
         reference = reference[...]
+    elif isinstance(reference, ComponentData):
+        idx = reference.index()
+        if type(idx) is not tuple:
+            idx = (idx,)
+        reference = _IndexedComponent_slice(
+            reference.parent_component(),
+            dict(_ for _ in enumerate(idx)), {}, None
+        )
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
@@ -557,13 +565,16 @@ def Reference(reference, ctype=_NotSpecified):
     else:
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
                          if lvl is not None), [])
-        index = wildcards[0][1]
-        if not isinstance(index, _SetDataBase):
-            index = SetOf(index)
-        for lvl, idx in wildcards[1:]:
-            if not isinstance(idx, _SetDataBase):
-                idx = SetOf(idx)
-            index = index * idx
+        if not wildcards:
+            index = SetOf(_ReferenceSet(reference))
+        else:
+            index = wildcards[0][1]
+            if not isinstance(index, _SetDataBase):
+                index = SetOf(index)
+            for lvl, idx in wildcards[1:]:
+                if not isinstance(idx, _SetDataBase):
+                    idx = SetOf(idx)
+                index = index * idx
     if ctype is _NotSpecified:
         if len(ctypes) == 1:
             ctype = ctypes.pop()
