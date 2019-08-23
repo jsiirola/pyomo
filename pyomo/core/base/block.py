@@ -701,14 +701,43 @@ class _BlockData(ActiveComponentData):
             super(_BlockData, self).__delattr__(name)
 
     def set_value(self, val):
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
+        # If _Block_reserved_words hasn't been set up yet, then this is
+        # the initial construction to initialize that data structure.
+        # There is nothing to delete or add...
+        if val is None and not self._Block_reserved_words:
+            return
+
+        # Remove any user-defined objects from this block
+        for k in tuple(self.__dict__):
+            if k not in self._Block_reserved_words:
+                print k
+                delattr(self, k)
         self._ctypes = {}
         self._decl = {}
         self._decl_order = []
-        if val:
+
+        if isinstance(val, dict):
+            # We will sort the dict keys so that this process is
+            # deterministic
             for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
+                setattr(self, k, val[k])
+        elif isinstance(val, _BlockData):
+            # First, preserve the _decl_order
+            for c,_ in val._decl_order:
+                name = c.local_name
+                val.del_component(c)
+                self.add_component(name, c)
+            # Now move over any (new) non-component attributes
+            for k,v in iteritems(val.__dict__):
+                if k not in self.__dict__:
+                    setattr(self, k, v)
+        elif val is None:
+            pass
+        else:
+            raise ValueError(
+                "Invalid type '%s' got _BlockData.set_value().  "
+                "Expected dict or _BlockData." % (val.__class__.__name__,)
+            )
 
     def _add_temporary_set(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -2067,7 +2096,7 @@ def components_data(block, ctype,
 
 #
 # Create a Block and record all the default attributes, methods, etc.
-# These will be assumes to be the set of illegal component names.
+# These will be assumed to be the set of illegal component names.
 #
 _BlockData._Block_reserved_words = set(dir(Block()))
 
