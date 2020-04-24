@@ -34,6 +34,8 @@ from pyomo.common import DeveloperError
 from pyomo.core.expr.numvalue import (
     native_types,
 )
+from pyomo.core.base.component import Component
+
 
 def is_functor(obj):
     """
@@ -198,6 +200,11 @@ def Initializer(init,
         # segfault in pypy3 7.3.0).  We will immediately expand the
         # generator into a tuple and then store it as a constant.
         return ConstantInitializer(tuple(init))
+    elif isinstance(init, Component):
+        if init.is_indexed():
+            return ItemInitializer(init)
+        else:
+            return ConstantInitializer(init)
     else:
         return ConstantInitializer(init)
 

@@ -2993,10 +2993,19 @@ class TestSetErrors(PyomoModel):
         #     self.fail("test_setargs1 - expected error because of bad argument")
         # except ValueError:
         #     pass
+        m = ConcreteModel()
+        m.a=Set()
+        m.b=Set(m.a)
+        with self.assertRaisesRegexp(
+                KeyError,
+                "Index 'None' is not valid for indexed component 'b'"):
+            m.c=Set(within=m.b, dimen=2)
+
         a=Set()
         b=Set(a)
         with self.assertRaisesRegexp(
-                TypeError, "Cannot apply a Set operator to an indexed"):
+                ValueError,
+                ".*The component has not been constructed"):
             c=Set(within=b, dimen=2)
             c.construct()
 
