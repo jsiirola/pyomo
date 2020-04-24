@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -18,6 +18,7 @@ import pyutilib.th as unittest
 from pyutilib.misc.redirect_io import capture_output
 
 from pyomo.environ import *
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.expression import _GeneralExpressionData
 
 import six
@@ -27,9 +28,10 @@ class TestExpressionData(unittest.TestCase):
     def test_exprdata_get_set(self):
         model = ConcreteModel()
         model.e = Expression([1])
-        self.assertEqual(len(model.e), 1)
+        self.assertEqual(len(model.e), 0)
         self.assertEqual(model.e[1].expr, None)
-        model.e.add(1,1)
+        self.assertEqual(len(model.e), 1)
+        model.e[1] = 1
         self.assertEqual(model.e[1].expr(), 1)
         model.e[1].expr += 2
         self.assertEqual(model.e[1].expr(), 3)
@@ -37,13 +39,35 @@ class TestExpressionData(unittest.TestCase):
     def test_exprdata_get_set_value(self):
         model = ConcreteModel()
         model.e = Expression([1])
-        self.assertEqual(len(model.e), 1)
+        self.assertEqual(len(model.e), 0)
         self.assertEqual(model.e[1].expr, None)
-        model.e.add(1,1)
+        self.assertEqual(len(model.e), 1)
+        model.e[1] = 1
         model.e[1].expr = 1
         self.assertEqual(model.e[1].expr(), 1)
         model.e[1].expr += 2
         self.assertEqual(model.e[1].expr(), 3)
+
+    def test_value(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.e = Expression(expr = m.x)
+
+        os = StringIO()
+        with LoggingIntercept(os):
+            self.assertIs(m.e.value, m.x)
+        self.assertIn(
+            "The .value property getter on _GeneralExpressionDataImpl "
+            "is deprecated", os.getvalue().replace('\n',' '))
+
+        os = StringIO()
+        with LoggingIntercept(os):
+            m.e.value = m.y
+        self.assertIn(
+            "The .value property setter on _GeneralExpressionDataImpl "
+            "is deprecated", os.getvalue().replace('\n',' '))
+        self.assertIs(m.e.expr, m.y)
 
     # The copy method must be invoked on expression container to obtain
     # a shallow copy of the class, the underlying expression remains
@@ -295,31 +319,22 @@ class TestExpression(unittest.TestCase):
         a = Expression()
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
-        try:
+        with self.assertRaisesRegex(RuntimeError,
+                                    '.*before it has been constructed'):
             a()
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(RuntimeError,
+                                    '.*before it has been constructed'):
             a.expr
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(RuntimeError,
+                                    '.*before it has been constructed'):
             a.is_constant()
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(RuntimeError,
+                                    '.*before it has been constructed'):
             a.is_fixed()
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(RuntimeError,
+                                    '.*before it has been constructed'):
             a.set_value(4)
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
+
         a.construct()
         self.assertEqual(len(a), 1)
         self.assertEqual(a(), None)
@@ -332,16 +347,15 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(a.is_constant(), False)
         self.assertEqual(a.is_fixed(), True)
 
-
     def test_bad_init_wrong_type(self):
         model = ConcreteModel()
         def _some_rule(model):
             return 1.0
-        with self.assertRaises(TypeError):
-            model.e = Expression(expr=_some_rule)
-        with self.assertRaises(TypeError):
-            model.e = Expression([1], expr=_some_rule)
-        del _some_rule
+        model.e = Expression(expr=_some_rule)
+        self.assertEqual(model.e._expr, 1.0)
+        del model.e
+        model.e = Expression([1], expr=_some_rule)
+        self.assertEqual(model.e[1]._expr, 1.0)
 
     def test_display(self):
         model = ConcreteModel()
@@ -377,20 +391,17 @@ e : Size=1
         with capture_output() as out:
             model.E.display()
         self.assertEqual(out.getvalue().strip(), """
-E : Size=2
+E : Size=0
     Key : Value
-      1 : Undefined
-      2 : Undefined
         """.strip())
 
         model.E[1].set_value(1.0)
         with capture_output() as out:
             model.E.display()
         self.assertEqual(out.getvalue().strip(), """
-E : Size=2
+E : Size=1
     Key : Value
-      1 :       1.0
-      2 : Undefined
+      1 :   1.0
         """.strip())
 
         out = StringIO()
@@ -398,10 +409,9 @@ E : Size=2
             model.E.display(ostream=out)
         self.assertEqual(no_out.getvalue(), "")
         self.assertEqual(out.getvalue().strip(), """
-E : Size=2
+E : Size=1
     Key : Value
-      1 :       1.0
-      2 : Undefined
+      1 :   1.0
         """.strip())
 
     def test_extract_values_store_values(self):
@@ -416,14 +426,14 @@ E : Size=2
             model.e.store_values({1: 1.0})
 
         model.E = Expression([1,2])
-        self.assertEqual(model.E.extract_values(),
-                         {1: None, 2:None})
+        self.assertEqual(len(model.E), 0)
+        self.assertEqual(model.E.extract_values(), {})
         model.E.store_values({1: 1.0})
-        self.assertEqual(model.E.extract_values(),
-                         {1: 1.0, 2: None})
+        self.assertEqual(len(model.E), 1)
+        self.assertEqual(model.E.extract_values(), {1: 1.0})
         model.E.store_values({1: None, 2: 2.0})
-        self.assertEqual(model.E.extract_values(),
-                         {1: None, 2: 2.0})
+        self.assertEqual(len(model.E), 2)
+        self.assertEqual(model.E.extract_values(), {1: None, 2: 2.0})
         with self.assertRaises(KeyError):
             model.E.store_values({3: 3.0})
 
@@ -456,7 +466,7 @@ E : Size=2
         del _some_rule
         def _some_rule(model):
             return Expression.Skip
-        # non-indexed Expression does not recognized
+        # non-indexed Expression does not recognize
         # Expression.Skip
         with self.assertRaises(ValueError):
             model.e = Expression(rule=_some_rule)
@@ -483,11 +493,15 @@ E : Size=2
         # always be used as the index for non-indexed
         # Expressions
         with self.assertRaises(KeyError):
-            model.e.add(2, 2)
+            model.e[2] = 2
 
     def test_indexed_construct_rule(self):
         model = ConcreteModel()
         model.Index = Set(initialize=[1,2,3])
+        model.x = Var(model.Index, initialize=lambda m,i: -i)
+        model.y = Var()
+
+        # Init using a rule function
         def _some_rule(model, i):
             if i == 1:
                 return Expression.Skip
@@ -499,41 +513,88 @@ E : Size=2
                          {2:2, 3:3})
         self.assertEqual(len(model.E), 2)
 
+        # Init using an indexed component
+        model.F = Expression(model.Index, initialize=model.x)
+        self.assertEqual(model.F.extract_values(),
+                         {1:model.x[1], 2:model.x[2], 3:model.x[3]})
+
+        # Init using a scalar component
+        model.G = Expression(model.Index, initialize=model.y)
+        self.assertEqual(model.G.extract_values(),
+                         {1:model.y, 2:model.y, 3:model.y})
+
+        # Init using a dict
+        model.H = Expression(
+             model.Index, initialize={1:model.x[3], 3:model.x[1]} )
+        self.assertEqual(model.H.extract_values(),
+                         {1:model.x[3], 3:model.x[1]})
+
+
+
     def test_implicit_definition(self):
         model = ConcreteModel()
         model.idx = Set(initialize=[1,2,3])
-        model.E = Expression(model.idx, rule=lambda m,i: Expression.Skip)
+
+        model.E = Expression(model.idx)
         self.assertEqual(len(model.E), 0)
         expr = model.E[1]
         self.assertIs(type(expr), _GeneralExpressionData)
-        self.assertIs(expr.value, None)
+        self.assertIs(expr.expr, None)
         model.E[1] = 5
         self.assertIs(expr, model.E[1])
         self.assertEqual(model.E.extract_values(), {1:5})
         model.E[2] = 6
+        self.assertIs(type(model.E[2]), _GeneralExpressionData)
+        self.assertIsNot(expr, model.E[2])
+        self.assertEqual(model.E.extract_values(), {1:5, 2:6})
+
+        model.E = Expression(model.idx, rule=lambda m,i: Expression.Skip)
+        self.assertEqual(len(model.E), 0)
+        # Implicit creation of an index that was explicitly skipped
+        # returns None
+        expr = model.E[1]
+        self.assertIsNone(expr)
+        model.E[1] = None
+        expr = model.E[1]
+        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(expr.expr, None)
+        model.E[1] = 5
+        self.assertIs(expr, model.E[1])
+        self.assertEqual(model.E.extract_values(), {1:5})
+        model.E[2] = 6
+        self.assertIs(type(model.E[2]), _GeneralExpressionData)
         self.assertIsNot(expr, model.E[2])
         self.assertEqual(model.E.extract_values(), {1:5, 2:6})
 
     def test_indexed_construct_expr(self):
         model = ConcreteModel()
         model.Index = Set(initialize=[1,2,3])
+
         model.E = Expression(model.Index,
                              expr=Expression.Skip)
         self.assertEqual(len(model.E), 0)
+        self.assertEqual(model.E.extract_values(), {})
+        del model.E
+
         model.E = Expression(model.Index)
-        self.assertEqual(model.E.extract_values(),
-                         {1:None, 2:None, 3:None})
-        model.del_component(model.E)
+        self.assertEqual(len(model.E), 0)
+        self.assertEqual(model.E.extract_values(), {})
+        del model.E
+
         model.E = Expression(model.Index, expr=1.0)
         self.assertEqual(model.E.extract_values(),
                          {1:1.0, 2:1.0, 3:1.0})
-        model.del_component(model.E)
+        self.assertEqual(len(model.E), 3)
+        del model.E
+
         model.E = Expression(model.Index,
                              expr={1: Expression.Skip,
                                    2: Expression.Skip,
                                    3: 1.0})
+        self.assertEqual(len(model.E), 1)
         self.assertEqual(model.E.extract_values(),
                          {3: 1.0})
+        del model.E
 
     def test_bad_init_too_many_keywords(self):
         model = ConcreteModel()
@@ -694,6 +755,31 @@ E : Size=2
         e += inst.x
         self.assertEqual(inst.obj.expr(),3.0)
         self.assertEqual(id(inst.obj.expr.arg(1)),id(inst.ec))
+
+    def test_add(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.e = Expression()
+        self.assertIs(m.e.add(None, m.x), m.e)
+        self.assertIs(m.e.expr, m.x)
+        with self.assertRaisesRegex(
+                KeyError, "object 'e' does not accept index values "
+                "other than None."):
+            m.e.add(1, m.x)
+        with self.assertRaisesRegex(
+                ValueError, "Expression.Skip can not be assigned to "
+                "an Expression that is not indexed"):
+            m.e.add(None, Expression.Skip)
+
+        m.f = Expression([1,2,3])
+        obj = m.f.add(1, m.x)
+        self.assertIs(obj, m.f[1])
+        with self.assertRaisesRegex(
+                KeyError, "Index '0' is not valid for indexed component 'f'"):
+            m.f.add(0, m.x)
+        self.assertEqual(len(m.f), 1)
+        self.assertIsNone(m.f.add(2, Expression.Skip))
+        self.assertEqual(len(m.f), 1)
 
     def test_pprint_oldStyle(self):
         expr_common.TO_STRING_VERBOSE = True
@@ -871,12 +957,30 @@ E : Size=2, Index=E_index
         model.e.expr += 2
         self.assertEqual(model.e.expr(), 3)
 
-    def test_abstract_index(self):
+    def test_abstract_index_local_data(self):
         model = AbstractModel()
         model.A = Set()
         model.B = Set()
         model.C = model.A | model.B
         model.x = Expression(model.C)
+        inst = model.create_instance(data={
+            None: {
+                'A': {None: [1,3]},
+                'B': {None: [3,5]},
+                'x': {1: 10, 3: 13, 5: 15},
+            }})
+        self.assertEqual(inst.x.extract_values(), {1: 10, 3: 13, 5: 15})
+
+    def test_double_construct(self):
+        # Check that constructing a constructed set does not change it
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.x = Var()
+        e = Expression(m.I)
+        e.construct(data={1: 5, 3: m.x})
+        self.assertEqual(e.extract_values(), {1: 5, 3: m.x})
+        e.construct(data={2: 1})
+        self.assertEqual(e.extract_values(), {1: 5, 3: m.x})
 
     def test_iadd(self):
         # make sure simple for loops that look like they
