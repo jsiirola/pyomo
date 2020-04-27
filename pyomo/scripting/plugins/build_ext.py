@@ -20,7 +20,14 @@ class ExtensionBuilder(object):
 
     def call(self, args, unparsed):
         logger = logging.getLogger('pyomo.common')
-        logger.setLevel(logging.INFO)
+        init_level = logger.level
+        try:
+            logger.setLevel(logging.INFO)
+            return self._call_impl(logger, args, unparsed)
+        finally:
+            logger.setLevel(init_level)
+
+    def _call_impl(self, logger, args, unparsed):
         results = []
         result_fmt = "[%s]  %s"
         returncode = 0
