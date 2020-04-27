@@ -820,50 +820,78 @@ def finalize(data, model=None, instance=None, results=None):
 
 
 def configure_loggers(options=None, shutdown=False):
-    if shutdown:
+    pyomo_logger = logging.getLogger('pyomo')
+    pyutilib_logger = logging.getLogger('pyutilib')
+    if options is None:
         options = Options()
+    if options.runtime is None:
         options.runtime = Options()
-        options.runtime.logging = 'quiet'
-        if configure_loggers.fileLogger is not None:
-            logging.getLogger('pyomo').handlers = []
-            logging.getLogger('pyutilib').handlers = []
-            configure_loggers.fileLogger.close()
-            configure_loggers.fileLogger = None
+
+    if shutdown:
+        state = configure_loggers.initial_logger_state.pop()
+        options.runtime.logging = state['logging']
+        pyomo_logger.setLevel(state['pyomo'][0])
+        pyutilib_logger.setLevel(state['pyomo'][0])
+        pyomo_logger.propagate = state['pyomo'][1]
+        pyutilib_logger.propagate = state['pyomo'][1]
+
+        fileLogger = state['file_logger']
+        if fileLogger is not None:
+            pyomo_logger.removeHandler(fileLogger)
+            pyutilib_logger.removeHandler(fileLogger)
+            fileLogger.close()
+            for handler in state['pyomo'][2]:
+                pyomo_logger.addHandler(handler)
+            for handler in state['pyutilib'][2]:
+                pyutilib_logger.addHandler(handler)
             # TBD: This seems dangerous in Windows, as the process will
-            # have multiple open file handles pointint to the same file.
+            # have multiple open file handles pointing to the same file.
             pyutilib.misc.reset_redirect()
+        return
 
     #
     # Configure the logger
     #
-    if options.runtime is None:
-        options.runtime = Options()
+    state = {
+        'file_logger': None,
+        'logging': options.runtime.logging,
+        'pyomo': (
+            pyomo_logger.level,
+            pyomo_logger.propagate,
+            pyomo_logger.handlers ),
+        'pyutilib': (
+            pyutilib_logger.level,
+            pyutilib_logger.propagate,
+            pyutilib_logger.handlers ),
+    }
+    configure_loggers.initial_logger_state.append(state)
+
     if options.runtime.logging == 'quiet':
-        logging.getLogger('pyomo').setLevel(logging.ERROR)
+        pyomo_logger.setLevel(logging.ERROR)
     elif options.runtime.logging == 'warning':
-        logging.getLogger('pyomo').setLevel(logging.WARNING)
+        pyomo_logger.setLevel(logging.WARNING)
     elif options.runtime.logging == 'info':
-        logging.getLogger('pyomo').setLevel(logging.INFO)
-        logging.getLogger('pyutilib').setLevel(logging.INFO)
+        pyomo_logger.setLevel(logging.INFO)
+        pyutilib_logger.setLevel(logging.INFO)
     elif options.runtime.logging == 'verbose':
-        logging.getLogger('pyomo').setLevel(logging.DEBUG)
-        logging.getLogger('pyutilib').setLevel(logging.DEBUG)
+        pyomo_logger.setLevel(logging.DEBUG)
+        pyutilib_logger.setLevel(logging.DEBUG)
     elif options.runtime.logging == 'debug':
-        logging.getLogger('pyomo').setLevel(logging.DEBUG)
-        logging.getLogger('pyutilib').setLevel(logging.DEBUG)
+        pyomo_logger.setLevel(logging.DEBUG)
+        pyutilib_logger.setLevel(logging.DEBUG)
 
     if options.runtime.logfile:
-        configure_loggers.fileLogger \
+        state['file_logger'] = fileLogger \
             = logging.FileHandler(options.runtime.logfile, 'w')
-        logging.getLogger('pyomo').handlers = []
-        logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('pyomo').addHandler(configure_loggers.fileLogger)
-        logging.getLogger('pyutilib').addHandler(configure_loggers.fileLogger)
+        pyomo_logger.handlers = []
+        pyutilib_logger.handlers = []
+        pyomo_logger.addHandler(fileLogger)
+        pyutilib_logger.addHandler(fileLogger)
         # TBD: This seems dangerous in Windows, as the process will
         # have multiple open file handles pointint to the same file.
         pyutilib.misc.setup_redirect(options.runtime.logfile)
 
-configure_loggers.fileLogger = None
+configure_loggers.initial_logger_state = []
 
 @pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
@@ -962,8 +990,8 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # If debugging is enabled or the 'catch' option is specified, then
             # exit.  Otherwise, print an "Exiting..." message.
             #
+            configure_loggers(shutdown=True)
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                configure_loggers(shutdown=True)
                 sys.exit(0)
             print('Exiting %s: %s' % (name, str(err)))
             errorcode = err.code
@@ -973,8 +1001,8 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # If debugging is enabled or the 'catch' option is specified, then
             # pass the exception up the chain (to pyomo_excepthook)
             #
+            configure_loggers(shutdown=True)
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                configure_loggers(shutdown=True)
                 TempfileManager.pop(remove=not options.runtime.keep_files)
                 raise
 
