@@ -288,12 +288,10 @@ def _update_expression(expre):
     This method will construct any additional indices in an expression
     resulting from the discretization of a ContinuousSet.
     """
-    _rule = expre._init_rule
-    _parent = expre._parent()
     for i in expre.index_set():
-        if i not in expre:
-            # Code taken from the construct() method of Expression
-            expre.add(i, apply_indexed_rule(expre, _rule, _parent, i))
+        # Note: Expression's _getitem_if_not_present will trigger the
+        # rule if necessary.
+        expre[i]
 
 
 def _update_block(blk):
