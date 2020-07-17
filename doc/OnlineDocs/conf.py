@@ -213,6 +213,7 @@ texinfo_documents = [
 
 doctest_global_setup = '''
 
+from __future__ import division, print_function
 import pyomo.opt
 
 # Not using SolverFactory to check solver availability because
@@ -228,3 +229,11 @@ try:
 except ImportError:
     gurobipy_available = False
 '''
+
+# Print out the global setup configuration
+print("Doctest global setup:")
+_doctest_global_setup = {}
+exec(doctest_global_setup, _doctest_global_setup)
+for k, v in _doctest_global_setup.items():
+    if k.endswith('_available'):
+        print("    %20s : %s" % (k, v))
