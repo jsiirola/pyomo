@@ -445,14 +445,20 @@ jobs:
         while : ; do
             ((i+=1))
             echo "Uploading coverage to codecov (attempt ${i})"
-            bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
+            bash $CODECOV -Z -X gcov $DISABLE_S3 -f coverage.xml
             if test $? == 0; then
                 echo "PASS" > ${GITHUB_WORKSPACE}/codecov.result
                 break
             elif test $i -ge 2; then
-                # Do not fail the build just because the codecov upload fails
-                echo "FAIL" > ${GITHUB_WORKSPACE}/codecov.result
-                break
+                if test -z "$DISABLE_S3"; then
+                    # Start over, disabling the S3 uploader
+                    DISABLE_S3="-X s3"
+                    i=0
+                else
+                    # Do not fail the entire build; just record the failure
+                    echo  "FAIL" > ${GITHUB_WORKSPACE}/codecov.result
+                    break
+                fi
             fi
             DELAY=$(( RANDOM % 30 + 30))
             echo "Pausing $DELAY seconds before re-attempting upload"
