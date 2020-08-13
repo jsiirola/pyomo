@@ -84,6 +84,10 @@ class _fill_in_known_wildcards(object):
         _slice : pyomo.core.base.indexed_component_slice._slice_generator
             the slice to advance
         """
+        # Prevent this from ever returning more than one value for this
+        # slice; i.e., we will dive through the wildcard_keys once to
+        # get to a leaf and then stop.  As part of that dive, each slice
+        # in the hierarchy should only be advanced once.
         if _slice in self.known_slices:
             raise StopIteration()
         self.known_slices.add(_slice)
@@ -299,7 +303,7 @@ if six.PY3:
 class _ReferenceSet(collections_Set):
     """A set-like object whose values are defined by a slice.
 
-    This implements a dict-like object whose members are defined by a
+    This implements a set-like object whose members are defined by a
     component slice (:py:class:`IndexedComponent_slice`).
     :py:class:`_ReferenceSet` differs from the
     :py:class:`_ReferenceDict` above in that it looks in the underlying
@@ -412,10 +416,10 @@ def Reference(reference, ctype=_NotSpecified):
     ``Reference`` generates a *reference component*; that is, an indexed
     component that does not contain data, but instead references data
     stored in other components as defined by a component slice.  The
-    ctype parameter sets the :py:meth:`Component.type` of the resulting
+    ctype parameter sets the :py:attr:`Component.ctype` of the resulting
     indexed component.  If the ctype parameter is not set and all data
     identified by the slice (at construction time) share a common
-    :py:meth:`Component.type`, then that type is assumed.  If either the
+    :py:attr:`Component.ctype`, then that type is assumed.  If either the
     ctype parameter is ``None`` or the data has more than one ctype, the
     resulting indexed component will have a ctype of
     :py:class:`IndexedComponent`.

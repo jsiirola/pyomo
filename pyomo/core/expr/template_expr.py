@@ -359,12 +359,23 @@ class IndexTemplate(NumericValue):
     expression.  That is, given the expression template for "m.x[i]",
     where `m.z` is indexed by `m.I`, the expression tree becomes:
 
-    _GetItem:
-       - m.x
-       - IndexTemplate(_set=m.I, _value=None)
+       - _GetItem:
+          - m.x
+          - IndexTemplate(set_=m.I)
 
-    Constructor Arguments:
-       _set: the Set from which this IndexTemplate can take values
+    Parameters
+    ----------
+    _set: Set
+        The Set from which this IndexTemplate can take values
+
+    index: int or None
+        If None, the IndexTemplate is a placeholder for the entire Set.
+        Otherwise, it specifies the index into the Set specifying a
+        "coordinate set" within the Set
+
+    id_: int
+        If not None, the identifier for the IndexTemplate (used, e.g.,
+        for constring the string representation of the IndexTemplate
     """
 
     __slots__ = ('_set', '_value', '_index', '_id', '_lock')
