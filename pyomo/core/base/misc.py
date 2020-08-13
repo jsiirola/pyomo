@@ -18,6 +18,7 @@ from six import itervalues, string_types
 
 logger = logging.getLogger('pyomo.core')
 
+from .util import IndexedComponent_ArgListTypes
 
 def display(obj, ostream=None):
     """ Display data in a Pyomo object"""
@@ -53,14 +54,14 @@ def create_name(name, ndx):
 def apply_indexed_rule(obj, rule, model, index, options=None):
     try:
         if options is None:
-            if index.__class__ is tuple:
+            if index.__class__ in IndexedComponent_ArgListTypes:
                 return rule(model, *index)
             elif index is None and not obj.is_indexed():
                 return rule(model)
             else:
                 return rule(model, index)
         else:
-            if index.__class__ is tuple:
+            if index.__class__ in IndexedComponent_ArgListTypes:
                 return rule(model, *index, **options)
             elif index is None and not obj.is_indexed():
                 return rule(model, **options)
@@ -76,14 +77,14 @@ def apply_indexed_rule(obj, rule, model, index, options=None):
             # Nothing appears to have matched... re-trigger the original
             # TypeError
             if options is None:
-                if index.__class__ is tuple:
+                if index.__class__ in IndexedComponent_ArgListTypes:
                     return rule(model, *index)
                 elif index is None and not obj.is_indexed():
                     return rule(model)
                 else:
                     return rule(model, index)
             else:
-                if index.__class__ is tuple:
+                if index.__class__ in IndexedComponent_ArgListTypes:
                     return rule(model, *index, **options)
                 elif index is None and not obj.is_indexed():
                     return rule(model, **options)

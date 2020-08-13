@@ -32,6 +32,7 @@ else:
 
 
 from pyomo.common import DeveloperError
+from pyomo.common.collections import HashableTuple
 from pyomo.core.expr.numvalue import (
     native_types,
 )
@@ -281,6 +282,7 @@ class ItemInitializer(InitializerBase):
         except AttributeError:
             return xrange(len(self._dict))
 
+IndexedComponent_ArgListTypes = {tuple, HashableTuple}
 
 class IndexedCallInitializer(InitializerBase):
     """Initializer for functions and callable objects"""
@@ -294,7 +296,7 @@ class IndexedCallInitializer(InitializerBase):
         # any tuple-like type should have already been checked and
         # converted to a tuple; or flattening is turned off and it is
         # the user's responsibility to sort things out.
-        if idx.__class__ is tuple:
+        if idx.__class__ in IndexedComponent_ArgListTypes:
             return self._fcn(parent, *idx)
         else:
             return self._fcn(parent, idx)
