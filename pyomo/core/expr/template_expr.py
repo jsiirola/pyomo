@@ -15,6 +15,7 @@ import sys
 from six import iteritems, itervalues
 from six.moves import builtins
 
+from pyomo.common.collections import HashableTuple, ComponentMap
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, native_types, nonpyomo_leaf_types,
@@ -382,11 +383,21 @@ class IndexTemplate(NumericValue):
 
     __slots__ = ('_set', '_value', '_index', '_id', '_lock')
 
-    def __init__(self, _set, index=0, _id=None):
-        self._set = _set
+    def __init__(self, set_, index=0, id_=None):
+        self._set = set_
+        if index is not None:
+            setDim = set_.dimen
+            if setDim is None:
+                raise ValueError("Cannot generate positional IndexTemplate "
+                                 "for non-dimensioned (jagged) Set '%s'"
+                                 % (set_.name,))
+            if index >= setDim:
+                raise ValueError("Cannot generate positional IndexTemplate "
+                                 "for Set '%s': %s >= dimen (%s)"
+                                 % (set_.name,index,setDim))
         self._value = _NotSpecified
         self._index = index
-        self._id = _id
+        self._id = id_
         self._lock = None
 
     def __getstate__(self):
@@ -738,7 +749,28 @@ class _template_iter_context(object):
         )
 
 
-def templatize_rule(block, rule, index_set):
+def get_index_templates(index_set):
+    if index_set is None:
+        return ()
+    elif type(index_set) is tuple:
+        return index_set
+    elif type(index_set) is IndexTemplate:
+        return (index_set,)
+
+    context = _template_iter_context()
+    indices = next(iter(context.get_iter(index_set)))
+    try:
+        context.cache.pop()
+    except IndexError:
+        assert indices is None
+        indices = ()
+    if type(indices) is not tuple:
+        indices = (indices,)
+    assert not context.cache
+    return indices
+
+
+def templatize_rule(block, rule, indices):
     import pyomo.core.base.set
     context = _template_iter_context()
     internal_error = None
@@ -757,19 +789,7 @@ def templatize_rule(block, rule, index_set):
         # Override sum with our sum
         builtins.sum = context.sum_template
         # Get the index templates needed for calling the rule
-        if index_set is not None:
-            # Note, do not rely on the __iter__ overload, as non-finite
-            # Sets don't have an __iter__.
-            indices = next(iter(context.get_iter(index_set)))
-            try:
-                context.cache.pop()
-            except IndexError:
-                assert indices is None
-                indices = ()
-        else:
-            indices = ()
-        if type(indices) is not tuple:
-            indices = (indices,)
+        indices = get_index_templates(indices)
         # Call the rule, returning the template expression and the
         # top-level IndexTemplate(s) generated when calling the rule.
         #
@@ -797,5 +817,123 @@ def templatize_rule(block, rule, index_set):
     return None, indices
 
 
-def templatize_constraint(con):
-    return templatize_rule(con.parent_block(), con.rule, con.index_set())
+def templatize_constraint(constraint, indices=None, component_templates=None):
+    if indices is None:
+        indices = get_index_templates(constraint.index_set())
+    else:
+        # TODO: verify that the template indices are compatible with the
+        # constraint indexing?
+        indices = get_index_templates(indices)
+    if constraint.rule is not None:
+        return templatize_rule(
+            constraint.parent_block(), constraint.rule, indices)
+    if not constraint._data:
+        raise RuntimeError("Cannot templatize an empty constraint with no rule")
+    _conData = next(itervalues(constraint._data))
+    if _conData.parent_component() is constraint:
+        raise RuntimeError("Cannot templatize a constraint with no rule")
+    # This *should* be a Reference.  We may need to create temporary
+    # objects in order to validate that the reference can be templatized
+    # and ge tthe underlying constraint rule
+    if component_templates is None:
+        component_templates = ComponentTemplateMap()
+    conData = constraint._data.__getitem__(indices, component_templates)
+    walker = FinalizeComponentTemplates(component_templates)
+    expr = walker.walk_expression(conData.expr)
+    return expr, indices
+
+
+class ComponentTemplateMap(object):
+    def __init__(self):
+        self.component_templates = ComponentMap()
+        self.obj_to_index = ComponentMap()
+
+    def get(self, component, idx):
+        key = tuple(IndexTemplate if _.__class__ is IndexTemplate
+                    else hash(_) for _ in idx)
+        if component not in self.component_templates:
+            self.component_templates[component] = {}
+        if key in self.component_templates[component]:
+            return self.component_templates[component][key]
+        # If this is a template, we will bypass the regular getitem
+        # logic (so that we don't re-trigger the TypeError)
+        hashableIdx = HashableTuple(idx)
+        obj = component._getitem_when_not_present(hashableIdx)
+        self.component_templates[component][key] = obj
+        self.obj_to_index[obj] = idx
+        # Remove the (recently-added) (bogus) object from the
+        # component, but restore the parent pointer so that, e.g.,
+        # naming still works
+        _parent_component = obj._component
+        del component[hashableIdx]
+        obj._component = _parent_component
+        return obj
+
+    def get_index(self, obj):
+        return self.obj_to_index[obj]
+
+    def __contains__(self, obj):
+        return obj in self.obj_to_index
+
+
+class FinalizeComponentTemplates(StreamBasedExpressionVisitor):
+    def __init__(self, component_templates):
+        super(FinalizeComponentTemplates, self).__init__()
+        self.component_templates = component_templates
+
+    def beforeChild(self, node, child, child_idx):
+        # Skip native types
+        if child.__class__ in native_types:
+            return False, child
+        # We will descend into all expressions...
+        if child.is_expression_type():
+            return True, None
+        # Non-component types can be left intact
+        if not child.is_component_type():
+            return False, child
+        # I don't think that the initial component can ever show up in
+        # component_templates, but we will check just to be sure
+        root = None
+        obj = child
+        while obj is not None:
+            if obj in self.component_templates:
+                root = obj
+            obj = obj.parent_block()
+
+        if root is None:
+            # this object does not reside on a templated container.
+            # return it unchanged.
+            return False, child
+
+        # The object exists on a templated container. Replace it with
+        # the the appropriate expression
+        path = []
+        obj = child
+        while obj is not None:
+            component = obj.parent_component()
+            if obj in self.component_templates:
+                path.append((component.local_name,
+                             self.component_templates.get_index(obj)))
+            else:
+                if component.is_indexed():
+                    path.append((component.local_name, obj.index()))
+                else:
+                    path.append((component.local_name,))
+            if obj is root:
+                break
+            obj = obj.parent_block()
+        obj = root.parent_block()
+        for lvl in reversed(path):
+            obj = getattr(obj, lvl[0])
+            if len(lvl) > 1:
+                obj = obj.__getitem__( *lvl[1] )
+        return False, obj
+
+    def initializeWalker(self, expr):
+        return self.beforeChild(None, expr, None)
+
+    def exitNode(self, node, data):
+        for idx, arg in enumerate(node.args):
+            if arg is not data[idx]:
+                return node.create_node_with_local_data( tuple(data) )
+        return node

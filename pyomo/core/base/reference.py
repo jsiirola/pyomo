@@ -64,12 +64,14 @@ class _fill_in_known_wildcards(object):
     """
     def __init__(self, wildcard_values,
                  look_in_index=False,
-                 get_if_not_present=False):
+                 get_if_not_present=False,
+                 component_templates=None):
         self.base_key = wildcard_values
         self.key = list(wildcard_values)
         self.known_slices = set()
         self.look_in_index = look_in_index or get_if_not_present
         self.get_if_not_present = get_if_not_present
+        self.component_templates = component_templates
 
     def __call__(self, _slice):
         """Advance the specified slice generator, substituting wildcard values
@@ -113,7 +115,16 @@ class _fill_in_known_wildcards(object):
                 "(found evaluating slice index %s)"
                 % (_slice.component.name, self.base_key))
 
-        if idx in _slice.component:
+        try:
+            _known_index = idx in _slice.component
+        except TypeError:
+            if self.component_templates is None:
+                raise
+            # TODO: verify that the exception was due to dereferencing
+            #    an IndexTemplate?
+            return self.component_templates.get(_slice.component, idx)
+
+        if _known_index:
             _slice.last_index = idx
             return _slice.component[idx]
         elif len(idx) == 1 and idx[0] in _slice.component:
@@ -176,10 +187,11 @@ class _ReferenceDict(collections_MutableMapping):
                     return True
             return False
 
-    def __getitem__(self, key):
+    def __getitem__(self, key, component_templates=None):
         try:
             return advance_iterator(
-                self._get_iter(self._slice, key, get_if_not_present=True)
+                self._get_iter(self._slice, key, get_if_not_present=True,
+                               component_templates=component_templates)
             )
         except StopIteration:
             raise KeyError("KeyError: %s" % (key,))
@@ -287,13 +299,17 @@ class _ReferenceDict(collections_MutableMapping):
         """
         return iter(self._slice)
 
-    def _get_iter(self, _slice, key, get_if_not_present=False):
+    def _get_iter(self, _slice, key, get_if_not_present=False,
+                  component_templates=None):
         if key.__class__ not in (tuple, list):
             key = (key,)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flatten_tuple(key),
-                                     get_if_not_present=get_if_not_present)
+            _fill_in_known_wildcards(
+                flatten_tuple(key),
+                get_if_not_present=get_if_not_present,
+                component_templates=component_templates,
+            )
         )
 
 if six.PY3:
