@@ -148,6 +148,8 @@ class GetAttrExpression(ExpressionBase):
         return GetAttrExpression((self, attr))
 
     def __getitem__(self, *idx):
+        if len(idx) == 1 and type(idx[0]) is tuple:
+            idx = idx[0]
         return GetItemExpression((self,) + idx)
 
     def __iter__(self):
