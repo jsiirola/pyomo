@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from .orderedset import OrderedDict, OrderedSet
-from .hashabletuple import HashableTuple
-from .component_map import ComponentMap
-from .component_set import ComponentSet
-
+class HashableTuple(tuple):
+    def __hash__(self):
+        return id(self)
