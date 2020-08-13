@@ -896,7 +896,7 @@ class ComponentData(_ComponentBase):
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in
             # the buffer
-            for idx, obj in iteritems(c):
+            for idx, obj in iteritems(c._data):
                 name_buffer[id(obj)] = base + _name_index_generator(idx)
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer
@@ -907,7 +907,7 @@ class ComponentData(_ComponentBase):
             # dictionary until we find this object.  This can be much
             # more expensive than if a buffer is provided.
             #
-            for idx, obj in iteritems(c):
+            for idx, obj in iteritems(c._data):
                 if obj is self:
                     return base + _name_index_generator(idx)
         #
