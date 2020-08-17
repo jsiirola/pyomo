@@ -714,7 +714,8 @@ class _set_iterator_template_generator(object):
 
     next = __next__
 
-class _template_iter_context(object):
+
+class ExpressionTemplateContext(object):
     """Manage the iteration context when generating templatized rules
 
     This class manages the context tracking when generating templatized
@@ -727,6 +728,8 @@ class _template_iter_context(object):
     def __init__(self):
         self.cache = []
         self._id = 0
+        self.component_template_map = ComponentTemplateMap()
+
 
     def get_iter(self, _set):
         return _set_iterator_template_generator(_set, self)
@@ -748,31 +751,29 @@ class _template_iter_context(object):
             (expr,), self.npop_cache(final_cache-init_cache)
         )
 
+    def get_initial_index_templates(self, index_set):
+        assert not self.cache
+        if index_set is None:
+            return ()
+        elif type(index_set) is tuple:
+            return index_set
+        elif type(index_set) is IndexTemplate:
+            return (index_set,)
 
-def get_index_templates(index_set):
-    if index_set is None:
-        return ()
-    elif type(index_set) is tuple:
-        return index_set
-    elif type(index_set) is IndexTemplate:
-        return (index_set,)
-
-    context = _template_iter_context()
-    indices = next(iter(context.get_iter(index_set)))
-    try:
-        context.cache.pop()
-    except IndexError:
-        assert indices is None
-        indices = ()
-    if type(indices) is not tuple:
-        indices = (indices,)
-    assert not context.cache
-    return indices
+        indices = next(iter(self.get_iter(index_set)))
+        try:
+            self.cache.pop()
+        except IndexError:
+            assert indices is None
+            indices = ()
+        if type(indices) is not tuple:
+            indices = (indices,)
+        assert not self.cache
+        return indices
 
 
-def templatize_rule(block, rule, indices):
+def templatize_rule(block, rule, indices, context):
     import pyomo.core.base.set
-    context = _template_iter_context()
     internal_error = None
     _old_iters = (
             pyomo.core.base.set._FiniteSetMixin.__iter__,
@@ -788,8 +789,6 @@ def templatize_rule(block, rule, indices):
             = lambda x: context.get_iter(x).__iter__()
         # Override sum with our sum
         builtins.sum = context.sum_template
-        # Get the index templates needed for calling the rule
-        indices = get_index_templates(indices)
         # Call the rule, returning the template expression and the
         # top-level IndexTemplate(s) generated when calling the rule.
         #
@@ -817,16 +816,18 @@ def templatize_rule(block, rule, indices):
     return None, indices
 
 
-def templatize_constraint(constraint, indices=None, component_templates=None):
+def templatize_constraint(constraint, indices=None, context=None):
+    if context is None:
+        context = ExpressionTemplateContext()
     if indices is None:
-        indices = get_index_templates(constraint.index_set())
+        indices = context.get_initial_index_templates(constraint.index_set())
     else:
         # TODO: verify that the template indices are compatible with the
         # constraint indexing?
-        indices = get_index_templates(indices)
+        indices = context.get_initial_index_templates(indices)
     if constraint.rule is not None:
         return templatize_rule(
-            constraint.parent_block(), constraint.rule, indices)
+            constraint.parent_block(), constraint.rule, indices, context)
     if not constraint._data:
         raise RuntimeError("Cannot templatize an empty constraint with no rule")
     _conData = next(itervalues(constraint._data))
@@ -835,10 +836,10 @@ def templatize_constraint(constraint, indices=None, component_templates=None):
     # This *should* be a Reference.  We may need to create temporary
     # objects in order to validate that the reference can be templatized
     # and ge tthe underlying constraint rule
-    if component_templates is None:
-        component_templates = ComponentTemplateMap()
-    conData = constraint._data.__getitem__(indices, component_templates)
-    walker = FinalizeComponentTemplates(component_templates)
+    conData = constraint._data.__getitem__(
+        indices, context.component_template_map
+    )
+    walker = FinalizeComponentTemplates(context)
     expr = walker.walk_expression(conData.expr)
     return expr, indices
 
@@ -863,7 +864,7 @@ class ComponentTemplateMap(object):
         self.obj_to_index[obj] = idx
         # Remove the (recently-added) (bogus) object from the
         # component, but restore the parent pointer so that, e.g.,
-        # naming still works
+        # we can still walk up the hierarchy
         _parent_component = obj._component
         del component[hashableIdx]
         obj._component = _parent_component
@@ -877,9 +878,9 @@ class ComponentTemplateMap(object):
 
 
 class FinalizeComponentTemplates(StreamBasedExpressionVisitor):
-    def __init__(self, component_templates):
+    def __init__(self, context):
         super(FinalizeComponentTemplates, self).__init__()
-        self.component_templates = component_templates
+        self.context = context
 
     def beforeChild(self, node, child, child_idx):
         # Skip native types
@@ -896,7 +897,7 @@ class FinalizeComponentTemplates(StreamBasedExpressionVisitor):
         root = None
         obj = child
         while obj is not None:
-            if obj in self.component_templates:
+            if obj in self.context.component_template_map:
                 root = obj
             obj = obj.parent_block()
 
@@ -911,9 +912,10 @@ class FinalizeComponentTemplates(StreamBasedExpressionVisitor):
         obj = child
         while obj is not None:
             component = obj.parent_component()
-            if obj in self.component_templates:
-                path.append((component.local_name,
-                             self.component_templates.get_index(obj)))
+            if obj in self.context.component_template_map:
+                path.append(
+                    ( component.local_name,
+                      self.context.component_template_map.get_index(obj) ))
             else:
                 if component.is_indexed():
                     path.append((component.local_name, obj.index()))
@@ -933,7 +935,7 @@ class FinalizeComponentTemplates(StreamBasedExpressionVisitor):
         return self.beforeChild(None, expr, None)
 
     def exitNode(self, node, data):
-        for idx, arg in enumerate(node.args):
-            if arg is not data[idx]:
-                return node.create_node_with_local_data( tuple(data) )
-        return node
+        if len(data) == node.nargs() and all(
+                a is b for a,b in zip(node.args, data)):
+            return node
+        return node.create_node_with_local_data( tuple(data) )
