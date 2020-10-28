@@ -179,12 +179,13 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
 
         # a quick explanation of the various flags used below:
         # p: outputs in full precision
-        # n: output the name
-        # t: output the type
-        # a: output the activity (value)
-        # c: outputs the costs for variables, slacks for constraints.
-        # d: outputs the reduced costs for columns, duals for constraints
-        script += "writesol %s -pnatcd\n" % (self._soln_file,)
+        # n: name: output the name
+        # t: type: output the type
+        # a: activity: output the activity (value)
+        # b: basis status
+        # c: cost: outputs the costs for variables, slacks for constraints
+        # d: dj: outputs the reduced costs for columns, duals for constraints
+        script += "writesol %s -pntbacd\n" % (self._soln_file,)
 
         script += "quit\n"
 
@@ -358,51 +359,52 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             tokens=line.split(',')
 
             name = tokens[0].strip("\" ")
-            type = tokens[1].strip("\" ")
+            row_type = tokens[1].strip("\" ")
+            row_status = tokens[2].strip("\" ")
 
-            primary_value = float(tokens[2].strip("\" "))
-            secondary_value = float(tokens[3].strip("\" "))
-            tertiary_value = float(tokens[4].strip("\" "))
+            primary_value = float(tokens[3].strip("\" "))
+            secondary_value = float(tokens[4].strip("\" "))
+            tertiary_value = float(tokens[5].strip("\" "))
 
-            if type == "C": # a 'C' type in Xpress is a variable (i.e., column) - everything else is a constraint.
+            if row_type == "C": # a 'C' type in Xpress is a variable (i.e., column) - everything else is a constraint.
 
                 variable_name = name
                 variable_value = primary_value
-                variable_reduced_cost = None
+                variable_reduced_cost = tertiary_value
+
                 ### TODO: What is going on here with field_name, and shortly thereafter, with variable_status and whatnot? They've never been defined. 
                 ### It seems like this is trying to mimic the CPLEX solver but has some issues
-                if (extract_reduced_costs is True) and (field_name == "reducedCost"):
-                    variable_reduced_cost = tertiary_value
 
-                if variable_name != "ONE_VAR_CONSTANT":
-                    variable = soln_variable[variable_name] = {"Value" : float(variable_value)}
-                    if (variable_reduced_cost is not None) and (extract_reduced_costs is True):
-                        try:
-                            if extract_rc is True:
-                                variable["Rc"] = float(variable_reduced_cost)
-                            if variable_status is not None:
-                                if extract_lrc is True:
-                                    if variable_status == "LL":
-                                        variable["Lrc"] = float(variable_reduced_cost)
-                                    else:
-                                        variable["Lrc"] = 0.0
-                                if extract_urc is True:
-                                    if variable_status == "UL":
-                                        variable["Urc"] = float(variable_reduced_cost)
-                                    else:
-                                        variable["Urc"] = 0.0
-                        except:
-                            raise ValueError("Unexpected reduced-cost value="
-                                             +str(variable_reduced_cost)+
-                                             " encountered for variable="+variable_name)
+                if variable_name == "ONE_VAR_CONSTANT":
+                    continue
+
+                variable = soln_variable[variable_name] = {"Value" : float(variable_value)}
+                if extract_reduced_costs:
+                    try:
+                        if extract_rc is True:
+                            variable["Rc"] = float(variable_reduced_cost)
+                        if extract_lrc is True:
+                            if variable_status == "LL":
+                                variable["Lrc"] = float(variable_reduced_cost)
+                            else:
+                                variable["Lrc"] = 0.0
+                        if extract_urc is True:
+                            if variable_status == "UL":
+                                variable["Urc"] = float(variable_reduced_cost)
+                            else:
+                                variable["Urc"] = 0.0
+                    except:
+                        raise ValueError("Unexpected reduced-cost value="
+                                         +str(variable_reduced_cost)+
+                                         " encountered for variable="+variable_name)
 
             else:
 
                 constraint = soln.constraint[name] = {}
 
-                if (extract_duals is True) and (tertiary_value != 0.0):
+                if extract_duals and (tertiary_value != 0.0):
                     constraint["Dual"] = tertiary_value
-                if (extract_slacks is True) and (secondary_value != 0.0):
+                if extract_slacks and (secondary_value != 0.0):
                     constraint["Slack"] = secondary_value
 
         if not results.solver.status is SolverStatus.error and \
