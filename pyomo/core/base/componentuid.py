@@ -543,8 +543,8 @@ tokens = [
 ]
 
 # Numbers only appear in getitem lists, so they must be followed by a
-# delimiter token (one of ' ,]')
-@ply.lex.TOKEN(_re_number.pattern+r'(?=[\s\],])')
+# delimiter token (one of ',]')
+@ply.lex.TOKEN(_re_number.pattern+r'(?=[\],])')
 def t_NUMBER(t):
     t.value = _int_or_float(t.value)
     return t

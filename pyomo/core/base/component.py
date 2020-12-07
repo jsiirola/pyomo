@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import re
 import six
 import sys
 from copy import deepcopy
@@ -29,30 +30,31 @@ relocated_module_attribute(
     'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
     version='TBD')
 
-def _name_index_generator(idx):
-    """
-    Return a string representation of an index.
-    """
-    def _escape(val):
-        if type(val) is tuple:
-            ans = "(" + ','.join(_escape(_) for _ in val) + ")"
-        else:
-            # We need to quote set members (because people put things
-            # like spaces - or worse commas - in their set names).  Our
-            # plan is to put the strings in single quotes... but that
-            # requires escaping any single quotes in the string... which
-            # in turn requires escaping the escape character.
-            ans = "%s" % (val,)
-            if isinstance(val, six.string_types):
-                ans = ans.replace("\\", "\\\\").replace("'", "\\'")
-                if ',' in ans or "'" in ans:
-                    ans = "'"+ans+"'"
-        return ans
-    if idx.__class__ is tuple:
-        return "[" + ",".join(_escape(i) for i in idx) + "]"
-    else:
-        return "[" + _escape(idx) + "]"
+_re_number = re.compile(
+    r'(?:[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|-?inf|nan)$')
+_literals = '\\()[],.'
 
+def _safe_str(x):
+    if type(x) is tuple:
+        return '(' + ','.join(_safe_str(_) for _ in x) + \
+            (',)' if len(x) <=1 else ')')
+    elif not isinstance(x, string_types):
+        return str(x)
+    else:
+        x = repr(x)
+        if x[0] not in '"\'':
+            x = x[1:]
+        if any(_ in x for _ in _literals):
+            return x
+        if _re_number.match(x[1:-1]):
+            return x
+        return x[1:-1]
+
+def _name_index_generator(idx):
+    if idx.__class__ is tuple and len(idx) > 1:
+        return "[" + ",".join(_safe_str(i) for i in idx) + "]"
+    else:
+        return "[" + _safe_str(idx) + "]"
 
 def name(component, index=None, fully_qualified=False, relative_to=None):
     """

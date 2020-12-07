@@ -253,15 +253,16 @@ class _TestComponentDictBase(object):
 
     def test_name(self):
         model = self.model
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, '1', None, (1,), (1,2)]
         model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         index_to_string = {}
         index_to_string['a'] = '[a]'
         index_to_string[1] = '[1]'
+        index_to_string['1'] = "['1']"
         index_to_string[None] = '[None]'
         # I don't like that (1,) looks the same as 1, but oh well
-        index_to_string[(1,)] = '[1]'
+        index_to_string[(1,)] = '[(1,)]'
         index_to_string[(1,2)] = '[1,2]'
         prefix = "c"
         for i in index:
