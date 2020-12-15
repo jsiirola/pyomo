@@ -278,7 +278,14 @@ class IndexedComponent(Component):
     def __iter__(self):
         """Iterate over the keys in the dictionary"""
 
-        if hasattr(self._index, 'isfinite') and not self._index.isfinite():
+        if not self._index.isordered():
+            #
+            # If the index set is not ordered, then return the
+            # data iterator.  This is in an arbitrary order, which is
+            # fine because the data is unordered.
+            #
+            # As non-finite sets are unordered by definition (only
+            # finite sets are be ordered), this will also catch them.
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
@@ -312,28 +319,15 @@ You can silence this warning by one of three ways:
        if the component is empty first and avoid iteration in the case
        where it is empty.
 """ % (self.name,) )
-
-            if not hasattr(self._index, 'isordered') or not self._index.isordered():
-                #
-                # If the index set is not ordered, then return the
-                # data iterator.  This is in an arbitrary order, which is
-                # fine because the data is unordered.
-                #
-                return self._data.__iter__()
-            else:
-                #
-                # Test each element of a sparse data with an ordered
-                # index set in order.  This is potentially *slow*: if
-                # the component is in fact very sparse, we could be
-                # iterating over a huge (dense) index in order to sort a
-                # small number of indices.  However, this provides a
-                # consistent ordering that the user expects.
-                #
-                def _sparse_iter_gen(self):
-                    for idx in self._index.__iter__():
-                        if idx in self._data:
-                            yield idx
-                return _sparse_iter_gen(self)
+            #
+            # Test each element of a sparse data with an ordered
+            # index set in order.  This is potentially *slow*: if
+            # the component is in fact very sparse, we could be
+            # iterating over a huge (dense) index in order to sort a
+            # small number of indices.  However, this provides a
+            # consistent ordering that the user expects.
+            #
+            return filter(self._data.__contains__, self._index.__iter__())
 
     def keys(self):
         """Return a list of keys in the dictionary"""
