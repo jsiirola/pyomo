@@ -236,9 +236,24 @@ class Hull_Reformulation(Transformation):
         targets = self._config.targets
         if targets is None:
             targets = ( instance, )
+        # We need to check that all the targets are in fact on instance. As we
+        # do this, we will use the set below to cache components we know to be
+        # in the tree rooted at instance.
         knownBlocks = {}
         for t in targets:
-            # check that t is in fact a child of instance
+            # FIXME: For historical reasons, BigM would silently skip
+            # any targets that were explicitly deactivated.  This
+            # preserves that behavior (although adds a warning).  We
+            # should revisit that design decision and probably remove
+            # this filter, as it is slightly ambiguous as to what it
+            # means for the target to be deactivated: is it just the
+            # target itself [historical implementation] or any block in
+            # the hierarchy?
+            if not t.active:
+                logger.warn('GDP.Hull transformation passed a deactivated '
+                            'target (%s). Skipping.' % (t.name,))
+                continue
+           # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
                                knownBlocks=knownBlocks):
                 raise GDP_Error(

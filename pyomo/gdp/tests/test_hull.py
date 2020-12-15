@@ -1769,7 +1769,7 @@ class TestErrors(unittest.TestCase):
         # but the disaggregation constraints are going to force them to 0 (which
         # will in turn force the outer disjunct indicator variable to 0, which
         # is what we want)
-        d3_ind_dis = transBlock.disaggregationConstraints[1, None]
+        d3_ind_dis = transBlock.disaggregationConstraints[2, None]
         self.assertEqual(d3_ind_dis.lower, 0)
         self.assertEqual(d3_ind_dis.upper, 0)
         repn = generate_standard_repn(d3_ind_dis.body)
@@ -1781,7 +1781,7 @@ class TestErrors(unittest.TestCase):
         ct.check_linear_coef(self, repn,
                              transBlock.relaxedDisjuncts[1].disaggregatedVars.\
                              indicator_var, -1)
-        d4_ind_dis = transBlock.disaggregationConstraints[2, None]
+        d4_ind_dis = transBlock.disaggregationConstraints[3, None]
         self.assertEqual(d4_ind_dis.lower, 0)
         self.assertEqual(d4_ind_dis.upper, 0)
         repn = generate_standard_repn(d4_ind_dis.body)

@@ -26,11 +26,13 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    _warn_for_active_logical_constraint, target_list, is_child_of, get_src_disjunction,
+    target_list, is_child_of,
+    get_src_disjunction, get_src_disjunct,
     get_src_constraint, get_transformed_constraints,
-    _get_constraint_transBlock, get_src_disjunct,
-    _warn_for_active_disjunction,
-    _warn_for_active_disjunct, )
+    _get_constraint_transBlock,
+    _warn_for_active_logical_constraint, _warn_for_active_disjunction,
+    _warn_for_active_disjunct,
+)
 from pyomo.repn import generate_standard_repn
 
 from functools import wraps
@@ -234,6 +236,18 @@ class BigM_Transformation(Transformation):
         # in the tree rooted at instance.
         knownBlocks = {}
         for t in targets:
+            # FIXME: For historical reasons, BigM would silently skip
+            # any targets that were explicitly deactivated.  This
+            # preserves that behavior (although adds a warning).  We
+            # should revisit that design decision and probably remove
+            # this filter, as it is slightly ambiguous as to what it
+            # means for the target to be deactivated: is it just the
+            # target itself [historical implementation] or any block in
+            # the hierarchy?
+            if not t.active:
+                logger.warn('GDP.BigM transformation passed a deactivated '
+                            'target (%s). Skipping.' % (t.name,))
+                continue
             # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
                                knownBlocks=knownBlocks):
