@@ -59,6 +59,12 @@ jobs:
           PYENV: conda
           PACKAGES: glpk
 
+        - os: windows-latest
+          python: 3.8
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk
+
         - os: ubuntu-18.04
           python: 3.7
           other: /mpi
