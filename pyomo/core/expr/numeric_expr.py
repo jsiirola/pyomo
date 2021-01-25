@@ -17,6 +17,7 @@ from itertools import islice
 logger = logging.getLogger('pyomo.core')
 
 from pyutilib.math.util import isclose
+from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import deprecated
 
 from .expr_common import (
@@ -127,11 +128,12 @@ class ExpressionBase(NumericValue):
     # Here, we use _args_ to force errors for code that was referencing this
     # data.  There are now accessor methods, so in most cases users
     # and developers should not directly access the _args_ data values.
-    __slots__ =  ('_args_',)
+    __slots__ =  ('_args_','args')
     PRECEDENCE = 0
 
     def __init__(self, args):
         self._args_ = args
+        self.args = args
 
     def nargs(self):
         """
@@ -164,18 +166,22 @@ class ExpressionBase(NumericValue):
         if i >= self.nargs():
             raise KeyError("Invalid index for expression argument: %d" % i)
         if i < 0:
-            return self._args_[self.nargs()+i]
+            j = self.nargs() + i
+            if j < 0:
+                raise KeyError("Invalid index for expression argument: %d" % i)
+            return self._args_[j]
         return self._args_[i]
 
     @property
-    def args(self):
+    def Xargs(self):
         """
         Return the child nodes
 
         Returns: Either a list or tuple (depending on the node storage
             model) containing only the child nodes of this node
         """
-        return self._args_[:self.nargs()]
+        #return _args_view(self._args_, self.nargs())
+        return self._args_
 
 
     def __getstate__(self):
@@ -606,6 +612,7 @@ class ExternalFunctionExpression(ExpressionBase):
 
     def __init__(self, args, fcn=None):
         self._args_ = args
+        self.args = args
         self._fcn = fcn
 
     def nargs(self):
@@ -972,6 +979,17 @@ class SumExpression(SumExpressionBase):
         self._nargs = len(self._args_)
         return self
 
+    @property
+    def args(self):
+        """
+        Return the child nodes
+
+        Returns: Either a list or tuple (depending on the node storage
+            model) containing only the child nodes of this node
+        """
+        #return _args_view(self._args_, self.nargs())
+        return self._args_[:self.nargs()]
+
     def nargs(self):
         return self._nargs
 
@@ -1078,6 +1096,7 @@ class Expr_ifExpression(ExpressionBase):
         if type(IF_) is tuple and THEN_==None and ELSE_==None:
             IF_, THEN_, ELSE_ = IF_
         self._args_ = (IF_, THEN_, ELSE_)
+        self.args = self._args_
         self._if = IF_
         self._then = THEN_
         self._else = ELSE_
@@ -1155,9 +1174,10 @@ class UnaryFunctionExpression(ExpressionBase):
     __slots__ = ('_fcn', '_name')
 
     def __init__(self, args, name=None, fcn=None):
-        if not type(args) is tuple:
+        if type(args) is not tuple:
             args = (args,)
         self._args_ = args
+        self.args = args
         self._name = name
         self._fcn = fcn
 
@@ -1267,6 +1287,7 @@ class LinearExpression(ExpressionBase):
             self.linear_vars = linear_vars if linear_vars else []
             
         self._args_ = tuple()
+        self.args = self._args_
 
     def nargs(self):
         return 0
