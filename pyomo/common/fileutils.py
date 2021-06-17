@@ -398,7 +398,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
                      pathlist=pathlist, allow_pathlist_deep_references=False)
 
 
-def import_file(path, clear_cache=False, infer_package=True):
+def import_file(path, clear_cache=False, infer_package=True, add_to_sys=False):
     """
     Import a module given the full path/filename of the file.
     Replaces import_file from pyutilib (Pyomo 6.0.0).
@@ -422,13 +422,18 @@ def import_file(path, clear_cache=False, infer_package=True):
                 os.path.join(module_dir, '__init__.py')):
             module_dir, mod = os.path.split(module_dir)
             module_name = mod + '.' + module_name
-    if clear_cache and module_name in sys.modules:
-        del sys.modules[module_name]
+    if module_name in sys.modules:
+        if clear_cache:
+            del sys.modules[module_name]
+        else:
+            return sys.modules[module_name]
     sys.path.insert(0, module_dir)
     try:
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+        if add_to_sys:
+            sys.modules[module.__name__] = module
     finally:
         sys.path.pop(0)
     return module
