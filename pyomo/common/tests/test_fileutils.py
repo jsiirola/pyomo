@@ -111,7 +111,7 @@ class TestFileUtils(unittest.TestCase):
 
         import_ex_2 = import_file(
             os.path.join(_this_file_dir, 'import_ex.py'),
-            add_to_sys=True
+            sys_modules=True,
         )
         self.assertIn("pyomo.common.tests.import_ex", sys.modules)
         self.assertEqual(import_ex_2.b, 2)
@@ -120,7 +120,25 @@ class TestFileUtils(unittest.TestCase):
         import_ex_3 = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
         self.assertIn("pyomo.common.tests.import_ex", sys.modules)
         self.assertEqual(import_ex_3.b, 2)
-        self.assertIs(import_ex_3, import_ex_2)
+        self.assertIsNot(import_ex_3, import_ex_2)
+
+        import_ex_4 = import_file(
+            os.path.join(_this_file_dir, 'import_ex.py'),
+            sys_modules=True,
+        )
+        self.assertIn("pyomo.common.tests.import_ex", sys.modules)
+        self.assertEqual(import_ex_4.b, 2)
+        self.assertIs(import_ex_4, import_ex_2)
+
+        import_ex_5 = import_file(
+            os.path.join(_this_file_dir, 'import_ex.py'),
+            clear_cache=True,
+            sys_modules=True,
+        )
+        self.assertIn("pyomo.common.tests.import_ex", sys.modules)
+        self.assertEqual(import_ex_5.b, 2)
+        self.assertIsNot(import_ex_5, import_ex_2)
+        self.assertIs(sys.modules["pyomo.common.tests.import_ex"], import_ex_5)
 
     def test_import_file_no_extension(self):
         with self.assertRaises(FileNotFoundError) as context:

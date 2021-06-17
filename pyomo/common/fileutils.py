@@ -398,18 +398,36 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
                      pathlist=pathlist, allow_pathlist_deep_references=False)
 
 
-def import_file(path, clear_cache=False, infer_package=True, add_to_sys=False):
-    """
-    Import a module given the full path/filename of the file.
+def import_file(path, clear_cache=False, infer_package=True, sys_modules=False):
+    """Import a module given the full path/filename of the file.
+
     Replaces import_file from pyutilib (Pyomo 6.0.0).
     
-    This function returns the module object that is created.
     Parameters
     ----------
     path : str
         Full path to .py file.
-    clear_cache: bool
-        Remove module if already loaded. The default is False.
+    clear_cache : bool
+        Remove module from sys.modules if a module by that name has
+        already been loaded.  Note this has no effect unless
+        `sys_modules` is `True`.
+    infer_package : bool
+        Attempt to infer the package name by walking up the path looking
+        for __init__.py files.
+    sys_modules : bool
+        If True, integrate the imported module with sys.modules: if the
+        identified module name is in sys.modules, return the already
+        loaded module (unless `clear_cache` is True).  Otherwise, import
+        the file as a new module and add the module to sys_modules
+        before returning it.  If sys_modules is False, then the module
+        file is imported as a standalone module, even if the module has
+        been previously imported.
+
+    Returns
+    -------
+    module
+        the imported module
+
     """
     path = os.path.normpath(os.path.abspath(os.path.expanduser(
         os.path.expandvars(path))))
@@ -422,17 +440,20 @@ def import_file(path, clear_cache=False, infer_package=True, add_to_sys=False):
                 os.path.join(module_dir, '__init__.py')):
             module_dir, mod = os.path.split(module_dir)
             module_name = mod + '.' + module_name
-    if module_name in sys.modules:
-        if clear_cache:
-            del sys.modules[module_name]
-        else:
-            return sys.modules[module_name]
+    if sys_modules:
+        if module_name in sys.modules:
+            if clear_cache:
+                del sys.modules[module_name]
+            else:
+                return sys.modules[module_name]
+    else:
+        module_name = '__import_file__.' + module_name
     sys.path.insert(0, module_dir)
     try:
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        if add_to_sys:
+        if sys_modules:
             sys.modules[module.__name__] = module
     finally:
         sys.path.pop(0)
