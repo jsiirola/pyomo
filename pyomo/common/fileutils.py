@@ -427,7 +427,8 @@ def import_file(path, clear_cache=False, infer_package=True):
     sys.path.insert(0, module_dir)
     try:
         spec = importlib.util.spec_from_file_location(module_name, path)
-        module = spec.loader.load_module()
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
     finally:
         sys.path.pop(0)
     return module
