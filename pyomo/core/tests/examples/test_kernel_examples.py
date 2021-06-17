@@ -63,7 +63,7 @@ def create_test_method(example):
                 self.skipTest("Ipopt or Mosek is not available")
         # These tests fail by throwing an assertion.  If no exception is
         # raised, then they are assumed successful.
-        module = import_file(example, clear_cache=True)
+        module = import_file(example)
         if hasattr(module, 'run'):
             module.run()
     return testmethod
