@@ -78,8 +78,11 @@ def solve_conic(Aw, Af, alpha, beta, gamma, delta):
           format(h*w*d))
     print("")
 
-if __name__ == "__main__":
+def run():
     Aw, Af, alpha, beta, gamma, delta = \
         200.0, 50.0, 2.0, 10.0, 2.0, 10.0
     solve_nonlinear(Aw, Af, alpha, beta, gamma, delta)
     solve_conic(Aw, Af, alpha, beta, gamma, delta)
+
+if __name__ == "__main__":
+    run()

@@ -65,6 +65,9 @@ def solve_conic():
           format(m.o()))
     print("")
 
-if __name__ == "__main__":
+def run():
     solve_nonlinear()
     solve_conic()
+
+if __name__ == "__main__":
+    run()

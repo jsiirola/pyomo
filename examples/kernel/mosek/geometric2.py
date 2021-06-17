@@ -91,6 +91,9 @@ def solve_conic():
           format(x + (y**2)*z))
     print("")
 
-if __name__ == "__main__":
+def run():
     solve_nonlinear()
     solve_conic()
+
+if __name__ == "__main__":
+    run()

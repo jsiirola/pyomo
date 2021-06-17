@@ -13,22 +13,19 @@
 #
 
 import glob
-import sys
-from os.path import basename, dirname, abspath, join
+from os.path import basename, join
 
-import subprocess
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import numpy_available, scipy_available
+from pyomo.common.fileutils import PYOMO_ROOT_DIR, import_file
 
 import platform
 if platform.python_implementation() == "PyPy":
     # The scipy is importable into PyPy, but ODE integrators don't work. (2/ 18)
     scipy_available = False
 
-currdir = dirname(abspath(__file__))
-topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
-examplesdir = join(topdir, "examples", "kernel")
+examplesdir = join(PYOMO_ROOT_DIR, "examples", "kernel")
 
 examples = glob.glob(join(examplesdir,"*.py"))
 examples.extend(glob.glob(join(examplesdir,"mosek","*.py")))
@@ -64,14 +61,16 @@ def create_test_method(example):
             if (not testing_solvers['ipopt','nl']) or \
                (not testing_solvers['mosek_direct','python']):
                 self.skipTest("Ipopt or Mosek is not available")
-        result = subprocess.run([sys.executable, example],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                universal_newlines=True)
-        self.assertEqual(result.returncode, 0, msg=result.stdout)
+        # These tests fail by throwing an assertion.  If no exception is
+        # raised, then they are assumed successful.
+        module = import_file(example, clear_cache=True)
+        if hasattr(module, 'run'):
+            module.run()
     return testmethod
 
 class TestKernelExamples(unittest.TestCase):
     pass
+
 for filename in examples:
     testname = basename(filename)
     assert testname.endswith(".py")
