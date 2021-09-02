@@ -330,7 +330,8 @@ class TestTemplatizeRule(unittest.TestCase):
         def c(m, i):
             return m.x[i] <= 0
 
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 1)
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, m.I)
         self.assertEqual(str(template), "x[_1]  <=  0")
@@ -347,7 +348,8 @@ class TestTemplatizeRule(unittest.TestCase):
         def c(m, i):
             return m.x[i] <= 0
 
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 1)
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, Integers)
         self.assertEqual(str(template), "x[_1]  <=  0")
@@ -369,11 +371,12 @@ class TestTemplatizeRule(unittest.TestCase):
 
         with self.assertRaisesRegex(
                 ValueError, ".*has not been constructed"):
-            template, indices = templatize_constraint(m.c)
+            template, indices, count = templatize_constraint(m.c)
 
         m.I.construct()
         m.x.construct()
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 1)
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, m.I)
         self.assertEqual(str(template), "x[_1]  <=  0")
@@ -387,7 +390,8 @@ class TestTemplatizeRule(unittest.TestCase):
         def c(m, i):
             return sum(m.x[i,j] for j in m.J) <= 0
 
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 2)
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, m.I)
         self.assertEqual(
@@ -416,7 +420,8 @@ class TestTemplatizeRule(unittest.TestCase):
             return sum( sum(m.x[i,j,k] for k in m.K[i])
                         for j in m.J for i in m.I) <= 0
 
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 3)
         self.assertEqual(len(indices), 0)
         self.assertEqual(
             template.to_string(verbose=True),
@@ -455,7 +460,8 @@ class TestTemplatizeRule(unittest.TestCase):
             return sum( sum(m.x[i,j,k] for k in m.K[i])
                         for j,i in m.JI) <= 0
 
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 3)
         self.assertEqual(len(indices), 0)
         self.assertEqual(
             template.to_string(verbose=True),
@@ -494,7 +500,8 @@ class TestTemplatizeRule(unittest.TestCase):
             return sum( sum(m.x[i,j,k] for k in m.K[i])
                         for j,i in m.JI) <= 0
 
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 3)
         self.assertEqual(len(indices), 0)
         self.assertEqual(
             template.to_string(verbose=True),
@@ -536,7 +543,8 @@ class TestTemplatizeRule(unittest.TestCase):
             return sum( sum(m.x[i,j,k] for k in m.b[i].K)
                         for j,i in m.JI) <= 0
 
-        template, indices = templatize_constraint(m.c)
+        template, indices, count = templatize_constraint(m.c)
+        self.assertEqual(count, 3)
         self.assertEqual(len(indices), 0)
         self.assertEqual(
             template.to_string(verbose=True),

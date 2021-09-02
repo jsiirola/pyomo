@@ -221,7 +221,7 @@ class _TemplateSumExpression_argList(object):
         if self._i == i:
             self._set_iter_vals(next(self._iter))
             self._i += 1
-        elif self._i is not None:
+        elif type(self._iter) is not list:
             # Switch to random-access mode.  If we have already
             # retrieved one of the indices, then we need to regenerate
             # the iterator from scratch.
@@ -312,6 +312,10 @@ class TemplateSumExpression(ExpressionBase):
 
     def getname(self, *args, **kwds):
         return "SUM"
+
+    def index_templates(self):
+        for iterGroup in self._iters:
+            yield from iterGroup
 
     def is_potentially_variable(self):
         if any(arg.is_potentially_variable() for arg in self._local_args_
@@ -430,10 +434,14 @@ class IndexTemplate(NumericValue):
         return True
 
     def is_constant(self):
+        """True if set to a valid value and can be substituted out.
+
+        The IndexTemplate is a constant when it is set to a valid value,
+        but not if it has no specified value (i.e., during template
+        generation).
+
         """
-        Returns False because this cannot immediately be simplified.
-        """
-        return False
+        return self._value is not _NotSpecified
 
     def is_potentially_variable(self):
         """Returns False because index values cannot be variables.
@@ -472,16 +480,19 @@ class IndexTemplate(NumericValue):
         if values is _NotSpecified:
             self._value = _NotSpecified
             return
-        if type(values) is not tuple:
-            values = (values,)
         if self._index is not None:
-            if len(values) == 1:
+            if values.__class__ is not tuple:
+                self._value = values
+            elif len(values) == 1:
                 self._value = values[0]
             else:
                 raise ValueError("Passed multiple values %s to a scalar "
                                  "IndexTemplate %s" % (values, self))
         else:
-            self._value = values
+            if values.__class__ is tuple:
+                self._value = values
+            else:
+                self._value = (values,)
 
     def lock(self, lock):
         assert self._lock is None
@@ -514,9 +525,6 @@ def resolve_template(expr):
     def exitNode(node, args):
         if hasattr(node, '_resolve_template'):
             return node._resolve_template(args)
-        if len(args) == node.nargs() and all(
-                a is b for a,b in zip(node.args, args)):
-            return node
         return node.create_node_with_local_data(args)
 
     return StreamBasedExpressionVisitor(
@@ -715,13 +723,26 @@ class _template_iter_context(object):
         self._id += 1
         return self._id
 
+    def count(self):
+        return self._id
+
     def sum_template(self, generator):
         init_cache = len(self.cache)
-        expr = next(generator)
+        # We want to exhaust the generator: templates should only return
+        # one item, but generators over non Pyomo Set objects need to be
+        # expanded.
+        expr = list(generator)
         final_cache = len(self.cache)
-        return TemplateSumExpression(
-            (expr,), self.npop_cache(final_cache-init_cache)
-        )
+        if len(expr) == 1:
+            expr = expr[0]
+        else:
+            expr = SumExpression(expr)
+        if final_cache > init_cache:
+            return TemplateSumExpression(
+                (expr,), self.npop_cache(final_cache - init_cache)
+            )
+        else:
+            return expr
 
 
 def templatize_rule(block, rule, index_set):
@@ -761,7 +782,11 @@ def templatize_rule(block, rule, index_set):
         #
         # TBD: Should this just return a "FORALL()" expression node that
         # behaves similarly to the GetItemExpression node?
-        return rule(block, indices), indices
+        #
+        # Note: we call the rule first to guarantee that the rule is
+        # called before we retrieve the IndexTemplate count.
+        expr = rule(block, indices)
+        return expr, indices, context.count()
     except:
         internal_error = sys.exc_info()
         raise
@@ -770,17 +795,17 @@ def templatize_rule(block, rule, index_set):
             GetItemExpression.__iter__, \
             GetAttrExpression.__iter__ = _old_iters
         builtins.sum = _old_sum
+        if internal_error is not None:
+            logger.error("The following exception was raised when "
+                         "templatizing the rule '%s':\n\t%s"
+                         % (rule.__name__, internal_error[1]))
         if len(context.cache):
-            if internal_error is not None:
-                logger.error("The following exception was raised when "
-                             "templatizing the rule '%s':\n\t%s"
-                             % (rule.__name__, internal_error[1]))
             raise TemplateExpressionError(
                 None,
                 "Explicit iteration (for loops) over Sets is not supported "
                 "by template expressions.  Encountered loop over %s"
                 % (context.cache[-1][0]._set,))
-    return None, indices
+    return None, indices, context.count()
 
 
 def templatize_constraint(con):
