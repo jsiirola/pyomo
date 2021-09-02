@@ -551,6 +551,8 @@ class Component(_ComponentBase):
                 return str(self())
             except:
                 pass
+        if smap:
+            return smap.getSymbol(self, labeler)
         return self.name
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
