@@ -814,11 +814,11 @@ You can silence this warning by one of three ways:
                     #
                     raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
-index %s is not a constant value.  This is likely not what you meant to
+index %s is not a constant value (%s).  This is likely not what you meant to
 do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
-the value() function.""" % ( self.name, i ))
+the value() function.""" % (self.name, i, val))
 
                 except EXPR.FixedExpressionError:
                     #
@@ -826,11 +826,11 @@ the value() function.""" % ( self.name, i ))
                     #
                     raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
-index %s is a fixed but not constant value.  This is likely not what you
+index %s is a fixed but not constant value (%s).  This is likely not what you
 meant to do, as if you later change the fixed value of the object this
 lookup will not change.  If you understand the implications of using
 fixed but not constant values, you can get the current value using the
-value() function.""" % ( self.name, i ))
+value() function.""" % (self.name, i, val))
                 #
                 # There are other ways we could get an exception such as
                 # evaluating a Param / Var that is not initialized.
