@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,6 +17,7 @@ import logging
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
+from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.base import \
     (SymbolMap, TextLabeler,
      NumericLabeler, Constraint, SortComponents,
@@ -27,18 +28,19 @@ from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.core')
 
-def _no_negative_zero(val):
-    """Make sure -0 is never output. Makes diff tests easier."""
-    if val == 0:
-        return 0
-    return val
-
-def _get_bound(exp):
-    if exp is None:
+def _get_bound(bound, offset=0):
+    if bound is None:
         return None
-    if is_fixed(exp):
-        return value(exp)
-    raise ValueError("non-fixed bound or weight: " + str(exp))
+    if bound.__class__ not in native_numeric_types:
+        if not is_fixed(bound):
+            raise ValueError("non-fixed bound or weight: %s" % (bound,))
+        bound = value(bound)
+        if bound is None:
+            return None
+    bound -= offset
+    if bound == 0:
+        return 0
+    return bound
 
 
 @WriterFactory.register('cpxlp', 'Generate the corresponding CPLEX LP file')
@@ -200,7 +202,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # Linear
         #
-        if len(x.linear_vars) > 0:
+        if x.linear_vars:
             constant=False
             for vardata in x.linear_vars:
                 self._referenced_variable_ids[id(vardata)] = vardata
@@ -210,9 +212,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 # Order columns by dictionary names
                 #
                 names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
-                    
-                for i, name in sorted(enumerate(names), key=lambda x: x[1]):
-                    output.append(linear_coef_string_template % (x.linear_coefs[i], name))
+
+                #for i, name in sorted(enumerate(names), key=lambda x: x[1]):
+                #    output.append(linear_coef_string_template % (x.linear_coefs[i], name))
+                #output.append(''.join(
+                #    linear_coef_string_template % (x.linear_coefs[i], name)
+                #    for i, name in sorted(enumerate(names), key=lambda x: x[1])))
+                output.extend(
+                    linear_coef_string_template % (x.linear_coefs[i], name)
+                    for i, name in sorted(enumerate(names), key=lambda x: x[1]))
             else:
                 #
                 # Order columns by the value of column_order[]
@@ -223,7 +231,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # Quadratic
         #
-        if len(x.quadratic_vars) > 0:
+        if x.quadratic_vars:
             constant=False
             for var1, var2 in x.quadratic_vars:
                 self._referenced_variable_ids[id(var1)] = var1
@@ -465,6 +473,19 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         output.append(
             "\\* Source Pyomo model name=%s *\\\n\n" % (model.name,) )
 
+        # The following is a complete hack, and to our knowledge is only
+        # used by PySP.  This functionality should be deprecated and
+        # replaced by logic similar to APPSI
+        process_repn_cache = False
+        for block in all_blocks:
+            # Get/Create the ComponentMap for the repn
+            gen_repn = getattr(block, "_gen_con_repn", None) is not None or \
+                       getattr(block, "_gen_obj_repn", None) is not None
+            if gen_repn:
+                process_repn_cache = True
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+
         #
         # Objective
         #
@@ -473,75 +494,76 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         numObj = 0
         onames = []
-        for block in all_blocks:
 
-            gen_obj_repn = getattr(block, "_gen_obj_repn", True)
+        for objective_data in block.component_data_objects(
+                Objective,
+                active=True,
+                sort=sortOrder,
+                descend_into=True):
 
-            # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_repn'):
-                block._repn = ComponentMap()
-            block_repn = block._repn
-
-            for objective_data in block.component_data_objects(
-                    Objective,
-                    active=True,
-                    sort=sortOrder,
-                    descend_into=False):
-
-                numObj += 1
-                onames.append(objective_data.name)
-                if numObj > 1:
-                    raise ValueError(
-                        "More than one active objective defined for input "
-                        "model '%s'; Cannot write legal LP file\n"
-                        "Objectives: %s" % (model.name, ' '.join(onames)))
-
-                create_symbol_func(symbol_map,
-                                   objective_data,
-                                   labeler)
-
-                symbol_map.alias(objective_data, '__default_objective__')
-                if objective_data.is_minimizing():
-                    output.append("min \n")
-                else:
-                    output.append("max \n")
-
-                if gen_obj_repn:
-                    repn = generate_standard_repn(objective_data.expr)
-                    block_repn[objective_data] = repn
-                else:
+            if process_repn_cache:
+                block_repn = objective_data.parent_block()._repn
+                if objective_data in block_repn:
                     repn = block_repn[objective_data]
+                else:
+                    if hasattr(objective_data, 'canonical_form'):
+                        repn = objective_data.canonical_form()
+                    else:
+                        repn = generate_standard_repn(objective_data.expr)
+                    block_repn[objective_data] = repn
+            else:
+                if hasattr(objective_data, 'canonical_form'):
+                    repn = objective_data.canonical_form()
+                else:
+                    repn = generate_standard_repn(objective_data.expr)
 
-                degree = repn.polynomial_degree()
+            degree = repn.polynomial_degree()
 
-                if degree == 0:
-                    logger.warning("Constant objective detected, replacing "
-                          "with a placeholder to prevent solver failure.")
-                    force_objective_constant = True
-                elif degree == 2:
-                    if not supports_quadratic_objective:
-                        raise RuntimeError(
-                            "Selected solver is unable to handle "
-                            "objective functions with quadratic terms. "
-                            "Objective at issue: %s."
-                            % objective_data.name)
-                elif degree is None:
+            numObj += 1
+            onames.append(objective_data.name)
+            if numObj > 1:
+                raise ValueError(
+                    "More than one active objective defined for input "
+                    "model '%s'; Cannot write legal LP file\n"
+                    "Objectives: %s" % (model.name, ' '.join(onames)))
+
+            create_symbol_func(symbol_map, objective_data, labeler)
+
+            symbol_map.alias(objective_data, '__default_objective__')
+            if objective_data.is_minimizing():
+                output.append("min \n")
+            else:
+                output.append("max \n")
+
+
+            if degree == 0:
+                logger.warning("Constant objective detected, replacing "
+                               "with a placeholder to prevent solver failure.")
+                force_objective_constant = True
+            elif degree == 2:
+                if not supports_quadratic_objective:
                     raise RuntimeError(
-                        "Cannot write legal LP file.  Objective '%s' "
-                        "has nonlinear terms that are not quadratic."
+                        "Selected solver is unable to handle "
+                        "objective functions with quadratic terms. "
+                        "Objective at issue: %s."
                         % objective_data.name)
+            elif degree is None:
+                raise RuntimeError(
+                    "Cannot write legal LP file.  Objective '%s' "
+                    "has nonlinear terms that are not quadratic."
+                    % objective_data.name)
 
-                output.append(
-                    object_symbol_dictionary[id(objective_data)]+':\n')
+            output.append(
+                object_symbol_dictionary[id(objective_data)]+':\n')
 
-                offset = print_expr_canonical(
-                    repn,
-                    output,
-                    object_symbol_dictionary,
-                    variable_symbol_dictionary,
-                    True,
-                    column_order,
-                    force_objective_constant=force_objective_constant)
+            offset = print_expr_canonical(
+                repn,
+                output,
+                object_symbol_dictionary,
+                variable_symbol_dictionary,
+                True,
+                column_order,
+                force_objective_constant=force_objective_constant)
 
         if numObj == 0:
             raise ValueError(
@@ -561,51 +583,47 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         output.append("\n")
 
         have_nontrivial = False
-
         supports_quadratic_constraint = solver_capability('quadratic_constraint')
 
         def constraint_generator():
             for block in all_blocks:
-
-                gen_con_repn = getattr(block, "_gen_con_repn", True)
-
-                # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_repn'):
-                    block._repn = ComponentMap()
-                block_repn = block._repn
-
-                for constraint_data in block.component_data_objects(
+                yield from block.component_data_objects(
                         Constraint,
                         active=True,
                         sort=sortOrder,
-                        descend_into=False):
-
-                    if (not constraint_data.has_lb()) and \
-                       (not constraint_data.has_ub()):
-                        assert not constraint_data.equality
-                        continue # non-binding, so skip
-
-                    if constraint_data._linear_canonical_form:
-                        repn = constraint_data.canonical_form()
-                    elif gen_con_repn:
-                        repn = generate_standard_repn(constraint_data.body)
-                        block_repn[constraint_data] = repn
-                    else:
-                        repn = block_repn[constraint_data]
-
-                    yield constraint_data, repn
+                        descend_into=False)
 
         if row_order is not None:
             sorted_constraint_list = list(constraint_generator())
-            sorted_constraint_list.sort(key=lambda x: row_order[x[0]])
+            sorted_constraint_list.sort(key=lambda x: row_order[x])
             def yield_all_constraints():
                 yield from sorted_constraint_list
         else:
             yield_all_constraints = constraint_generator
 
         # FIXME: This is a hack to get nested blocks working...
-        for constraint_data, repn in yield_all_constraints():
-            have_nontrivial = True
+        for constraint_data in yield_all_constraints():
+            lb = constraint_data.lb
+            ub = constraint_data.ub
+            if lb is None and ub is None:
+                assert not constraint_data.equality
+                continue # non-binding, so skip
+
+            if process_repn_cache:
+                block_repn = constraint_data.parent_block()._repn
+                if constraint_data in block_repn:
+                    repn = block_repn[constraint_data]
+                else:
+                    if hasattr(constraint_data, 'canonical_form'):
+                        repn = constraint_data.canonical_form()
+                    else:
+                        repn = generate_standard_repn(constraint_data.body)
+                    block_repn[constraint_data] = repn
+            else:
+                if hasattr(constraint_data, 'canonical_form'):
+                    repn = constraint_data.canonical_form()
+                else:
+                    repn = generate_standard_repn(constraint_data.body)
 
             degree = repn.polynomial_degree()
 
@@ -632,12 +650,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     "Cannot write legal LP file.  Constraint '%s' has a body "
                     "with nonlinear terms." % (constraint_data.name))
 
+            have_nontrivial = True
+
             # Create symbol
             con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
 
             if constraint_data.equality:
-                assert value(constraint_data.lower) == \
-                    value(constraint_data.upper)
+                assert lb == ub
                 label = 'c_e_%s_' % con_symbol
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output.append(label)
@@ -648,14 +667,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                               variable_symbol_dictionary,
                                               False,
                                               column_order)
-                bound = constraint_data.lower
-                bound = _get_bound(bound) - offset
-                output.append(eq_string_template
-                                  % (_no_negative_zero(bound)))
+                output.append(eq_string_template % _get_bound(lb, offset))
                 output.append("\n")
             else:
-                if constraint_data.has_lb():
-                    if constraint_data.has_ub():
+                if lb is not None:
+                    if ub is not None:
                         label = 'r_l_%s_' % con_symbol
                     else:
                         label = 'c_l_%s_' % con_symbol
@@ -668,15 +684,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   variable_symbol_dictionary,
                                                   False,
                                                   column_order)
-                    bound = constraint_data.lower
-                    bound = _get_bound(bound) - offset
-                    output.append(geq_string_template
-                                      % (_no_negative_zero(bound)))
-                else:
-                    assert constraint_data.has_ub()
+                    output.append(geq_string_template % _get_bound(lb, offset))
 
-                if constraint_data.has_ub():
-                    if constraint_data.has_lb():
+                if ub is not None:
+                    if lb is not None:
                         label = 'r_u_%s_' % con_symbol
                     else:
                         label = 'c_u_%s_' % con_symbol
@@ -689,12 +700,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   variable_symbol_dictionary,
                                                   False,
                                                   column_order)
-                    bound = constraint_data.upper
-                    bound = _get_bound(bound) - offset
-                    output.append(leq_string_template
-                                      % (_no_negative_zero(bound)))
-                else:
-                    assert constraint_data.has_lb()
+                    output.append(leq_string_template % _get_bound(ub, offset))
 
             # A simple hack to avoid caching super large files
             if len(output) > 1024:
@@ -814,35 +820,24 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         "IO-option 'output_fixed_variable_bounds=True' to suppress "
                         "this error and fix the variable by overwriting its bounds "
                         "in the LP file." % (vardata.name, model.name))
-                if vardata.value is None:
+                lb = ub = _get_bound(vardata)
+                if lb is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
-                vardata_lb = value(vardata.value)
-                vardata_ub = value(vardata.value)
-
-                output.append("   ")
-                output.append(lb_string_template
-                                      % (_no_negative_zero(vardata_lb)))
-                output.append(name_to_output)
-                output.append(ub_string_template
-                                      % (_no_negative_zero(vardata_ub)))
             else:
-                vardata_lb = _get_bound(vardata.lb)
-                vardata_ub = _get_bound(vardata.ub)
+                lb = _get_bound(vardata.lb)
+                ub = _get_bound(vardata.ub)
 
-                # Pyomo assumes that the default variable bounds are -inf and +inf
-                output.append("   ")
-                if vardata.has_lb():
-                    output.append(lb_string_template
-                                      % (_no_negative_zero(vardata_lb)))
-                else:
-                    output.append(" -inf <= ")
-
-                output.append(name_to_output)
-                if vardata.has_ub():
-                    output.append(ub_string_template
-                                      % (_no_negative_zero(vardata_ub)))
-                else:
-                    output.append(" <= +inf\n")
+            # Pyomo assumes that the default variable bounds are -inf and +inf
+            output.append("   ")
+            if lb is not None:
+                output.append(lb_string_template % lb)
+            else:
+                output.append(" -inf <= ")
+            output.append(name_to_output)
+            if ub is not None:
+                output.append(ub_string_template % ub)
+            else:
+                output.append(" <= +inf\n")
 
         if len(integer_vars) > 0:
 
