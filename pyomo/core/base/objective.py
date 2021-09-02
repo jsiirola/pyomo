@@ -25,6 +25,9 @@ from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
+from pyomo.core.expr.template_expr import (
+    templatize_rule, resolve_template, TemplateExpressionError,
+)
 from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
 )
@@ -42,6 +45,8 @@ from pyomo.core.base.initializer import (
 from pyomo.core.base import minimize, maximize
 
 logger = logging.getLogger('pyomo.core')
+
+ATTEMPT_TEMPLITIZATION = True
 
 _rule_returned_none_error = """Objective '%s': rule returned None.
 
@@ -200,6 +205,91 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
                              "'minimize' (%s) or 'maximize' (%s). Invalid "
                              "value: %s'" % (minimize, maximize, sense))
 
+
+class _TemplatedObjectiveCommonInfo(object):
+    def __init__(self, template_expr, template_indices, linear_repn_template):
+        self.template_expr = template_expr
+        self.template_indices = template_indices
+        self.linear_repn_template = linear_repn_template
+
+
+class _TemplatedObjectiveMixin(object):
+    __slots__ = ()
+
+    def _resolve_template(self, exp):
+        for idx, val in zip(self._expr[0].template_indices,
+                            self._expr[1]):
+            idx.set_value(val)
+        return resolve_template(exp)
+
+    @property
+    def expr(self):
+        return self._resolve_template(self._expr[0].template_expr)
+
+    def canonical_form(self):
+        if self._expr[0].linear_repn_template is None:
+            self._build_linear_repn_template()
+        for idx, val in zip(self._expr[0].template_indices,
+                            self._expr[1]):
+            idx.set_value(val)
+        return self._expr[0].linear_repn_template.standardRepn()
+
+    def _build_linear_repn_template(self):
+        from pyomo.repn.linear_template_repn import (
+            LinearTemplateRepnVisitor as visitor
+        )
+        self._expr[0].linear_repn_template = visitor(
+            self._expr[0].template_indices).walk_expression(
+                self._expr[0].template_expr)
+
+
+class _TemplatedObjectiveData(_TemplatedObjectiveMixin,
+                               _GeneralObjectiveData):
+    __slots__ = ()
+
+    def __init__(self):
+        pass
+
+    def initialize_template(self, component, template, indices, index):
+        if index.__class__ is not tuple:
+            index = (index,)
+        super().__init__(component=component, expr=template)
+        self._expr = (
+            _TemplatedObjectiveCommonInfo(self._expr, indices, None),
+            index,
+        )
+        return self
+
+    def duplicate_template(self, index):
+        if index.__class__ is not tuple:
+            index = (index,)
+        ans = _TemplatedObjectiveData()
+        ans._component = self._component
+        ans._active = self._active
+        ans._expr = (self._expr[0], index)
+        ans._sense = self._sense
+        return ans
+
+    def set_value(self, expr):
+        # If someone is setting the expression, then this index is no
+        # longer defined by the template: revert it back to a
+        # _GeneralObjectiveData
+        if self._expr is not None:
+            self.__class__ = _GeneralObjectiveData
+            self.set_value(expr)
+        else:
+            super().set_value(expr)
+
+    def getname(self, fully_qualified=False, name_buffer=None,
+                relative_to=None):
+        try:
+            return super().getname(fully_qualified, name_buffer, relative_to)
+        except RuntimeError:
+            pass
+        return self.parent_component().getname(
+            fully_qualified, name_buffer, relative_to) + "[{template}]"
+
+
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
     """
@@ -315,20 +405,60 @@ class Objective(ActiveIndexedComponent):
                     ans = self.__setitem__(index, rule(block, index))
                     if ans is not None:
                         self[index].set_sense(self._init_sense(block, index))
+                return
             elif not self.index_set().isfinite():
                 # If the index is not finite, then we cannot iterate
                 # over it.  Since the rule doesn't provide explicit
                 # indices, then there is nothing we can do (the
                 # assumption is that the user will trigger specific
                 # indices to be created at a later time).
-                pass
-            else:
-                # Bypass the index validation and create the member directly
-                for index in self.index_set():
-                    ans = self._setitem_when_not_present(
-                        index, rule(block, index))
-                    if ans is not None:
-                        ans.set_sense(self._init_sense(block, index))
+                return
+            elif ATTEMPT_TEMPLITIZATION:
+                template = None
+                try:
+                    template, indices, count = templatize_rule(
+                        block, rule, self.index_set())
+                except:
+                    # If anything fails, then (silently - for the
+                    # moment) fall back on the normal objective
+                    # construction procedure
+                    self._data.clear()
+                if template is not None:
+                    if not count:
+                        # constant expressions and scalar functions that
+                        # do not loop over Pyomo Sets
+                        for index in self.index_set():
+                            ans = self._setitem_when_not_present(
+                                index, template)
+                            if ans is not None:
+                                ans.set_sense(self._init_sense(block, index))
+                    elif self.is_indexed():
+                        index_iter = iter(self.index_set())
+                        index = next(index_iter)
+                        ref = _TemplatedObjectiveData().initialize_template(
+                            self, template, indices, index)
+                        ref.set_sense(self._init_sense(block, index))
+                        self._data[index] = ref
+                        for index in index_iter:
+                            tmp = ref.duplicate_template(index)
+                            self._data[index] = tmp
+                            tmp.set_sense(self._init_sense(block, index))
+                    else:
+                        self._setitem_when_not_present(None, template)
+                        self.__class__ = ScalarTemplatedObjective
+                        self._expr = (
+                            _TemplatedObjectiveCommonInfo(
+                                self._expr, indices, None),
+                            ()
+                        )
+                        self.set_sense(self._init_sense(block, index))
+                    return
+            # Bypass the index validation and create the member directly
+            for index in self.index_set():
+                ans = self._setitem_when_not_present(
+                    index, rule(block, index))
+                if ans is not None:
+                    ans.set_sense(self._init_sense(block, index))
         except Exception:
             err = sys.exc_info()[1]
             logger.error(
@@ -527,6 +657,19 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
 class SimpleObjective(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarObjective
     __renamed__version__ = '6.0'
+
+
+class ScalarTemplatedObjective(_TemplatedObjectiveMixin, ScalarObjective):
+
+    def set_value(self, expr):
+        # If someone is setting the expression, then this index is no
+        # longer defined by the template: revert it back to a
+        # _GeneralObjectiveData
+        if self._expr is not None:
+            self.__class__ = ScalarObjective
+        # Explicitly call the base class method, as changing the
+        # __class__ breaks super()
+        ScalarObjective.set_value(self, expr)
 
 
 class IndexedObjective(Objective):

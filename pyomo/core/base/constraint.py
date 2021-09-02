@@ -26,6 +26,9 @@ from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (
     NumericValue, value, as_numeric, is_fixed, native_numeric_types,
 )
+from pyomo.core.expr.template_expr import (
+    templatize_constraint, resolve_template, TemplateExpressionError,
+)
 from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
 )
@@ -38,8 +41,9 @@ from pyomo.core.base.initializer import (
     Initializer, IndexedCallInitializer, CountedCallInitializer,
 )
 
-
 logger = logging.getLogger('pyomo.core')
+
+ATTEMPT_TEMPLITIZATION = True
 
 _inf = float('inf')
 _rule_returned_none_error = """Constraint '%s': rule returned None.
@@ -507,7 +511,6 @@ class _GeneralConstraintData(_ConstraintData):
                 # could be useful in the case of GDP where certain
                 # disjuncts are trivially infeasible, but we would still
                 # like to express the disjunction.
-                #del self.parent_component()[self.index()]
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
                     % (self.name,) )
@@ -626,6 +629,155 @@ class _GeneralConstraintData(_ConstraintData):
                     "upper bound (%s)." % (self.name, self._upper))
 
 
+class _TemplatedConstraintCommonInfo(object):
+    def __init__(self, template_expr, template_indices, linear_repn_template):
+        self.template_expr = template_expr
+        self.template_indices = template_indices
+        self.linear_repn_template = linear_repn_template
+
+
+class _TemplatedConstraintMixin(object):
+    __slots__ = ()
+
+    def _resolve_template(self, exp):
+        for idx, val in zip(self._expr[0].template_indices,
+                            self._expr[1]):
+            idx.set_value(val)
+        return resolve_template(exp)
+
+    @property
+    def expr(self):
+        return self._resolve_template(self._expr[0].template_expr)
+
+    @property
+    def body(self):
+        """Access the body of a constraint expression."""
+        if self._body is not None:
+            body = self._body
+        else:
+            # The incoming RangedInequality had a potentially variable
+            # bound.  The "body" is fine, but the bounds may not be
+            # (although the responsibility for those checks lies with the
+            # lower/upper properties)
+            body = self._expr[0].template_expr.arg(1)
+        return as_numeric(self._resolve_template(body))
+
+    def _lb(self):
+        if self._body is not None:
+            bound = self._lower
+        else:
+            bound = self._expr[0].template_expr.arg(0)
+        if ( bound is not None and bound.__class__ not in native_numeric_types
+             and bound.is_expression_type() ):
+            bound = self._resolve_template(bound)
+        if self._body is not None and not is_fixed(bound):
+            raise ValueError(
+                "Constraint '%s' is a Ranged Inequality with a "
+                "variable %s bound.  Cannot normalize the "
+                "constraint or send it to a solver."
+                % (self.name, 'lower'))
+        return bound
+
+    def _ub(self):
+        if self._body is not None:
+            bound = self._upper
+        else:
+            bound = self._expr[0].template_expr.arg(2)
+        if ( bound is not None and bound.__class__ not in native_numeric_types
+             and bound.is_expression_type() ):
+            bound = self._resolve_template(bound)
+        if self._body is not None and not is_fixed(bound):
+            raise ValueError(
+                "Constraint '%s' is a Ranged Inequality with a "
+                "variable %s bound.  Cannot normalize the "
+                "constraint or send it to a solver."
+                % (self.name, 'upper'))
+        return bound
+
+    @property
+    def equality(self):
+        """A boolean indicating whether this is an equality constraint."""
+        if self._expr[0].template_expr.__class__ is logical_expr.EqualityExpression:
+            return True
+        return False
+
+    def canonical_form(self):
+        try:
+            if self._expr[0].linear_repn_template is None:
+                self._build_linear_repn_template()
+        except:
+            logger.error("CDATA: %s" % (self.name,))
+            raise
+        for idx, val in zip(self._expr[0].template_indices,
+                            self._expr[1]):
+            idx.set_value(val)
+        return self._expr[0].linear_repn_template.standardRepn()
+
+    def _build_linear_repn_template(self):
+        from pyomo.repn.linear_template_repn import (
+            LinearTemplateRepnVisitor as visitor
+        )
+        if self._body is not None:
+            body = self._body
+        else:
+            # The incoming RangedInequality had a potentially variable
+            # bound.  The "body" is fine, but the bounds may not be
+            # (although the responsibility for those checks lies with the
+            # lower/upper properties)
+            body = self._expr[0].template_expr.arg(1)
+        self._expr[0].linear_repn_template = visitor(
+            self._expr[0].template_indices).walk_expression(body)
+
+
+class _TemplatedConstraintData(_TemplatedConstraintMixin,
+                               _GeneralConstraintData):
+    __slots__ = ()
+
+    def __init__(self):
+        pass
+
+    def initialize_template(self, component, template, indices, index):
+        if index.__class__ is not tuple:
+            index = (index,)
+        super().__init__(component=component, expr=template)
+        self._expr = (
+            _TemplatedConstraintCommonInfo(self._expr, indices, None),
+            index,
+        )
+        return self
+
+    def duplicate_template(self, index):
+        if index.__class__ is not tuple:
+            index = (index,)
+        ans = _TemplatedConstraintData()
+        ans._component = self._component
+        ans._active = self._active
+        ans._expr = (self._expr[0], index)
+        ans._body = self._body
+        ans._lower = self._lower
+        ans._upper = self._upper
+        return ans
+
+    def set_value(self, expr):
+        # If someone is setting the expression, then this index is no
+        # longer defined by the template: revert it back to a
+        # _GeneralConstraintData
+        if self._expr is not None:
+            self.__class__ = _GeneralConstraintData
+            self.set_value(expr)
+        else:
+            super().set_value(expr)
+
+    def getname(self, fully_qualified=False, name_buffer=None,
+                relative_to=None):
+        try:
+            return super().getname(fully_qualified, name_buffer, relative_to)
+        except RuntimeError:
+            pass
+        return self.parent_component().getname(
+            fully_qualified, name_buffer, relative_to) + "[{template}]"
+
+
 @ModelComponentFactory.register("General constraint expressions.")
 class Constraint(ActiveIndexedComponent):
     """
@@ -739,17 +891,49 @@ class Constraint(ActiveIndexedComponent):
                 # The index is coming in externally; we need to validate it
                 for index in rule.indices():
                     self[index] = rule(block, index)
+                return
             elif not self.index_set().isfinite():
                 # If the index is not finite, then we cannot iterate
                 # over it.  Since the rule doesn't provide explicit
                 # indices, then there is nothing we can do (the
                 # assumption is that the user will trigger specific
                 # indices to be created at a later time).
-                pass
-            else:
-                # Bypass the index validation and create the member directly
-                for index in self.index_set():
-                    self._setitem_when_not_present(index, rule(block, index))
+                return
+            elif ATTEMPT_TEMPLITIZATION:
+                template = None
+                try:
+                    template, indices, count = templatize_constraint(self)
+                except:
+                    # If anything fails, then (silently - for the
+                    # moment) fall back on the normal constraint
+                    # construction procedure
+                    self._data.clear()
+                if template is not None:
+                    if not count:
+                        # constant expressions and scalar functions that
+                        # do not loop over Pyomo Sets
+                        for index in self.index_set():
+                            self._setitem_when_not_present(index, template)
+                    elif self.is_indexed():
+                        index_iter = iter(self.index_set())
+                        index = next(index_iter)
+                        ref = _TemplatedConstraintData().initialize_template(
+                            self, template, indices, index)
+                        self._data[index] = ref
+                        for index in index_iter:
+                            self._data[index] = ref.duplicate_template(index)
+                    else:
+                        self._setitem_when_not_present(None, template)
+                        self.__class__ = ScalarTemplatedConstraint
+                        self._expr = (
+                            _TemplatedConstraintCommonInfo(
+                                self._expr, indices, None),
+                            ()
+                        )
+                    return
+            # Bypass the index validation and create the member directly
+            for index in self.index_set():
+                self._setitem_when_not_present(index, rule(block, index))
         except Exception:
             err = sys.exc_info()[1]
             logger.error(
@@ -949,6 +1133,19 @@ class AbstractScalarConstraint(ScalarConstraint):
 class AbstractSimpleConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractScalarConstraint
     __renamed__version__ = '6.0'
+
+
+class ScalarTemplatedConstraint(_TemplatedConstraintMixin, ScalarConstraint):
+
+    def set_value(self, expr):
+        # If someone is setting the expression, then this index is no
+        # longer defined by the template: revert it back to a
+        # _GeneralConstraintData
+        if self._expr is not None:
+            self.__class__ = ScalarConstraint
+        # Explicitly call the base class method, as changing the
+        # __class__ breaks super()
+        ScalarConstraint.set_value(self, expr)
 
 
 class IndexedConstraint(Constraint):
