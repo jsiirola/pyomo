@@ -289,6 +289,11 @@ class EqualityExpression(_LinearOperatorExpression):
         lhs, rhs = self.args
         if lhs is rhs:
             return True
+        # Note: we want to *evaluate* this expression first (this allows
+        # things like TemplateExpressionErrors to be raised).  Then if
+        # the expression is numerically valid, we will perform the error
+        # checking for implicitly evaluating non-constant expressions
+        ans = bool(self())
         if not self.is_constant():
             raise PyomoException('Cannot convert non-constant expression '
                                  'to bool. This error is usually caused by '
@@ -298,7 +303,7 @@ class EqualityExpression(_LinearOperatorExpression):
                                  '    if m.x <= 0:\n'
                                  '        ...\n'
                                  'would cause this exception.')
-        return bool(self())
+        return ans
 
     def is_relational(self):
         return True
