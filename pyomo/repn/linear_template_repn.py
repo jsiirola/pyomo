@@ -59,18 +59,16 @@ class CompiledGetItem(ExpressionBase):
 
 
 class linearTemplateRepn(object):
-    __slots__ = ('coef', 'vars', 'const', 'sum_tmpl')
+    __slots__ = ('linear', 'const', 'sum_tmpl')
 
     def __init__(self):
-        self.coef = []
-        self.vars = []
+        self.linear = []
         self.sum_tmpl = []
         self.const = 0
 
     def merge(self, other):
         self.const += other.const
-        self.vars.extend(other.vars)
-        self.coef.extend(other.coef)
+        self.linear.extend(other.linear)
         self.sum_tmpl.extend(other.sum_tmpl)
 
     def distribute_multiplicand(self, mult):
@@ -90,8 +88,7 @@ class linearTemplateRepn(object):
     def toLinearExpr(self):
         ans = LinearExpression()
         ans.constant = self.const
-        ans.linear_coefs = self.coef
-        ans.linear_vars = self.vars
+        ans.linear_coefs, ans.linear_vars = zip(*self.linear)
         if REMOVE_ZERO_COEF:
             try:
                 i = 0
@@ -105,8 +102,7 @@ class linearTemplateRepn(object):
 
     def fromLinearExpr(self, linear):
         self.const += value(linear.constant)
-        self.vars.extend(linear_vars)
-        self.coef.extend(linear_coefs)
+        self.linear.extend(zip(linear.linear_coefs, linear.linear_vars))
 
     def _generateTemplateSums(self):
         yield self
@@ -120,7 +116,7 @@ class linearTemplateRepn(object):
         ans.linear_vars = _vars = []
         ans.linear_coefs = _coefs = []
         for ltr in self._generateTemplateSums():
-            for c, v in zip(ltr.coef, ltr.vars):
+            for c, v in ltr.linear:
                 if hasattr(v, '_resolve_template'):
                     _vars.append(v._resolve_template())
                 else:
@@ -217,15 +213,14 @@ class LinearTemplateRepnVisitor(StreamBasedExpressionVisitor):
             # Linear Expression
             child_type = child_result[0]
             if child_type is _MONOMIAL:
-                data.coef.append(child_result[1])
-                data.vars.append(child_result[2])
+                data.linear.append(child_result[1:])
             elif child_type is _CONSTANT:
                 data.const += child_result[1]
             elif child_type is _LINEAR:
                 data.merge(child_result[1])
             elif child_type is _GENERAL:
-                if data.const or data.vars or data.sum_tmpl:
-                    if not data.vars and not data.sum_tmpl:
+                if data.const or data.linear or data.sum_tmpl:
+                    if not data.linear and not data.sum_tmpl:
                         return [(_CONSTANT, const), child_result]
                     return [(_LINEAR, data), child_result]
                 else:
@@ -312,8 +307,7 @@ class LinearTemplateRepnVisitor(StreamBasedExpressionVisitor):
         elif result_type is _MONOMIAL:
             ans = linearTemplateRepn()
             if result[1]:
-                ans.coef.append(result[1])
-                ans.vars.append(result[2])
+                ans.linear.append(result[1:])
         elif result_type is _CONSTANT:
             ans = linearTemplateRepn()
             ans.const = result[1]
