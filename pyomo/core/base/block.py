@@ -1299,7 +1299,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 =====  ===============================
 
         sort: bool
-            Iterate over the components in a sorted otder
+            Iterate over the components in a sorted order
 
                 =====  ================================================
                 True   Iterate using Block.alphabetizeComponentAndIndex
