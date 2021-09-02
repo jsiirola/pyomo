@@ -111,6 +111,8 @@ def Initializer(init,
         return ConstantInitializer(tuple(init))
     if type(init) is functools.partial:
         _args = inspect.getfullargspec(init.func)
+        if not hasattr(init, '__name__'):
+            init.__name__ = 'partial(%s)' % init.func.__name__
         if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
             return ScalarCallInitializer(init)
         else:
@@ -153,6 +155,10 @@ class InitializerBase(object):
     def __setstate__(self, state):
         for key, val in state.items():
             object.__setattr__(self, key, val)
+
+    @property
+    def __name__(self):
+        return self.__class__.__name__
 
     def constant(self):
         """Return True if this initializer is constant across all indices"""
@@ -213,6 +219,10 @@ class IndexedCallInitializer(InitializerBase):
 
     def __init__(self, _fcn):
         self._fcn = _fcn
+
+    @property
+    def __name__(self):
+        return self._fcn.__name__
 
     def __call__(self, parent, idx):
         # Note: this is called by a component using data from a Set (so
@@ -303,6 +313,10 @@ class CountedCallInitializer(InitializerBase):
         if self._scalar:
             self._is_counted_rule = True
 
+    @property
+    def __name__(self):
+        return self._fcn.__name__
+
     def __call__(self, parent, idx):
         # Note: this is called by a component using data from a Set (so
         # any tuple-like type should have already been checked and
@@ -338,6 +352,10 @@ class ScalarCallInitializer(InitializerBase):
     def __init__(self, _fcn, constant=True):
         self._fcn = _fcn
         self._constant = constant
+
+    @property
+    def __name__(self):
+        return self._fcn.__name__
 
     def __call__(self, parent, idx):
         return self._fcn(parent)
