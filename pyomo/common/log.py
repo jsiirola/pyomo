@@ -24,8 +24,8 @@ import sys
 import textwrap
 
 from pyomo.version.info import releaselevel
-from pyomo.common.deprecation import deprecated
-from pyomo.common.fileutils import PYOMO_ROOT_DIR
+from .deprecation import deprecated
+from .fileutils import PYOMO_ROOT_DIR
 
 _indentation_re = re.compile(r'\s*')
 _bullet_re = re.compile(r'(?:[-*] +)|(\[\s*[A-Za-z0-9\.]+\s*\] +)')

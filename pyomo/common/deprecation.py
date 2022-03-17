@@ -26,7 +26,7 @@ import sys
 import textwrap
 import types
 
-from pyomo.common.errors import DeveloperError
+from .errors import DeveloperError
 
 _doc_flag = '.. deprecated::'
 

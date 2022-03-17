@@ -15,8 +15,9 @@ import stat
 import sys
 import tempfile
 
-import pyomo.common.envvar as envvar
-from pyomo.common.fileutils import this_file_dir, find_executable
+
+from . import envvar
+from .fileutils import this_file_dir, find_executable
 
 def handleReadonly(function, path, excinfo):
     excvalue = excinfo[1]
