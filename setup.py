@@ -35,10 +35,16 @@ def read(*rnames):
 
 def import_pyomo_module(*path):
     _module_globals = dict(globals())
-    _module_globals['__name__'] = None
-    _source = os.path.join(os.path.dirname(__file__), *path)
-    with open(_source) as _FILE:
-        exec(_FILE.read(), _module_globals)
+    _module_globals['__name__'] = '.'.join(
+        os.path.splitext(p)[0] for p in path)
+    _pyomo_dir = os.path.dirname(__file__)
+    _source = os.path.join(_pyomo_dir, *path)
+    sys.path.insert(0, _pyomo_dir)
+    try:
+        with open(_source) as _FILE:
+            exec(_FILE.read(), _module_globals)
+    finally:
+        sys.path.remove(_pyomo_dir)
     return _module_globals
 
 def get_version():
