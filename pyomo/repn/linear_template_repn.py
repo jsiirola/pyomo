@@ -73,15 +73,17 @@ class linearTemplateRepn(object):
 
     def distribute_multiplicand(self, mult):
         self.const *= mult
-        for i in range(len(self.coef)):
-            self.coef[i] *= mult
+        # for i in range(len(self.linear)):
+        #     self.linear[i] *= mult
+        self.linear = list((c*mult, v) for c,v in self.linear)
         for st in self.sum_tmpl:
             st.distribute_multiplicand(mult)
 
     def distribute_divisor(self, div):
         self.const /= div
-        for i in range(len(self.coef)):
-            self.coef[i] /= mult
+        #for i in range(len(self.linear)):
+        #    self.linear[i] /= div
+        self.linear = list((c/div, v) for c,v in self.linear)
         for st in self.sum_tmpl:
             st.distribute_divisor(div)
 
