@@ -197,14 +197,25 @@ def slice_component_along_sets(
                     # TODO: Should CUID normalize (slice(None),)?
                     new_index = normalize_index(new_index)
                 c_slice = base_component[new_index]
+                # Note that c_slice is not necessarily a slice.
+                # We enter this loop even if no sets need slicing.
                 if type(c_slice) is IndexedComponent_slice:
                     # This is just to make sure we do not have an
                     # empty slice.
                     #
-                    # Note that c_slice is not necessarily a slice.
-                    # We enter this loop even if no sets need slicing.
-                    temp_slice = c_slice.duplicate()
-                    next(iter(temp_slice))
+                    # It is possible that this slice is not universally
+                    # valid.  In particular, if deactivated blocks do
+                    # not share the same structure as the active portion
+                    # of the slice.  We will ignore AttributeErrors when
+                    # checking if this slice is non-empty.
+                    temp_slice_iter = iter(c_slice)
+                    while 1:
+                        try:
+                            _c = next(temp_slice_iter)
+                            if _c.active:
+                                break
+                        except AttributeError:
+                            pass
                 if ((normalize is None and normalize_index.flatten)
                         or normalize):
                     # Most users probably want this index to be normalized,
@@ -303,16 +314,19 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
                 # create a slice-or-data object
                 descend_data = sub[descend_idx]
                 if type(descend_data) is IndexedComponent_slice:
-                    try:
-                        # Attempt to find a data object matching this slice
-                        descend_data = next(iter(descend_data))
-                    except StopIteration:
+                    # Attempt to find a data object matching this slice
+                    for descend_data in iter(descend_data):
+                        if descend_data.active:
+                            break
+                    else:
                         # For this particular idx (and given indices), no
-                        # block data object exists to descend into.
+                        # active block data object exists to descend into.
                         # Not sure if we should raise an error here... -RBP
                         continue
             else:
                 descend_data = sub
+                if not descend_data.active:
+                    continue
             
             # Recursively generate sliced components from this data object
             for st, v in generate_sliced_components(

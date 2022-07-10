@@ -36,6 +36,12 @@ class TestAssumedBehavior(unittest.TestCase):
     These are some behaviors we rely on that weren't
     immediately obvious would be the case.
     """
+    def setUp(self):
+        self._saved_normalize_index_flaten = normalize_index.flatten
+
+    def teadDown(self):
+        normalize_index.flatten = self._saved_normalize_index_flaten
+
     def test_cross(self):
         m = ConcreteModel()
         m.s1 = Set(initialize=[1,2])
@@ -56,7 +62,7 @@ class TestAssumedBehavior(unittest.TestCase):
                 self.assertIsNot(type(j), tuple)
 
         normalize_index.flatten = False
-        # This behavior is consistent regardless of the value of 
+        # This behavior is consistent regardless of the value of
         # normalize_index.flatten
 
         for i in m.s1.cross():
@@ -220,7 +226,7 @@ class TestCategorize(unittest.TestCase):
         for ref in dae:
             self.assertIn(self._hashRef(ref), ref_data)
 
-    
+
     def test_indexed_block(self):
         m = ConcreteModel()
         m.time = ContinuousSet(bounds=(0,1))
@@ -252,7 +258,7 @@ class TestCategorize(unittest.TestCase):
         m.v0 = Var()
         m.v1 = Var(m.time)
         m.v2 = Var(m.time, m.comp)
-        
+
         def c0_rule(m):
             return m.v0 == 1
         m.c0 = Constraint(rule=c0_rule)
@@ -304,6 +310,12 @@ class TestCategorize(unittest.TestCase):
 
 class TestFlatten(TestCategorize):
 
+    def setUp(self):
+        self._saved_normalize_index_flaten = normalize_index.flatten
+
+    def teadDown(self):
+        normalize_index.flatten = self._saved_normalize_index_flaten
+
     def _hashRef(self, ref):
         if not ref.is_indexed():
             return (id(ref),)
@@ -350,7 +362,7 @@ class TestFlatten(TestCategorize):
 
     def test_flatten_m1_along_time_space(self):
         m = self._model1_1d_sets()
-        
+
         sets = ComponentSet((m.time, m.space))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
         assert len(sets_list) == len(comps_list)
@@ -422,7 +434,7 @@ class TestFlatten(TestCategorize):
 
     def test_flatten_m1_empty(self):
         m = self._model1_1d_sets()
-        
+
         sets = ComponentSet()
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
         assert len(sets_list) == len(comps_list)
@@ -441,7 +453,7 @@ class TestFlatten(TestCategorize):
 
     def test_flatten_m1_along_space(self):
         m = self._model1_1d_sets()
-        
+
         sets = ComponentSet((m.space,))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
         assert len(sets_list) == len(comps_list)
@@ -492,7 +504,7 @@ class TestFlatten(TestCategorize):
 
     def test_flatten_m1_along_time(self):
         m = self._model1_1d_sets()
-        
+
         sets = ComponentSet((m.time,))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
 
@@ -512,7 +524,7 @@ class TestFlatten(TestCategorize):
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 1 and sets[0] is m.time:
                 ref_data = {
-                    # Components indexed only by time;                        
+                    # Components indexed only by time;
                     self._hashRef(Reference(m.v1)),
                     self._hashRef(Reference(m.b.b1[:].v0)),
                 }
@@ -1175,6 +1187,59 @@ class TestFlatten(TestCategorize):
             else:
                 raise RuntimeError()
 
+    def test_flatten_deactivated_blocks(self):
+        m = ConcreteModel()
+        m.TIME = Set(initialize=[1,2,3])
+
+        def _xy_block(blk, *idx):
+            blk.x = Var()
+            blk.y = Var(blk.model().TIME)
+
+        m.b = Block(rule=_xy_block)
+        m.b_off = Block(rule=_xy_block)
+        m.b_off.deactivate()
+
+        m.c = Block(m.TIME, rule=_xy_block)
+        m.c[3].d = Block(rule=_xy_block)
+        m.c[3].d_off = Block(rule=_xy_block)
+        m.c[1].deactivate()
+        m.c[2].deactivate()
+        m.c[3].d_off.deactivate()
+
+        sets = ComponentSet((m.TIME,))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 3
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                    self._hashRef(m.b.x),
+                }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 1 and sets[0] is m.TIME:
+                ref_data = {
+                    self._hashRef(Reference(m.b.y[:])),
+                    self._hashRef(Reference(m.c[:].x)),
+                    self._hashRef(Reference(m.c[3].d.x)),
+                }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 2 and sets[0] is m.TIME and sets[1] is m.TIME:
+                ref_data = {
+                    self._hashRef(Reference(m.c[:].y[:])),
+                    self._hashRef(Reference(m.c[3].d.y[:])),
+                }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+
 
 class TestCUID(unittest.TestCase):
     """
@@ -1423,7 +1488,7 @@ class TestSliceComponent(TestFlatten):
         m.v12 = Var(m.s1, m.s2)
         m.v124 = Var(m.s1, m.s2, m.s4)
         return m
-    
+
     def test_no_sets(self):
         m = self.make_model()
         var = m.v12
@@ -1531,7 +1596,7 @@ class TestExceptional(unittest.TestCase):
         m.del_component(m.v) # No longer necessary
 
         # Same behavior can happen for blocks:
-        
+
         def block_rule(b, i, j):
             b.v = Var()
 
