@@ -2208,7 +2208,7 @@ def _register_new_before_child_dispatcher(visitor, child):
         # evaluation error), then on the way back out, we will use
         # the potentially variable handler to process the result.
         pv_base_type = child.potentially_variable_base_class()
-        if pv_base_type not in handlers:
+        if pv_base_type not in _register_new_before_child_dispatcher:
             try:
                 child.__class__ = pv_base_type
                 _register_new_before_child_dispatcher(child)
