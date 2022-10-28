@@ -1715,7 +1715,7 @@ def node_result_to_amplrepn(data):
     else:
         raise DeveloperError("unknown result type")
 
-def handle_negation_node(visitor, node, arg1):
+def _handle_negation_node(visitor, node, arg1):
     if arg1[0] is _MONOMIAL:
         return (_MONOMIAL, arg1[1], -1*arg1[2])
     elif arg1[0] is _GENERAL:
@@ -1726,7 +1726,7 @@ def handle_negation_node(visitor, node, arg1):
     else:
         raise RuntimeError("%s: %s" % (type(arg1[0]), arg1))
 
-def handle_product_node(visitor, node, arg1, arg2):
+def _handle_product_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         arg2, arg1 = arg1, arg2
     if arg1[0] is _CONSTANT:
@@ -1784,7 +1784,7 @@ def handle_product_node(visitor, node, arg1, arg2):
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_division_node(visitor, node, arg1, arg2):
+def _handle_division_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         div = arg2[1]
         if div == 1:
@@ -1811,7 +1811,7 @@ def handle_division_node(visitor, node, arg1, arg2):
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_pow_node(visitor, node, arg1, arg2):
+def _handle_pow_node(visitor, node, arg1, arg2):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
         return _apply_node_operation(node, (arg1[1], arg2[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
@@ -1819,21 +1819,21 @@ def handle_pow_node(visitor, node, arg1, arg2):
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_abs_node(visitor, node, arg1):
+def _handle_abs_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
         return (_CONSTANT, abs(arg1[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.abs)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_unary_node(visitor, node, arg1):
+def _handle_unary_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
         return _apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name])
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_exprif_node(visitor, node, arg1, arg2, arg3):
+def _handle_exprif_node(visitor, node, arg1, arg2, arg3):
     if arg1[0] is _CONSTANT:
         if arg1[1]:
             return arg2
@@ -1845,7 +1845,7 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_equality_node(visitor, node, arg1, arg2):
+def _handle_equality_node(visitor, node, arg1, arg2):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
         return (_CONSTANT, arg1[1] == arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
@@ -1853,7 +1853,7 @@ def handle_equality_node(visitor, node, arg1, arg2):
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_inequality_node(visitor, node, arg1, arg2):
+def _handle_inequality_node(visitor, node, arg1, arg2):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
         return (_CONSTANT, node._apply_operation((arg1[1], arg2[1])))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
@@ -1861,7 +1861,7 @@ def handle_inequality_node(visitor, node, arg1, arg2):
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
+def _handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
         return (_CONSTANT, node._apply_operation((arg1[1], arg2[1], arg3[1])))
     op = visitor.template.strict_inequality_map[node.strict]
@@ -1876,7 +1876,7 @@ def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
         visitor, nl, args, named)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_named_expression_node(visitor, node, arg1):
+def _handle_named_expression_node(visitor, node, arg1):
     _id = id(node)
     # Note that while named subexpressions ('defined variables' in the
     # ASL NL file vernacular) look like variables, they are not allowed
@@ -1999,7 +1999,7 @@ def handle_named_expression_node(visitor, node, arg1):
 
     return (_GENERAL, repn.duplicate())
 
-def handle_external_function_node(visitor, node, *args):
+def _handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
     # There is a special case for external functions: these are the only
     # expressions that can accept string arguments. As we currently pass
@@ -2039,33 +2039,33 @@ def handle_external_function_node(visitor, node, *args):
 
 
 _operator_handles = {
-    NegationExpression: handle_negation_node,
-    ProductExpression: handle_product_node,
-    DivisionExpression: handle_division_node,
-    PowExpression: handle_pow_node,
-    AbsExpression: handle_abs_node,
-    UnaryFunctionExpression: handle_unary_node,
-    Expr_ifExpression: handle_exprif_node,
-    EqualityExpression: handle_equality_node,
-    InequalityExpression: handle_inequality_node,
-    RangedExpression: handle_ranged_inequality_node,
-    _GeneralExpressionData: handle_named_expression_node,
-    ScalarExpression: handle_named_expression_node,
-    kernel.expression.expression: handle_named_expression_node,
-    kernel.expression.noclone: handle_named_expression_node,
+    NegationExpression: _handle_negation_node,
+    ProductExpression: _handle_product_node,
+    DivisionExpression: _handle_division_node,
+    PowExpression: _handle_pow_node,
+    AbsExpression: _handle_abs_node,
+    UnaryFunctionExpression: _handle_unary_node,
+    Expr_ifExpression: _handle_exprif_node,
+    EqualityExpression: _handle_equality_node,
+    InequalityExpression: _handle_inequality_node,
+    RangedExpression: _handle_ranged_inequality_node,
+    _GeneralExpressionData: _handle_named_expression_node,
+    ScalarExpression: _handle_named_expression_node,
+    kernel.expression.expression: _handle_named_expression_node,
+    kernel.expression.noclone: _handle_named_expression_node,
     # Note: objectives are special named expressions
-    _GeneralObjectiveData: handle_named_expression_node,
-    ScalarObjective: handle_named_expression_node,
-    kernel.objective.objective: handle_named_expression_node,
-    ExternalFunctionExpression: handle_external_function_node,
+    _GeneralObjectiveData: _handle_named_expression_node,
+    ScalarObjective: _handle_named_expression_node,
+    kernel.objective.objective: _handle_named_expression_node,
+    ExternalFunctionExpression: _handle_external_function_node,
     # These are handled explicitly in beforeChild():
-    # LinearExpression: handle_linear_expression,
-    # SumExpression: handle_sum_expression,
+    # LinearExpression: _handle_linear_expression,
+    # SumExpression: _handle_sum_expression,
     #
     # Note: MonomialTermExpression is only hit when processing NPV
     # subexpressions that raise errors (e.g., log(0) * m.x), so no
     # special processing is needed [it is just a product expression]
-    MonomialTermExpression: handle_product_node,
+    MonomialTermExpression: _handle_product_node,
 }
 
 
