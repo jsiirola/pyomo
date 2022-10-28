@@ -13,7 +13,7 @@ import enum
 import logging
 import os
 import sys
-from collections import deque
+from collections import deque, defaultdict
 from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.backports import nullcontext
@@ -2189,29 +2189,73 @@ def _before_named_expression(visitor, child):
 def _before_general_expression(visitor, child):
     return True, None
 
+def _register_new_before_child_dispatcher(visitor, child):
+    child_type = child.__class__
+    if child_type in native_numeric_types:
+        handler = _before_native
+    elif issubclass(child_type, str):
+        handler = _before_string
+    elif child_type in native_types:
+        handler = _before_native
+    elif not child.is_expression_type():
+        if child.is_potentially_variable():
+            handler = _before_var
+        else:
+            handler = _before_npv
+    elif not child.is_potentially_variable():
+        handler = _before_npv
+        # If we descend into the named expression (because of an
+        # evaluation error), then on the way back out, we will use
+        # the potentially variable handler to process the result.
+        pv_base_type = child.potentially_variable_base_class()
+        if pv_base_type not in handlers:
+            try:
+                child.__class__ = pv_base_type
+                _register_new_before_child_dispatcher(child)
+            finally:
+                child.__class__ = child_type
+        if pv_base_type in _operator_handles:
+            _operator_handles[child_type] = _operator_handles[pv_base_type]
+    elif ( id(child) in visitor.subexpression_cache
+           or issubclass(child_type, _GeneralExpressionData) ):
+        handler = _before_named_expression
+        _operator_handles[child_type] = handle_named_expression_node
+    else:
+        handler = _before_general_expression
+
+    # Record the handler that should be used for this child type in the
+    # future
+    _before_child_dispatcher[child_type] = handler
+    # call the handler and return the result
+    return handler(visitor, child)
+
+
+_before_child_dispatcher = defaultdict(
+    lambda: _register_new_before_child_dispatcher)
+
 
 # Register an initial set of known expression types with the "before
 # child" expression handler lookup table.
-_before_child_handlers = {
-    _type: _before_native for _type in native_numeric_types
-}
+_before_child_dispatcher.update(
+    (_type, _before_native) for _type in native_numeric_types
+)
 for _type in native_types:
     if issubclass(_type, str):
-        _before_child_handlers[_type] = _before_string
+        _before_child_dispatcher[_type] = _before_string
 # general operators
 for _type in _operator_handles:
-    _before_child_handlers[_type] = _before_general_expression
+    _before_child_dispatcher[_type] = _before_general_expression
 # named subexpressions
 for _type in (
         _GeneralExpressionData, ScalarExpression,
         kernel.expression.expression, kernel.expression.noclone,
         _GeneralObjectiveData, ScalarObjective, kernel.objective.objective):
-
-    _before_child_handlers[_type] = _before_named_expression
+    _before_child_dispatcher[_type] = _before_named_expression
 # Special linear / summation expressions
-_before_child_handlers[MonomialTermExpression] = _before_monomial
-_before_child_handlers[LinearExpression] = _before_linear
-_before_child_handlers[SumExpression] = _before_general_expression
+_before_child_dispatcher[MonomialTermExpression] = _before_monomial
+_before_child_dispatcher[LinearExpression] = _before_linear
+_before_child_dispatcher[SumExpression] = _before_general_expression
+
 
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
@@ -2239,11 +2283,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        try:
-            return _before_child_handlers[child.__class__](self, child)
-        except KeyError:
-            self._register_new_before_child_processor(child)
-        return _before_child_handlers[child.__class__](self, child)
+        return _before_child_dispatcher[child.__class__](self, child)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
@@ -2335,37 +2375,3 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.active_expression_source = None
         return ans
 
-    def _register_new_before_child_processor(self, child):
-        handlers = _before_child_handlers
-        child_type = child.__class__
-        if child_type in native_numeric_types:
-            handlers[child_type] = _before_native
-        elif issubclass(child_type, str):
-            handlers[child_type] = _before_string
-        elif child_type in native_types:
-            handlers[child_type] = _before_native
-        elif not child.is_expression_type():
-            if child.is_potentially_variable():
-                handlers[child_type] = _before_var
-            else:
-                handlers[child_type] = _before_npv
-        elif not child.is_potentially_variable():
-            handlers[child_type] = _before_npv
-            # If we descend into the named expression (because of an
-            # evaluation error), then on the way back out, we will use
-            # the potentially variable handler to process the result.
-            pv_base_type = child.potentially_variable_base_class()
-            if pv_base_type not in handlers:
-                try:
-                    child.__class__ = pv_base_type
-                    _register_new_before_child_processor(self, child)
-                finally:
-                    child.__class__ = child_type
-            if pv_base_type in _operator_handles:
-                _operator_handles[child_type] = _operator_handles[pv_base_type]
-        elif ( id(child) in self.subexpression_cache or
-               issubclass(child_type, _GeneralExpressionData) ):
-            handlers[child_type] = _before_named_expression
-            _operator_handles[child_type] = handle_named_expression_node
-        else:
-            handlers[child_type] = _before_general_expression
