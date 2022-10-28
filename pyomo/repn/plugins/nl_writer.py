@@ -1272,7 +1272,7 @@ class _NLWriter_impl(object):
             expr_info = comp_info[1]
             # Note: mult will be 1 here: it is either cleared by
             # finalizeResult, or this is a named expression, in which
-            # case the mult was reset within handle_named_expression_node
+            # case the mult was reset within _handle_named_expression_node
             #
             # For efficiency, we will omit the obvious assertion:
             #   assert expr_info.mult == 1
@@ -2219,7 +2219,7 @@ def _register_new_before_child_dispatcher(visitor, child):
     elif ( id(child) in visitor.subexpression_cache
            or issubclass(child_type, _GeneralExpressionData) ):
         handler = _before_named_expression
-        _operator_handles[child_type] = handle_named_expression_node
+        _operator_handles[child_type] = _handle_named_expression_node
     else:
         handler = _before_general_expression
 
