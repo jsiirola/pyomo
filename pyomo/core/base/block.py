@@ -550,20 +550,39 @@ class PseudoMap(AutoSlots.Mixin):
                 self._block._ctypes[x][0]
                 for x in self._block._ctypes if x in self._ctypes
             ]
+        if not _idx_list:
+            return
         _idx_list.sort(reverse=True)
-        while _idx_list:
+        while 1:
+            # This loop handles when we have more than one ctype we are
+            # iterating over.  We can start iterating over the first
+            # ctype linked list until the next element is after the
+            # first object in any of the other ctype linked lists, at
+            # which point we ened to switch lists and continue
             _idx = _idx_list.pop()
-            _next_ctype = _idx_list[-1] if _idx_list else None
+            if not _idx_list:
+                # We are down to a single ctype; break out and use the
+                # next (slightly faster) loop to exhaust the last ctype
+                # linked list
+                break
+            _next_ctype = _idx_list[-1]
             while 1:
                 _obj, _idx = _decl_order[_idx]
                 if _obj is not None:
                     yield _obj
                 if _idx is None:
                     break
-                if _next_ctype is not None and _idx > _next_ctype:
+                if _idx > _next_ctype:
                     _idx_list.append(_idx)
                     _idx_list.sort(reverse=True)
                     break
+        # Walk a single ctype link list and return the objects
+        while 1:
+            _obj, _idx = _decl_order[_idx]
+            if _obj is not None:
+                yield _obj
+            if _idx is None:
+                break
 
     def keys(self):
         """
