@@ -501,12 +501,19 @@ class PseudoMap(AutoSlots.Mixin):
                            for x in self._block._ctypes
                            if x in self._ctypes)
         #
-        # If _active is True or False, then we have to count by brute force.
+        # If _active is True or False, then we have to count by brute
+        # force.  We will temporarily disable sorting as we are not
+        # returning elements to the user.
         #
-        ans = 0
-        for x in self.values():
-            ans += 1
-        return ans
+        sort_order = self._sorted
+        try:
+            self._sorted = False
+            ans = 0
+            for x in self.values():
+                ans += 1
+            return ans
+        finally:
+            self._sorted = sort_order
 
     def __contains__(self, key):
         """
