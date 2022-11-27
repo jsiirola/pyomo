@@ -1835,18 +1835,25 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         dedup.seen_data.add(id(self))
 
         PM = PseudoMap(self, ctype, active, sort)
-        _stack = [(self,).__iter__(), ]
-        while _stack:
-            try:
-                PM._block = _block = next(_stack[-1])
-                yield _block
-                if not PM:
-                    continue
-                _stack.append(_block._component_data_itervalues(
-                    ctype, active, sort, dedup)
-                )
-            except StopIteration:
-                _stack.pop()
+        subblocks = (self,)
+        n_subblocks = 1
+        i = 0
+        stack = None
+        while 1:
+            if i == n_subblocks:
+                if stack is None:
+                    return
+                stack, subblocks, n_subblocks, i = stack
+                continue
+            PM._block = _block = subblocks[i]
+            i += 1
+            yield _block
+            if PM:
+                stack = (stack, subblocks, n_subblocks, i)
+                subblocks = list(_block._component_data_itervalues(
+                    ctype, active, sort, dedup))
+                n_subblocks = len(subblocks)
+                i = 0
 
     def _postfix_dfs_iterator(self, ctype, active, sort, dedup):
         """
@@ -1862,18 +1869,28 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # the list of "seen" IDs
         dedup.seen_data.add(id(self))
 
-        _stack = [
-            (self, self._component_data_itervalues(ctype, active, sort, dedup))
-        ]
-        while _stack:
-            try:
-                _sub = next(_stack[-1][1])
-                _stack.append((
-                    _sub,
-                    _sub._component_data_itervalues(ctype, active, sort, dedup)
-                 ))
-            except StopIteration:
-                yield _stack.pop()[0]
+        PM = PseudoMap(self, ctype, active, sort)
+        subblocks = (self,)
+        n_subblocks = 1
+        i = 0
+        stack = None
+        while 1:
+            if i == n_subblocks:
+                if stack is None:
+                    return
+                stack, subblocks, n_subblocks, i = stack
+                yield subblocks[i-1]
+                continue
+            PM._block = _block = subblocks[i]
+            i += 1
+            if PM:
+                stack = (stack, subblocks, n_subblocks, i)
+                subblocks = list(_block._component_data_itervalues(
+                    ctype, active, sort, dedup))
+                n_subblocks = len(subblocks)
+                i = 0
+            else:
+                yield _block
 
     def _bfs_iterator(self, ctype, active, sort, dedup):
         """Helper function implementing a non-recursive breadth-first search.
