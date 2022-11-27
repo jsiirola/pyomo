@@ -636,8 +636,7 @@ class PseudoMap(AutoSlots.Mixin):
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  items()
         # just wraps values().
-        for obj in self.values():
-            yield (obj._name, obj)
+        return ((obj._name, obj) for obj in self.values())
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
                 version='6.0')
@@ -1801,30 +1800,25 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # component_data_objects, it might be desirable to always return
         # self.
         if active is not None and self.active != active:
-            return
+            return ()
         if not descend_into:
-            yield self
-            return
+            return (self,)
 
         if descend_into is True:
-            ctype = (Block,)
-        elif isclass(descend_into):
-            ctype = (descend_into,)
-        else:
-            ctype = descend_into
+            descend_into = Block
         dedup = _DeduplicateInfo()
 
         if descent_order is None or \
                 descent_order == TraversalStrategy.PrefixDepthFirstSearch:
-            walker = self._prefix_dfs_iterator(ctype, active, sort, dedup)
+            walker = self._prefix_dfs_iterator
         elif descent_order == TraversalStrategy.BreadthFirstSearch:
-            walker = self._bfs_iterator(ctype, active, sort, dedup)
+            walker = self._bfs_iterator
         elif descent_order == TraversalStrategy.PostfixDepthFirstSearch:
-            walker = self._postfix_dfs_iterator(ctype, active, sort, dedup)
+            walker = self._postfix_dfs_iterator
         else:
             raise RuntimeError("unrecognized traversal strategy: %s"
                                % (descent_order, ))
-        yield from walker
+        return walker(descend_into, active, sort, dedup)
 
 
     def _prefix_dfs_iterator(self, ctype, active, sort, dedup):
