@@ -14,6 +14,7 @@ __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'components_data', 'SimpleBlock', 'ScalarBlock']
 
 import copy
+import itertools
 import logging
 import sys
 import weakref
@@ -103,22 +104,30 @@ class SubclassOf(object):
     """This mocks up a tuple-like interface based on subclass relationship.
 
     Instances of this class present a somewhat tuple-like interface for
-    use in PseudoMap ctype / descend_into.  The constructor takes a
-    single ctype argument.  When used with PseudoMap (through Block APIs
+    use in PseudoMap ctype / descend_into.  The constructor takes one or
+    more ctype arguments.  When used with PseudoMap (through Block APIs
     like component_objects()), it will match any ctype that is a
-    subclass of the reference ctype.
+    subclass of the reference ctype(s).
 
     This allows, for example:
 
         model.component_data_objects(Var, descend_into=SubclassOf(Block))
+
+    Parameters
+    ----------
+    *ctypes: type
+
+        One or more component types.  The resulting object will behave
+        like a container (tuple) that contains any subclass of the ctypes.
+
     """
-    def __init__(self, *ctype):
-        self.ctype = ctype
+    def __init__(self, *ctypes):
+        self.ctypes = ctypes
         self.__name__ = 'SubclassOf(%s)' % (
-            ','.join(x.__name__ for x in ctype),)
+            ','.join(x.__name__ for x in ctypes),)
 
     def __contains__(self, item):
-        return issubclass(item, self.ctype)
+        return issubclass(item, self.ctypes)
 
     def __len__(self):
         return 1
@@ -128,6 +137,58 @@ class SubclassOf(object):
 
     def __iter__(self):
         return iter((self,))
+
+
+class _SubclassSet(object):
+    """This mocks up a tuple-like interface wrapping SubclassOf / set(types)
+
+    This is a utility class that presents a somewhat tuple-like
+    interface for use in PseudoMap ctype / descend_into.  The
+    constructor takes two arguments: a set of ctypes and a sequence of 1
+    or more SubclassOf objects.  When used with PseudoMap (through Block
+    APIs like component_objects()), it will match any ctype that is
+    either in the set of ctypes or matches any of the SubclassOf
+    objects.
+
+    This allows, for example:
+
+        model.component_data_objects(
+            (SubclassOf(Block), SubclassOf(Var), Constraint)
+        )
+
+    Parameters
+    ----------
+    ctypes: Set[type]
+
+        Set of component types.
+
+    subclasses: Sequence[SubclassOf]
+
+        Sequence of 1 or more SubclassOf objects
+
+    """
+    def __init__(self, ctypes, subclass):
+        self.ctypes = ctypes
+        if len(subclass) == 1:
+            self.subclass = subclass[0]
+        else:
+            self.subclass = SubclassOf(
+                *sum(map(attrgetter('ctype'), subclass), ()))
+
+    def __contains__(self, item):
+        return item in self.ctypes or item in self.subclass
+
+    def __len__(self):
+        return len(self.ctypes) + 1
+
+    def __getitem__(self, item):
+        if item == 0:
+            return self.subclass
+        else:
+            return list(self.ctypes)[item-1]
+
+    def __iter__(self):
+        return itertools.chain((self.subclass,), self.ctypes)
 
 
 class _DeduplicateInfo(object):
@@ -357,13 +418,20 @@ class PseudoMap(AutoSlots.Mixin):
         """
         self._block = block
         if isclass(ctype):
-            self._ctypes = {ctype,}
+            self._ctypes = (ctype,)
         elif ctype is None:
             self._ctypes = Any
         elif ctype.__class__ is SubclassOf:
             self._ctypes = ctype
         else:
             self._ctypes = set(ctype)
+            subclass_types = []
+            for t in ctype:
+                if t.__class__ is SubclassOf:
+                    self._ctypes.remove(t)
+                    subclass_types.append(t)
+            if subclass_types:
+                self._ctypes = _SubclassSet(self._ctypes, subclass_types)
         self._active = active
         self._sorted = SortComponents.sort_names(sort)
 
@@ -465,7 +533,7 @@ class PseudoMap(AutoSlots.Mixin):
         # Note that because of SubclassOf, we cannot iterate over
         # self._ctypes. But this gets called a lot with a single type as
         # the ctypes set, so we will special case the set intersection.
-        if self._ctypes.__class__ is set:
+        if self._ctypes.__class__ in (tuple, set):
             _idx_list = [
                 self._block._ctypes[x][0]
                 for x in self._ctypes if x in self._block._ctypes
