@@ -54,6 +54,9 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
         theta_cuid = ComponentUID(param_name)
         theta_object = theta_cuid.find_component_on(model)
 
+        # TODO: This logic assumes that all param_names are ScalarParam
+        # or IndexedParam objects (not _ParamData)
+
         # Param
         if theta_object.is_parameter_type():
             # Delete Param, add Var
@@ -133,16 +136,15 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
                     model.constraints.add(
                         replace_expressions(expr=c.lower, substitution_map=substitution_map) ==
                         replace_expressions(expr=c.body, substitution_map=substitution_map))
-                elif c.lower is not None:
-                    model.constraints.add(
-                        replace_expressions(expr=c.lower, substitution_map=substitution_map) <=
-                        replace_expressions(expr=c.body, substitution_map=substitution_map))
-                elif c.upper is not None:
-                    model.constraints.add(
-                        replace_expressions(expr=c.upper, substitution_map=substitution_map) >=
-                        replace_expressions(expr=c.body, substitution_map=substitution_map))
                 else:
-                    raise ValueError("Unable to parse constraint to convert params to vars.")
+                    if c.lower is not None:
+                        model.constraints.add(
+                            replace_expressions(expr=c.lower, substitution_map=substitution_map) <=
+                            replace_expressions(expr=c.body, substitution_map=substitution_map))
+                    if c.upper is not None:
+                        model.constraints.add(
+                            replace_expressions(expr=c.upper, substitution_map=substitution_map) >=
+                            replace_expressions(expr=c.body, substitution_map=substitution_map))
                 c.deactivate() 
     
     # Convert Params to Vars in Objective expressions
