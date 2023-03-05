@@ -1521,12 +1521,16 @@ class _MindtPyAlgorithm(object):
                 self.mip, config)
 
         self.mip.MindtPy_utils.objective_constr.deactivate()
-        self.mip.MindtPy_utils.del_component('roa_proj_mip_obj')
-        self.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
+        if self.mip.MindtPy_utils.component('roa_proj_mip_obj') is not None:
+            self.mip.MindtPy_utils.del_component('roa_proj_mip_obj')
+        if self.mip.MindtPy_utils.cuts.component('obj_reg_estimate') is not None:
+            self.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
         if config.add_regularization == 'level_L1':
-            self.mip.MindtPy_utils.del_component('L1_obj')
+            if self.mip.MindtPy_utils.component('L1_obj') is not None:
+                self.mip.MindtPy_utils.del_component('L1_obj')
         elif config.add_regularization == 'level_L_infinity':
-            self.mip.MindtPy_utils.del_component('L_infinity_obj')
+            if self.mip.MindtPy_utils.component('L_infinity_obj') is not None:
+                self.mip.MindtPy_utils.del_component('L_infinity_obj')
 
         return self.mip, main_mip_results
 
@@ -1839,12 +1843,14 @@ class _MindtPyAlgorithm(object):
         MindtPy.cuts.activate()
 
         sign_adjust = 1 if self.objective_sense == minimize else - 1
-        MindtPy.del_component('mip_obj')
+        if MindtPy.component('mip_gap') is not None:
+            MindtPy.del_component('mip_obj')
         if config.add_regularization is not None and config.add_no_good_cuts:
             MindtPy.cuts.no_good_cuts.deactivate()
 
         if config.add_slack:
-            MindtPy.del_component('aug_penalty_expr')
+            if MindtPy.component('aug_penalty_expr') is not None:
+                MindtPy.del_component('aug_penalty_expr')
 
             MindtPy.aug_penalty_expr = Expression(
                 expr=sign_adjust * config.OA_penalty_factor * sum(
@@ -1857,7 +1863,8 @@ class _MindtPyAlgorithm(object):
 
         if config.use_dual_bound:
             # Delete previously added dual bound constraint
-            MindtPy.cuts.del_component('dual_bound')
+            if MindtPy.cuts.component('dual_bound') is not None:
+                MindtPy.cuts.del_component('dual_bound')
             if self.dual_bound not in {float('inf'), float('-inf')}:
                 if self.objective_sense == minimize:
                     MindtPy.cuts.dual_bound = Constraint(
@@ -1886,8 +1893,10 @@ class _MindtPyAlgorithm(object):
                 c.deactivate()
 
         MindtPy.cuts.activate()
-        MindtPy.del_component('mip_obj')
-        MindtPy.del_component('fp_mip_obj')
+        if MindtPy.component('mip_obj') is not None:
+            MindtPy.del_component('mip_obj')
+        if MindtPy.component('fp_mip_obj') is not None:
+            MindtPy.del_component('fp_mip_obj')
         if config.fp_main_norm == 'L1':
             MindtPy.fp_mip_obj = generate_norm1_objective_function(
                 self.mip,
@@ -1922,10 +1931,13 @@ class _MindtPyAlgorithm(object):
         MindtPy.cuts.activate()
 
         sign_adjust = 1 if self.objective_sense == minimize else - 1
-        MindtPy.del_component('mip_obj')
+        if MindtPy.component('mip_obj') is not None:
+            MindtPy.del_component('mip_obj')
         if config.single_tree:
-            MindtPy.del_component('roa_proj_mip_obj')
-            MindtPy.cuts.del_component('obj_reg_estimate')
+            if MindtPy.component('roa_proj_mip_obj') is not None:
+                MindtPy.del_component('roa_proj_mip_obj')
+            if MindtPy.cuts.component('obj_reg_estimate') is not None:
+                MindtPy.cuts.del_component('obj_reg_estimate')
         if config.add_regularization is not None and config.add_no_good_cuts:
             MindtPy.cuts.no_good_cuts.activate()
 
@@ -2172,7 +2184,8 @@ class _MindtPyAlgorithm(object):
             if fixed_nlp_results.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
                 self.handle_subproblem_optimal(fixed_nlp, config)
                 if self.primal_bound_improved:
-                    self.mip.MindtPy_utils.cuts.del_component('improving_objective_cut')
+                    if self.mip.MindtPy_utils.cuts.component('improving_objective_cut') is not None:
+                        self.mip.MindtPy_utils.cuts.del_component('improving_objective_cut')
                     if self.objective_sense == minimize:
                         self.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(self.mip.MindtPy_utils.objective_value[:])
                                                                                         <= self.primal_bound - config.fp_cutoffdecr*max(1, abs(self.primal_bound)))
@@ -2281,24 +2294,28 @@ class _MindtPyAlgorithm(object):
             # Call the NLP post-solve callback
             config.call_after_subproblem_solve(fp_nlp)
             self.fp_iter += 1
-        self.mip.MindtPy_utils.del_component('fp_mip_obj')
+        if self.mip.MindtPy_utils.component('fp_mip_obj') is not None:
+            self.mip.MindtPy_utils.del_component('fp_mip_obj')
 
         if config.fp_main_norm == 'L1':
-            self.mip.MindtPy_utils.del_component('L1_obj')
+            if self.mip.MindtPy_utils.component('L1_obj') is not None:
+                self.mip.MindtPy_utils.del_component('L1_obj')
         elif config.fp_main_norm == 'L_infinity':
-            self.mip.MindtPy_utils.del_component(
-                'L_infinity_obj')
+            if self.mip.MindtPy_utils.component('L_infinity_obj') is not None:
+                self.mip.MindtPy_utils.del_component('L_infinity_obj')
 
         # deactivate the improving_objective_cut
-        self.mip.MindtPy_utils.cuts.del_component(
-            'improving_objective_cut')
+        if self.mip.MindtPy_utils.cuts.component('improving_objective_cut') is not None:
+            self.mip.MindtPy_utils.cuts.del_component('improving_objective_cut')
         if not config.fp_transfercuts:
             for c in self.mip.MindtPy_utils.cuts.oa_cuts:
                 c.deactivate()
             for c in self.mip.MindtPy_utils.cuts.no_good_cuts:
                 c.deactivate()
         if config.fp_projcuts:
-            self.working_model.MindtPy_utils.cuts.del_component(
+            if self.working_model.MindtPy_utils.cuts.component(
+                    'fp_orthogonality_cuts') is not None:
+                self.working_model.MindtPy_utils.cuts.del_component(
                 'fp_orthogonality_cuts')
 
     def initialize_mip_problem(self):
