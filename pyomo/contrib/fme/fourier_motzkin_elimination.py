@@ -687,7 +687,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 obj_val = value(obj)
             # if we couldn't make it infeasible, it's useless
             if obj_val >= tolerance:
-                m.del_component(projected_constraints[i])
                 del projected_constraints[i]
             else:
                 projected_constraints[i].activate()
