@@ -11,7 +11,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.graphics import matplotlib_available, seaborn_available
+import  pyomo.contrib.parmest.graphics as graphics
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
@@ -43,7 +43,7 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
         rooney_biegler_with_constraint.main()
 
-    @unittest.skipUnless(seaborn_available, "test requires seaborn")
+    @unittest.skipUnless(graphics.imports_available, "test requires parmest.graphics")
     def test_parameter_estimation_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import (
             parameter_estimation_example,
@@ -51,13 +51,13 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
         parameter_estimation_example.main()
 
-    @unittest.skipUnless(seaborn_available, "test requires seaborn")
+    @unittest.skipUnless(graphics.imports_available, "test requires parmest.graphics")
     def test_bootstrap_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import bootstrap_example
 
         bootstrap_example.main()
 
-    @unittest.skipUnless(seaborn_available, "test requires seaborn")
+    @unittest.skipUnless(graphics.imports_available, "test requires parmest.graphics")
     def test_likelihood_ratio_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import (
             likelihood_ratio_example,
@@ -147,7 +147,7 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         parameter_estimation_example.main()
 
-    @unittest.skipUnless(seaborn_available, "test requires seaborn")
+    @unittest.skipUnless(graphics.imports_available, "test requires parmest.graphics")
     def test_bootstrap_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import bootstrap_example
 
@@ -181,7 +181,7 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         multisensor_data_example.main()
 
-    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
+    @unittest.skipUnless(graphics.imports_available, "test requires parmest.graphics")
     def test_datarec_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import datarec_example
 
