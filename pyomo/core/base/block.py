@@ -1239,13 +1239,21 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         Delete a component from this block.
         """
         obj = self.component(name_or_object)
-        # FIXME: Is this necessary?  Should this raise an exception?
         if obj is None:
-            return
-
-        # FIXME: Is this necessary?  Should this raise an exception?
-        # if name not in self._decl:
-        #    return
+            if isinstance(name_or_object, str):
+                raise NameError(
+                    f"name '{name_or_object}' is not defined on block '{self.name}'"
+                )
+            else:
+                raise ValueError(
+                    f"'{name_or_object}' is not defined on block '{self.name}'"
+                )
+        if obj is not name_or_object and not isinstance(name_or_object, str):
+            raise ValueError(
+                f'{name_or_object} is an ComponentData and not a component '
+                f'on {self.name}.  Use `del <block>.{name_or_object.local_name}` '
+                'to remove individual indices'
+            )
 
         name = obj.local_name
         if name in self._Block_reserved_words:
