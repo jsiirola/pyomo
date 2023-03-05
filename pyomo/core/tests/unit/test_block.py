@@ -1091,6 +1091,25 @@ class TestBlock(unittest.TestCase):
         self.assertFalse('x' in m.__dict__)
         self.assertIs(m.component('x'), None)
 
+    def test_del_component_errors(self):
+        m = ConcreteModel()
+        m.x = Var(range(3))
+        m.b = Block()
+        m.b.y = Var()
+        with self.assertRaisesRegex(
+                NameError, "name 'y' is not defined on block 'unknown'"
+        ):
+            m.del_component('y')
+        with self.assertRaisesRegex(
+                ValueError, "'b.y' is not defined on block 'unknown'"
+        ):
+            m.del_component(m.b.y)
+        with self.assertRaisesRegex(
+                ValueError, r"x\[1\] is an ComponentData and not a component on "
+                r"unknown.  Use `del <block>.x\[1\]` to remove individual indices"
+        ):
+            m.del_component(m.x[1])
+
     def test_reclassify_component(self):
         m = Block()
         m.a = Var()
