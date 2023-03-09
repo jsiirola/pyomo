@@ -75,7 +75,6 @@ class TestSimulator(unittest.TestCase):
             Simulator(m, package='scipy')
 
         m.del_component('con')
-        m.del_component('con_index')
         m.del_component('w')
         m.del_component('y')
 
@@ -126,7 +125,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
         m.del_component('w')
         m.del_component('dw')
@@ -166,7 +164,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
 
         def _deqv(m, i):
@@ -190,7 +187,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
         m.del_component('w')
         m.del_component('dw')
@@ -233,7 +229,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
 
         def _deqv(m, i):
@@ -257,7 +252,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
         m.del_component('w')
         m.del_component('dw')
@@ -300,7 +294,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
 
         def _deqv(m, i):
@@ -324,7 +317,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
         m.del_component('w')
         m.del_component('dw')
@@ -367,7 +359,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
 
         def _deqv(m, i):
@@ -391,7 +382,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
         m.del_component('w')
         m.del_component('dw')
@@ -434,7 +424,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
 
     # Testing various cases of separable differential equations to ensure
@@ -472,7 +461,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(len(mysim._rhsdict), 4)
         m.del_component('deqv')
         m.del_component('deqw')
-        m.del_component('deqv_index')
         m.del_component('deqw_index')
 
     # Testing Simulator construction on differential variables with a
