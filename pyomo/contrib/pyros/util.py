@@ -658,6 +658,7 @@ def substitute_ssv_in_dr_constraints(model, constraint):
     :param constraint: an equality constraint from the working model identified to be of the form h(x,z,q) = 0.
     :return:
     '''
+    substitution_map = {}
     dr_eqns = model.util.decision_rule_eqns
     fsv = ComponentSet(model.util.first_stage_variables)
     if not hasattr(model, "dr_substituted_constraints"):
@@ -674,9 +675,7 @@ def substitute_ssv_in_dr_constraints(model, constraint):
             for coeff, var in map_quad_coeff_to_var:
                 new_expression += coeff * var[0] * var[1] # var here is a 2-tuple
 
-        model.no_ssv_dr_expr = Expression(expr=new_expression)
-        substitution_map = {}
-        substitution_map[id(repn.linear_vars[-1])] = model.no_ssv_dr_expr.expr
+        substitution_map[id(repn.linear_vars[-1])] = new_expression
 
     model.dr_substituted_constraints.add(
             replace_expressions(expr=constraint.lower,
