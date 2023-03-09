@@ -855,10 +855,10 @@ def coefficient_matching(model, constraint, uncertain_params, config):
             model.util.h_x_q_constraints.add(constraint)
 
     for i in range(len(list(variables_in_constraint))):
-        model.del_component("p_%s" % i)
+        model.del_component(model.component("p_%s" % i))
 
     for i in range(len(list(params_in_constraint))):
-        model.del_component("x_%s" % i)
+        model.del_component(model.component("x_%s" % i))
 
     model.del_component("swapped_constraints")
     model.del_component("swapped_constraints_index")
