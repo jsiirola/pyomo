@@ -132,7 +132,8 @@ def add_var_bound(model, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
+    r"""This function generates objective (FP-NLP subproblem) for minimum
+    euclidean distance to setpoint_model.
 
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}.
 
@@ -143,7 +144,8 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete
+        variables, by default False.
 
     Returns
     -------
@@ -168,7 +170,8 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum
+    Norm1 distance to setpoint_model.
 
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
 
@@ -179,7 +182,8 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete
+        variables, by default False.
 
     Returns
     -------
@@ -212,7 +216,8 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum
+    Norm Infinity distance to setpoint_model.
 
     Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
 
@@ -223,7 +228,8 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete
+        variables, by default False.
 
     Returns
     -------
@@ -342,9 +348,12 @@ def generate_lag_objective_function(model, setpoint_model, config, timing, discr
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
-    """This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates constraint (PF-OA main problem) for minimum
+    Norm1 distance to setpoint_model.
 
-    Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
+    Norm constraint is used to guarantees the monotonicity of the norm
+    objective value sequence of all iterations
+
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
     Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP' Eq. (16).
 
@@ -357,7 +366,9 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     config : ConfigBlock
         The specific configurations for MindtPy.
     discrete_only : bool, optional
-        Whether to only optimize on distance between the discrete variables, by default True.
+        Whether to only optimize on distance between the discrete
+        variables, by default True.
+
     """
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: True)
