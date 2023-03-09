@@ -1235,10 +1235,32 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                              % (_blockName, _out.getvalue()))
 
     def del_component(self, name_or_object):
+        """Delete a component from this block.
+
+        Removes the specified name or component from the Block if
+        `name_or_object` is not None
+
+        Parameters
+        ----------
+        name_or_object : str or Component
+            Component object or name to remove from this Block.
+
+        Raises
+        ------
+        NameError
+            raised when the provided string is not a component on the Block
+
+        ValueError
+            raised when the provided object is either not a component or
+            not a component on this block
+
         """
-        Delete a component from this block.
-        """
+        # Passing in None will be silently ignored
+        if name_or_object is None:
+            return
+
         obj = self.component(name_or_object)
+        # Non-None arguments that resolve to None will generate exceptions
         if obj is None:
             if isinstance(name_or_object, str):
                 raise NameError(
