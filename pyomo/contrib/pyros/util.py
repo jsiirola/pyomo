@@ -683,9 +683,8 @@ def substitute_ssv_in_dr_constraints(model, constraint):
             replace_expressions(expr=constraint.body,
                                      substitution_map=substitution_map))
 
-    # === Delete the original constraint
-    model.del_component(constraint.name)
-    model.del_component("no_ssv_dr_expr")
+    # === Deactivate the original constraint
+    constraint.deactivate()
 
     return model.dr_substituted_constraints[max(model.dr_substituted_constraints.keys())]
 
