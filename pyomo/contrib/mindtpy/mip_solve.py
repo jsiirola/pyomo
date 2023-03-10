@@ -104,13 +104,16 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
 
     if regularization_problem:
         solve_data.mip.MindtPy_utils.objective_constr.deactivate()
-        solve_data.mip.MindtPy_utils.del_component('roa_proj_mip_obj')
-        solve_data.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
+        solve_data.mip.MindtPy_utils.del_component(
+            solve_data.mip.MindtPy_utils.component('roa_proj_mip_obj'))
+        solve_data.mip.MindtPy_utils.cuts.del_component(
+            solve_data.mip.MindtPy_utils.cuts.component('obj_reg_estimate'))
         if config.add_regularization == 'level_L1':
-            solve_data.mip.MindtPy_utils.del_component('L1_obj')
+            solve_data.mip.MindtPy_utils.del_component(
+                solve_data.mip.MindtPy_utils.component('L1_obj'))
         elif config.add_regularization == 'level_L_infinity':
             solve_data.mip.MindtPy_utils.del_component(
-                'L_infinity_obj')
+                solve_data.mip.MindtPy_utils.component('L_infinity_obj'))
 
     return solve_data.mip, main_mip_results
 
@@ -300,10 +303,10 @@ def setup_main(solve_data, config, fp, regularization_problem):
     MindtPy.cuts.activate()
 
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
-    MindtPy.del_component('mip_obj')
+    MindtPy.del_component(MindtPy.component('mip_obj'))
     if regularization_problem and config.single_tree:
-        MindtPy.del_component('roa_proj_mip_obj')
-        MindtPy.cuts.del_component('obj_reg_estimate')
+        MindtPy.del_component(MindtPy.component('roa_proj_mip_obj'))
+        MindtPy.cuts.del_component(MindtPy.cuts.component('obj_reg_estimate'))
     if config.add_regularization is not None and config.add_no_good_cuts:
         if regularization_problem:
             MindtPy.cuts.no_good_cuts.activate()
@@ -311,7 +314,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
             MindtPy.cuts.no_good_cuts.deactivate()
 
     if fp:
-        MindtPy.del_component('fp_mip_obj')
+        MindtPy.del_component(MindtPy.component('fp_mip_obj'))
         if config.fp_main_norm == 'L1':
             MindtPy.fp_mip_obj = generate_norm1_objective_function(
                 solve_data.mip,
@@ -359,7 +362,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
                 expr=sum(MindtPy.objective_value[:]) >= (1 - config.level_coef) * solve_data.primal_bound + config.level_coef * solve_data.dual_bound)
     else:
         if config.add_slack:
-            MindtPy.del_component('aug_penalty_expr')
+            MindtPy.del_component(MindtPy.component('aug_penalty_expr'))
 
             MindtPy.aug_penalty_expr = Expression(
                 expr=sign_adjust * config.OA_penalty_factor * sum(
@@ -372,7 +375,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
 
         if config.use_dual_bound:
             # Delete previously added dual bound constraint
-            MindtPy.cuts.del_component('dual_bound')
+            MindtPy.cuts.del_component(MindtPy.cuts.component('dual_bound'))
             if solve_data.dual_bound not in {float('inf'), float('-inf')}:
                 if solve_data.objective_sense == minimize:
                     MindtPy.cuts.dual_bound = Constraint(
