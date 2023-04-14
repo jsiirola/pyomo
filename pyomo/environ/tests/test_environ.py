@@ -151,7 +151,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',
             'heapq',  # Added in Python 3.10
-            'importlib',  # Imported on Windows
+            'importlib',
             'inspect',
             'json',  # Imported on Windows
             'locale',  # Added in Python 3.9
@@ -160,6 +160,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'platform',
             'shlex',
             'socket',  # Imported on MacOS, Windows; Linux in 3.10
+            'subprocess',  # Began appearing in 3.11
             'tempfile',  # Imported on MacOS, Windows
             'textwrap',
             'typing',
