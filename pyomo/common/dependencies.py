@@ -716,6 +716,7 @@ def _finalize_numpy(np, available):
 # Standard libraries that are slower to import and not strictly required
 # on all platforms / situations.
 ctypes, _ = attempt_import('ctypes', deferred_submodules=['util'])
+random, _ = attempt_import('random')
 
 # Commonly-used optional dependencies
 dill, dill_available = attempt_import('dill')

@@ -158,7 +158,6 @@ class TestPyomoEnviron(unittest.TestCase):
             'logging',
             'pickle',
             'platform',
-            'random',  # Imported on MacOS, Windows
             'shlex',
             'socket',  # Imported on MacOS, Windows; Linux in 3.10
             'tempfile',  # Imported on MacOS, Windows

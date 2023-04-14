@@ -9,9 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from random import random
 import sys
-
+from pyomo.common.dependencies import random
 
 def randint(a, b):
     """Our implementation of random.randint.
