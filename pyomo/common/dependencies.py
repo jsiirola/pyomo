@@ -713,7 +713,11 @@ def _finalize_numpy(np, available):
         numeric_types.RegisterNumericType(t)
         numeric_types.RegisterBooleanType(t)
 
+# Standard libraries that are slower to import and not strictly required
+# on all platforms / situations.
+ctypes, _ = attempt_import('ctypes', deferred_submodules=['util'])
 
+# Commonly-used optional dependencies
 dill, dill_available = attempt_import('dill')
 networkx, networkx_available = attempt_import('networkx')
 numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)

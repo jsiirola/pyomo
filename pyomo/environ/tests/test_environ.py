@@ -147,7 +147,6 @@ class TestPyomoEnviron(unittest.TestCase):
             'base64',  # Imported on Windows
             'cPickle',
             'csv',
-            'ctypes',
             'decimal',
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',

@@ -9,10 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import ctypes
 import multiprocessing
 import os
 
+from .dependencies import ctypes
 
 def _as_bytes(val):
     """Helper function to coerce a string to a bytes() object"""
