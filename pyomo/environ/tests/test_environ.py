@@ -20,7 +20,7 @@ from collections import namedtuple
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.dependencies import numpy_available, attempt_import
+from pyomo.common.dependencies import attempt_import
 
 pyro4, pyro4_available = attempt_import('Pyro4')
 
@@ -171,8 +171,6 @@ class TestPyomoEnviron(unittest.TestCase):
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('ply')
         ref.add('pyutilib')
-        if numpy_available:
-            ref.add('numpy')
         diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)
         self.assertEqual(
             diff, set(), "Unexpected module found in 5 slowest-loading TPL modules"

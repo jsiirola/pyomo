@@ -26,7 +26,7 @@ __all__ = (
 import sys
 import logging
 
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.expr_common import (
@@ -68,6 +68,8 @@ from pyomo.common.numeric_types import (
 )
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+
+_ndarray, _ = attempt_import('pyomo.core.expr.ndarray')
 
 logger = logging.getLogger('pyomo.core')
 
@@ -946,7 +948,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
         return _generate_other_expression(_abs, self, None)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)
+        return _ndarray.NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs
+        )
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """Return a string representation of the expression tree.
@@ -1021,30 +1025,3 @@ pyomo_constant_types.add(NumericConstant)
 
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
-
-
-#
-# Note: the "if numpy_available" in the class definition also ensures
-# that the numpy types are registered if numpy is in fact available
-#
-class NumericNDArray(np.ndarray if numpy_available else object):
-    """An ndarray subclass that stores Pyomo numeric expressions"""
-
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        if method == '__call__':
-            # Convert all incoming types to ndarray (to prevent recursion)
-            args = [np.asarray(i) for i in inputs]
-            # Set the return type to be an 'object'.  This prevents the
-            # logical operators from casting the result to a bool.  This
-            # requires numpy >= 1.6
-            kwargs['dtype'] = object
-
-        # Delegate to the base ufunc, but return an instance of this
-        # class so that additional operators hit this method.
-        ans = getattr(ufunc, method)(*args, **kwargs)
-        if isinstance(ans, np.ndarray):
-            if ans.size == 1:
-                return ans[0]
-            return ans.view(NumericNDArray)
-        else:
-            return ans

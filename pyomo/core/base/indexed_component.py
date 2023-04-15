@@ -20,7 +20,7 @@ from copy import deepcopy
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.expr_errors import TemplateExpressionError
-from pyomo.core.expr.numvalue import native_types, NumericNDArray
+from pyomo.core.expr.numvalue import native_types, _ndarray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.component import Component, ActiveComponent
@@ -1128,7 +1128,7 @@ class IndexedComponent_NDArrayMixin(object):
 
     def __array__(self, dtype=None):
         if not self.is_indexed():
-            ans = NumericNDArray(shape=(1,), dtype=object)
+            ans = _ndarray.NumericNDArray(shape=(1,), dtype=object)
             ans[0] = self
             return ans
 
@@ -1148,10 +1148,12 @@ class IndexedComponent_NDArrayMixin(object):
                 % (self, bounds[0], bounds[1])
             )
         shape = tuple(b + 1 for b in bounds[1])
-        ans = NumericNDArray(shape=shape, dtype=object)
+        ans = _ndarray.NumericNDArray(shape=shape, dtype=object)
         for k, v in self.items():
             ans[k] = v
         return ans
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        return NumericNDArray.__array_ufunc__(None, ufunc, method, *inputs, **kwargs)
+        return _ndarray.NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs
+        )
