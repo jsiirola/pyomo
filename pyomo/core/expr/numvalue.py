@@ -476,6 +476,12 @@ def check_if_numeric_type(obj):
 
     """
     obj_class = obj.__class__
+    if 'numpy' in obj_class.__module__:
+        # trigger the resolution of numpy_available and check if this
+        # type was automaticcally registered
+        bool(_ndarray.numpy_available)
+        if obj_class in native_numeric_types:
+            return True
     try:
         obj_plus_0 = obj + 0
         obj_p0_class = obj_plus_0.__class__
