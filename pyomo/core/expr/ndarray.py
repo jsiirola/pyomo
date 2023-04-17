@@ -11,6 +11,7 @@
 
 from pyomo.common.dependencies import numpy as np, numpy_available
 
+
 #
 # Note: the "if numpy_available" in the class definition also ensures
 # that the numpy types are registered if numpy is in fact available
