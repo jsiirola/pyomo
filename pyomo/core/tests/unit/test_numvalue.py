@@ -552,10 +552,10 @@ class Test_as_numeric(unittest.TestCase):
 
         def _tester(expr):
             rc = subprocess.run(
-               [sys.executable, '-c', cmd % expr],
-               stdout=subprocess.PIPE,
-               stderr=subprocess.STDOUT,
-               text=True,
+                [sys.executable, '-c', cmd % expr],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
             )
             self.assertEqual((rc.returncode, rc.stdout), (0, "False\nTrue\n"))
 
@@ -566,6 +566,7 @@ class Test_as_numeric(unittest.TestCase):
         # Expand this test after merging expr_multiple_dispatch
         #
         # _tester('Var() + np.float64(5)')
+
 
 if __name__ == "__main__":
     unittest.main()
