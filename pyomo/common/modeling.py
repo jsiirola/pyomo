@@ -12,6 +12,7 @@
 import sys
 from pyomo.common.dependencies import random
 
+
 def randint(a, b):
     """Our implementation of random.randint.
 

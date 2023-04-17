@@ -713,6 +713,7 @@ def _finalize_numpy(np, available):
         numeric_types.RegisterNumericType(t)
         numeric_types.RegisterBooleanType(t)
 
+
 # Standard libraries that are slower to import and not strictly required
 # on all platforms / situations.
 ctypes, _ = attempt_import('ctypes', deferred_submodules=['util'])
