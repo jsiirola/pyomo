@@ -1471,19 +1471,28 @@ def identify_components(expr, component_types):
 # =====================================================
 
 
-class _VariableVisitor(SimpleExpressionVisitor):
-    def __init__(self):
-        self.seen = set()
-
-    def visit(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return
-
-        if node.is_variable_type():
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-            return node
+def _identify_structural_variables(expr):
+    seen = set()
+    thisLevel = None
+    nextLevel = [(expr,)]
+    while nextLevel:
+        thisLevel = nextLevel
+        nextLevel = []
+        for arg in chain(*thisLevel):
+            if arg.__class__ in native_types:
+                pass
+            elif arg.is_expression_type():
+                # All expressions, including Expression components
+                nextLevel.append(arg.args)
+            elif arg.is_variable_type():
+                # variable leaf node
+                _id = id(arg)
+                if _id not in seen:
+                    seen.add(_id)
+                    yield arg
+            else:
+                # Non-variable leaf node (e.g., Param, NonNumericValue)
+                pass
 
 
 def identify_variables(expr, include_fixed=True):
@@ -1500,22 +1509,9 @@ def identify_variables(expr, include_fixed=True):
     Yields:
         Each variable that is found.
     """
-    visitor = _VariableVisitor()
-    if include_fixed:
-        for v in visitor.xbfs_yield_leaves(expr):
-            if isinstance(v, tuple):
-                yield from v
-            else:
-                yield v
-    else:
-        for v in visitor.xbfs_yield_leaves(expr):
-            if isinstance(v, tuple):
-                for v_i in v:
-                    if not v_i.is_fixed():
-                        yield v_i
-            else:
-                if not v.is_fixed():
-                    yield v
+    if not include_fixed:
+        return filterfalse(attrgetter('fixed'), _identify_structural_variables(expr))
+    return _identify_structural_variables(expr)
 
 
 # =====================================================
