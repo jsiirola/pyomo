@@ -101,7 +101,7 @@ logger = logging.getLogger('pyomo.core')
 ##------------------------------------------------------------------------
 
 
-class NonNumericValue(object):
+class NonNumericValue(PyomoObject):
     """An object that contains a non-numeric value
 
     Constructor Arguments:

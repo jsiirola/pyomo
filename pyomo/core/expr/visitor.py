@@ -15,7 +15,9 @@ import inspect
 import logging
 import sys
 from copy import deepcopy
-from collections import deque
+from collections import deque, defaultdict
+from itertools import chain, filterfalse
+from operator import itemgetter, attrgetter
 
 logger = logging.getLogger('pyomo.core')
 
@@ -29,6 +31,7 @@ from pyomo.common.numeric_types import (
 )
 import pyomo.core.expr.expr_common as common
 from pyomo.core.expr.symbol_map import SymbolMap
+from pyomo.core.expr.numeric_expr import ProductExpression, DivisionExpression
 
 try:
     # sys._getframe is slightly faster than inspect's currentframe, but
@@ -1094,6 +1097,114 @@ class EvaluateFixedSubexpressionVisitor(ExpressionReplacementVisitor):
         return True, None
 
 
+class SimplifyFixedSubexpressionVisitor(StreamBasedExpressionVisitor):
+    class _register_new_before_child_dispatcher(object):
+        @classmethod
+        def registrar(cls, visitor, child):
+            dispatcher = visitor._before_child_dispatcher
+            child_type = child.__class__
+            if child_type in native_types:
+                dispatcher[child_type] = cls._before_native
+            elif child.is_expression_type():
+                dispatcher[child_type] = cls._before_expression
+            elif not child.is_potentially_variable():
+                dispatcher[child_type] = cls._before_fixed
+            else:
+                dispatcher[child_type] = cls._before_variable
+            return dispatcher[child_type](visitor, child)
+
+        @staticmethod
+        def _before_native(visitor, child):
+            return False, (True, child)
+
+        @staticmethod
+        def _before_expression(visitor, child):
+            return True, None
+
+        @staticmethod
+        def _before_fixed(visitor, child):
+            return False, (True, child.value)
+
+        @staticmethod
+        def _before_variable(visitor, child):
+            if child.fixed:
+                return False, (True, child.value)
+            else:
+                return False, (False, child)
+
+    class Result(object):
+
+        __slots__ = ('_node', '_fixed', '_data')
+
+        class _register_new_exit_handler(object):
+            @classmethod
+            def registrar(cls, result, data):
+                dispatcher = result._exit_handler
+                child_type = result._node.__class__
+                if issubclass(child_type, ProductExpression):
+                    dispatcher[child_type] = cls._handle_product
+                elif issubclass(child_type, DivisionExpression):
+                    dispatcher[child_type] = cls._handle_division
+                else:
+                    dispatcher[child_type] = cls._handle_general
+                return dispatcher[child_type](result, data)
+
+            @staticmethod
+            def _handle_general(result, data):
+                return False, result._node.create_node_with_local_data(data)
+
+            @staticmethod
+            def _handle_product(result, data):
+                a, b = data
+                if a.__class__ in native_types and a == 0.:
+                    return True, 0.
+                if b.__class__ in native_types and b == 0.:
+                    return True, 0.
+                return False, a * b
+
+            @staticmethod
+            def _handle_division(result, data):
+                a, b = data
+                if a.__class__ in native_types and a == 0.:
+                    return True, 0.
+                return False, a / b
+
+        _exit_handler = defaultdict(lambda: SimplifyFixedSubexpressionVisitor.Result._register_new_exit_handler.registrar)
+
+        def __init__(self, node):
+            self._node = node
+            self._fixed = True
+            self._data = []
+
+        def append(self, data):
+            fixed, data = data
+            if not fixed:
+                self._fixed = False
+            self._data.append(data)
+
+        def apply_operation(self):
+            if self._fixed:
+                return self._node._apply_operation(self._data)
+            else:
+                return self._exit_handler[self._node.__class__](self, self._data)
+
+    _before_child_dispatcher = defaultdict(
+        lambda: SimplifyFixedSubexpressionVisitor._register_new_before_child_dispatcher.registrar
+    )
+
+    def beforeChild(self, node, child, child_idx):
+        return self._before_child_dispatcher[child.__class__](self, child)
+
+    def enterNode(self, node):
+        return node.args, self.Result(node)
+
+    def exitNode(self, node, data):
+        return data.apply_operation()
+
+    def finalizeResult(self, result):
+        return result[1]
+
+
 # -------------------------------------------------------
 #
 # Functions used to process expression trees
@@ -1652,7 +1763,7 @@ def expression_to_string(
     # TODO: should we deprecate the compute_values option?
     #
     if compute_values:
-        expr = evaluate_fixed_subexpressions(expr)
+        expr = SimplifyFixedSubexpressionVisitor().walk_expression(expr)
     #
     # Create and execute the visitor pattern
     #
