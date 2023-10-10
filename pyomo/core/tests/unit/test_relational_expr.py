@@ -77,14 +77,14 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #   a   b
         with self.assertRaisesRegex(
             TypeError,
-            "Attempting to use a non-numeric type "
-            r"\(EqualityExpression\) in a numeric expression context.",
+            "Cannot create an EqualityExpression where one of the sub-expressions "
+            "is a relational expression:\n    a  ==  b\n    {==}\n    a"
         ):
             e == m.a
         with self.assertRaisesRegex(
             TypeError,
-            "Attempting to use a non-numeric type "
-            r"\(EqualityExpression\) in a numeric expression context.",
+            "Cannot create an EqualityExpression where one of the sub-expressions "
+            "is a relational expression:\n    a\n    {==}\n    a  ==  b"
         ):
             m.a == e
 

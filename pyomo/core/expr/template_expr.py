@@ -21,9 +21,9 @@ from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
 from pyomo.core.expr.logical_expr import BooleanExpression
 from pyomo.core.expr.numeric_expr import (
     NumericExpression,
+    NumericExpressionDispatcher,
     SumExpression,
     Numeric_NPV_Mixin,
-    register_arg_type,
     ARG_TYPE,
     _balanced_parens,
 )
@@ -646,9 +646,9 @@ class IndexTemplate(NumericValue):
         self._lock = None
 
 
-# Instead of special-casing _categorize_arg_type for this class, we
+# Instead of special-casing categorize_arg_type for this class, we
 # will directly register that it should be treated as an NPV arg
-register_arg_type(IndexTemplate, ARG_TYPE.NPV)
+NumericExpressionDispatcher.register_arg_type(IndexTemplate, ARG_TYPE.NPV)
 
 
 def resolve_template(expr):

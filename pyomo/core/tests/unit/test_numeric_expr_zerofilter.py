@@ -38,8 +38,7 @@ from pyomo.core.expr import (
 )
 from pyomo.core.expr.numeric_expr import (
     ARG_TYPE,
-    _categorize_arg_type,
-    _known_arg_types,
+    NumericExpressionDispatcher,
     _MutableSumExpression,
     _MutableLinearExpression,
     _MutableNPVSumExpression,

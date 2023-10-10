@@ -11,6 +11,8 @@
 
 import collections
 import enum
+import functools
+import itertools
 import logging
 import math
 import operator
@@ -42,6 +44,11 @@ from pyomo.core.expr.expr_common import (
     _lt,
     _le,
     _eq,
+)
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression,
+    InequalityExpression,
+    RangedExpression,
 )
 
 # Note: pyggyback on expr.base's use of attempt_import(visitor)
@@ -97,11 +104,6 @@ relocated_module_attribute(
 )
 
 _zero_one_optimizations = {1}
-
-
-# Stub in the dispatchers
-def _generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError("incomplete import of Pyomo expression system")
 
 
 def enable_expression_optimizations(zero=None, one=None):
@@ -378,7 +380,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self < other
             other > self
         """
-        return _generate_relational_expression(_lt, self, other)
+        return _inequality_dispatcher[self.__class__, other.__class__](
+            self, other, True
+        )
 
     def __gt__(self, other):
         """
@@ -389,7 +393,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self > other
             other < self
         """
-        return _generate_relational_expression(_lt, other, self)
+        return _inequality_dispatcher[other.__class__, self.__class__](
+            other, self, True
+        )
 
     def __le__(self, other):
         """
@@ -400,7 +406,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self <= other
             other >= self
         """
-        return _generate_relational_expression(_le, self, other)
+        return _inequality_dispatcher[self.__class__, other.__class__](
+            self, other, False
+        )
 
     def __ge__(self, other):
         """
@@ -411,7 +419,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self >= other
             other <= self
         """
-        return _generate_relational_expression(_le, other, self)
+        return _inequality_dispatcher[other.__class__, self.__class__](
+            other, self, False
+        )
 
     def __eq__(self, other):
         """
@@ -421,7 +431,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self == other
         """
-        return _generate_relational_expression(_eq, self, other)
+        return _equality_dispatcher[self.__class__, other.__class__](self, other)
 
     def __add__(self, other):
         """
@@ -1658,71 +1668,179 @@ class ARG_TYPE(enum.IntEnum):
     OTHER = 8
 
 
-_known_arg_types = {}
-
-
+@deprecated(
+    'register_arg_type() has been moved to '
+    'NumericExpressionDispatcher.register_arg_type()',
+    version='6.7.0.dev0',
+)
 def register_arg_type(arg_class, etype):
-    _known_arg_types.setdefault(arg_class, ARG_TYPE(etype))
-
-
-def _categorize_arg_type(arg):
-    if arg.__class__ in _known_arg_types:
-        return _known_arg_types[arg.__class__]
-
-    if arg.__class__ in native_numeric_types:
-        ans = ARG_TYPE.NATIVE
-    else:
-        try:
-            is_numeric = arg.is_numeric_type()
-        except AttributeError:
-            if check_if_numeric_type(arg):
-                ans = ARG_TYPE.NATIVE
-            else:
-                ans = ARG_TYPE.INVALID
-        else:
-            if is_numeric:
-                ans = None
-            elif hasattr(arg, 'as_numeric'):
-                ans = ARG_TYPE.ASNUMERIC
-            else:
-                ans = ARG_TYPE.INVALID
-
-    if ans is None:
-        if arg.is_expression_type():
-            # Note: this makes a strong assumption that NPV is a class
-            # attribute and not determined by the current expression
-            # arguments / state.
-            if not arg.is_potentially_variable():
-                ans = ARG_TYPE.NPV
-                # TODO: remove NPV_expression_types
-                NPV_expression_types.add(arg.__class__)
-            elif isinstance(arg, _MutableSumExpression):
-                ans = ARG_TYPE.MUTABLE
-            elif arg.__class__ is MonomialTermExpression:
-                ans = ARG_TYPE.MONOMIAL
-            elif isinstance(arg, LinearExpression):
-                ans = ARG_TYPE.LINEAR
-            elif isinstance(arg, SumExpression):
-                ans = ARG_TYPE.SUM
-            else:
-                ans = ARG_TYPE.OTHER
-        else:
-            if not arg.is_potentially_variable():
-                ans = ARG_TYPE.PARAM
-            elif arg.is_variable_type():
-                ans = ARG_TYPE.VAR
-            else:
-                ans = ARG_TYPE.OTHER
-    register_arg_type(arg.__class__, ans)
-    return ans
-
-
-def _categorize_arg_types(*args):
-    return tuple(_categorize_arg_type(arg) for arg in args)
+    NumericExpressionDispatcher.register_arg_type(arg_class, etype)
 
 
 def _invalid(*args):
     return NotImplemented
+
+
+class NumericExpressionDispatcher(collections.defaultdict):
+    """"""
+
+    __slots__ = ('type_handler_mapping',)
+
+    known_arg_types = {}
+    _ARG_TYPES = ARG_TYPE
+
+    def __init__(self, type_mapping, default=None, invalid=_invalid):
+        super().__init__()
+        self.type_handler_mapping = dict()
+        self._initialize_dispatcher_type_mapping(type_mapping, invalid)
+        if default is not None:
+            try:
+                n = len(next(iter(type_mapping)))
+            except:
+                n = 1
+            for key in itertools.product(self._ARG_TYPES, repeat=n):
+                self.type_handler_mapping.setdefault(key, default)
+
+    def __missing__(self, key):
+        return self.register_dispatcher
+
+    def register_dispatcher(self, *args):
+        types = tuple(self.categorize_arg_type(arg) for arg in args)
+        # Retrieve the appropriate handler, record it in the main
+        # _add_dispatcher dict (so this method is not called a second time for
+        # these types)
+        handler = self.type_handler_mapping[types]
+        self[tuple(map(operator.attrgetter('__class__'), args))] = handler
+        # Call the appropriate handler
+        return handler(*args)
+
+    def _initialize_dispatcher_type_mapping(self, updates, invalid):
+        __any_asnumeric = functools.partial(_any_asnumeric, self)
+        __asnumeric_any = functools.partial(_asnumeric_any, self)
+        __asnumeric_asnumeric = functools.partial(_asnumeric_asnumeric, self)
+        __any_mutable = functools.partial(_any_mutable, self)
+        __mutable_any = functools.partial(_mutable_any, self)
+        __mutable_mutable = functools.partial(_mutable_mutable, self)
+
+        _ARG_TYPES = self._ARG_TYPES
+
+        mapping = self.type_handler_mapping
+        mapping.update({(i, ARG_TYPE.ASNUMERIC): __any_asnumeric for i in _ARG_TYPES})
+        mapping.update({(ARG_TYPE.ASNUMERIC, i): __asnumeric_any for i in _ARG_TYPES})
+        mapping[ARG_TYPE.ASNUMERIC, ARG_TYPE.ASNUMERIC] = __asnumeric_asnumeric
+
+        mapping.update({(i, ARG_TYPE.MUTABLE): __any_mutable for i in _ARG_TYPES})
+        mapping.update({(ARG_TYPE.MUTABLE, i): __mutable_any for i in _ARG_TYPES})
+        mapping[ARG_TYPE.MUTABLE, ARG_TYPE.MUTABLE] = __mutable_mutable
+
+        mapping.update({(i, ARG_TYPE.INVALID): invalid for i in _ARG_TYPES})
+        mapping.update({(ARG_TYPE.INVALID, i): invalid for i in _ARG_TYPES})
+
+        mapping.update(updates)
+
+    @classmethod
+    def register_arg_type(cls, arg_class, etype):
+        cls.known_arg_types.setdefault(arg_class, ARG_TYPE(etype))
+
+    @classmethod
+    def categorize_arg_type(cls, arg):
+        if arg.__class__ in cls.known_arg_types:
+            return cls.known_arg_types[arg.__class__]
+
+        if arg.__class__ in native_numeric_types:
+            ans = ARG_TYPE.NATIVE
+        else:
+            try:
+                is_numeric = arg.is_numeric_type()
+            except AttributeError:
+                if check_if_numeric_type(arg):
+                    ans = ARG_TYPE.NATIVE
+                else:
+                    ans = ARG_TYPE.INVALID
+            else:
+                if is_numeric:
+                    ans = None
+                elif hasattr(arg, 'as_numeric'):
+                    ans = ARG_TYPE.ASNUMERIC
+                else:
+                    ans = ARG_TYPE.INVALID
+
+        if ans is None:
+            if arg.is_expression_type():
+                # Note: this makes a strong assumption that NPV is a class
+                # attribute and not determined by the current expression
+                # arguments / state.
+                if not arg.is_potentially_variable():
+                    ans = ARG_TYPE.NPV
+                    # TODO: remove NPV_expression_types
+                    NPV_expression_types.add(arg.__class__)
+                elif isinstance(arg, _MutableSumExpression):
+                    ans = ARG_TYPE.MUTABLE
+                elif arg.__class__ is MonomialTermExpression:
+                    ans = ARG_TYPE.MONOMIAL
+                elif isinstance(arg, LinearExpression):
+                    ans = ARG_TYPE.LINEAR
+                elif isinstance(arg, SumExpression):
+                    ans = ARG_TYPE.SUM
+                else:
+                    ans = ARG_TYPE.OTHER
+            else:
+                if not arg.is_potentially_variable():
+                    ans = ARG_TYPE.PARAM
+                elif arg.is_variable_type():
+                    ans = ARG_TYPE.VAR
+                else:
+                    ans = ARG_TYPE.OTHER
+        cls.register_arg_type(arg.__class__, ans)
+        return ans
+
+
+class UnaryNumericExpressionDispatcher(NumericExpressionDispatcher):
+    """"""
+
+    __slots__ = ()
+
+    def register_dispatcher(self, a):
+        type_ = self.categorize_arg_type(a)
+        # Retrieve the appropriate handler, record it in the main
+        # _add_dispatcher dict (so this method is not called a second time for
+        # these types)
+        self[a.__class__] = handler = self.type_handler_mapping[type_]
+        # Call the appropriate handler
+        return handler(a)
+
+    def _initialize_dispatcher_type_mapping(self, updates, invalid):
+        __asnumeric = functools.partial(_asnumeric, self)
+        __mutable = functools.partial(_mutable, self)
+
+        self.type_handler_mapping.update(
+            {
+                ARG_TYPE.ASNUMERIC: __asnumeric,
+                ARG_TYPE.MUTABLE: __mutable,
+                ARG_TYPE.INVALID: invalid,
+            }
+        )
+
+        self.type_handler_mapping.update(updates)
+
+
+class SecondArgNumericExpressionDispatcher(NumericExpressionDispatcher):
+    """"""
+
+    __slots__ = ()
+
+    def register_dispatcher(self, *args):
+        type_ = self.categorize_arg_type(args[1])
+        # Retrieve the appropriate handler, record it in the main
+        # _add_dispatcher dict (so this method is not called a second time for
+        # these types)
+        handler = self.type_handler_mapping[type_]
+        self[args[1].__class__] = handler
+        # Call the appropriate handler
+        return handler(*args)
+
+    def _initialize_dispatcher_type_mapping(self, updates, invalid):
+        self.type_handler_mapping.update(updates)
 
 
 def _recast_mutable(expr):
@@ -1735,75 +1853,55 @@ def _recast_mutable(expr):
         return expr._args_[0]
 
 
-def _unary_op_dispatcher_type_mapping(dispatcher, updates):
-    #
-    # Special case (wrapping) operators
-    #
-    def _asnumeric(a):
-        a = a.as_numeric()
-        return dispatcher[a.__class__](a)
+#
+# Special case (wrapping) operators
+#
+def _asnumeric(dispatcher, a):
+    a = a.as_numeric()
+    return dispatcher[a.__class__](a)
 
-    def _mutable(a):
+
+def _mutable(dispatcher, a):
+    a = _recast_mutable(a)
+    return dispatcher[a.__class__](a)
+
+
+#
+# Special case (wrapping) operators
+#
+def _any_asnumeric(dispatcher, a, b):
+    b = b.as_numeric()
+    return dispatcher[a.__class__, b.__class__](a, b)
+
+
+def _asnumeric_any(dispatcher, a, b):
+    a = a.as_numeric()
+    return dispatcher[a.__class__, b.__class__](a, b)
+
+
+def _asnumeric_asnumeric(dispatcher, a, b):
+    a = a.as_numeric()
+    b = b.as_numeric()
+    return dispatcher[a.__class__, b.__class__](a, b)
+
+
+def _any_mutable(dispatcher, a, b):
+    b = _recast_mutable(b)
+    return dispatcher[a.__class__, b.__class__](a, b)
+
+
+def _mutable_any(dispatcher, a, b):
+    a = _recast_mutable(a)
+    return dispatcher[a.__class__, b.__class__](a, b)
+
+
+def _mutable_mutable(dispatcher, a, b):
+    if a is b:
+        a = b = _recast_mutable(a)
+    else:
         a = _recast_mutable(a)
-        return dispatcher[a.__class__](a)
-
-    mapping = {
-        ARG_TYPE.ASNUMERIC: _asnumeric,
-        ARG_TYPE.MUTABLE: _mutable,
-        ARG_TYPE.INVALID: _invalid,
-    }
-
-    mapping.update(updates)
-    return mapping
-
-
-def _binary_op_dispatcher_type_mapping(dispatcher, updates):
-    #
-    # Special case (wrapping) operators
-    #
-    def _any_asnumeric(a, b):
-        b = b.as_numeric()
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _asnumeric_any(a, b):
-        a = a.as_numeric()
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _asnumeric_asnumeric(a, b):
-        a = a.as_numeric()
-        b = b.as_numeric()
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _any_mutable(a, b):
         b = _recast_mutable(b)
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _mutable_any(a, b):
-        a = _recast_mutable(a)
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _mutable_mutable(a, b):
-        if a is b:
-            a = b = _recast_mutable(a)
-        else:
-            a = _recast_mutable(a)
-            b = _recast_mutable(b)
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    mapping = {}
-    mapping.update({(i, ARG_TYPE.ASNUMERIC): _any_asnumeric for i in ARG_TYPE})
-    mapping.update({(ARG_TYPE.ASNUMERIC, i): _asnumeric_any for i in ARG_TYPE})
-    mapping[ARG_TYPE.ASNUMERIC, ARG_TYPE.ASNUMERIC] = _asnumeric_asnumeric
-
-    mapping.update({(i, ARG_TYPE.MUTABLE): _any_mutable for i in ARG_TYPE})
-    mapping.update({(ARG_TYPE.MUTABLE, i): _mutable_any for i in ARG_TYPE})
-    mapping[ARG_TYPE.MUTABLE, ARG_TYPE.MUTABLE] = _mutable_mutable
-
-    mapping.update({(i, ARG_TYPE.INVALID): _invalid for i in ARG_TYPE})
-    mapping.update({(ARG_TYPE.INVALID, i): _invalid for i in ARG_TYPE})
-
-    mapping.update(updates)
-    return mapping
+    return dispatcher[a.__class__, b.__class__](a, b)
 
 
 #
@@ -2246,22 +2344,7 @@ def _add_other_other(a, b):
     return SumExpression([a, b])
 
 
-def _register_new_add_handler(a, b):
-    types = _categorize_arg_types(a, b)
-    # Retrieve the appropriate handler, record it in the main
-    # _add_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _add_dispatcher[a.__class__, b.__class__] = handler = _add_type_handler_mapping[
-        types
-    ]
-    # Call the appropriate handler
-    return handler(a, b)
-
-
-_add_dispatcher = collections.defaultdict(lambda: _register_new_add_handler)
-
-_add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _add_dispatcher,
+_add_dispatcher = NumericExpressionDispatcher(
     {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _add_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _add_native_npv,
@@ -2327,7 +2410,7 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _add_other_linear,
         (ARG_TYPE.OTHER, ARG_TYPE.SUM): _add_other_sum,
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _add_other_other,
-    },
+    }
 )
 
 #
@@ -2394,35 +2477,20 @@ def _iadd_mutablenpvsum_other(a, b):
     return _iadd_mutablesum_other(a, b)
 
 
-_iadd_mutablenpvsum_type_handler_mapping = {
-    ARG_TYPE.INVALID: _invalid,
-    ARG_TYPE.ASNUMERIC: _iadd_mutablenpvsum_asnumeric,
-    ARG_TYPE.MUTABLE: _iadd_mutablenpvsum_mutable,
-    ARG_TYPE.NATIVE: _iadd_mutablenpvsum_native,
-    ARG_TYPE.NPV: _iadd_mutablenpvsum_npv,
-    ARG_TYPE.PARAM: _iadd_mutablenpvsum_param,
-    ARG_TYPE.VAR: _iadd_mutablenpvsum_var,
-    ARG_TYPE.MONOMIAL: _iadd_mutablenpvsum_monomial,
-    ARG_TYPE.LINEAR: _iadd_mutablenpvsum_linear,
-    ARG_TYPE.SUM: _iadd_mutablenpvsum_sum,
-    ARG_TYPE.OTHER: _iadd_mutablenpvsum_other,
-}
-
-
-def _register_new_iadd_mutablenpvsum_handler(a, b):
-    types = _categorize_arg_types(b)
-    # Retrieve the appropriate handler, record it in the main
-    # _iadd_mutablenpvsum_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _iadd_mutablenpvsum_dispatcher[
-        b.__class__
-    ] = handler = _iadd_mutablenpvsum_type_handler_mapping[types[0]]
-    # Call the appropriate handler
-    return handler(a, b)
-
-
-_iadd_mutablenpvsum_dispatcher = collections.defaultdict(
-    lambda: _register_new_iadd_mutablenpvsum_handler
+_iadd_mutablenpvsum_dispatcher = SecondArgNumericExpressionDispatcher(
+    {
+        ARG_TYPE.INVALID: _invalid,
+        ARG_TYPE.ASNUMERIC: _iadd_mutablenpvsum_asnumeric,
+        ARG_TYPE.MUTABLE: _iadd_mutablenpvsum_mutable,
+        ARG_TYPE.NATIVE: _iadd_mutablenpvsum_native,
+        ARG_TYPE.NPV: _iadd_mutablenpvsum_npv,
+        ARG_TYPE.PARAM: _iadd_mutablenpvsum_param,
+        ARG_TYPE.VAR: _iadd_mutablenpvsum_var,
+        ARG_TYPE.MONOMIAL: _iadd_mutablenpvsum_monomial,
+        ARG_TYPE.LINEAR: _iadd_mutablenpvsum_linear,
+        ARG_TYPE.SUM: _iadd_mutablenpvsum_sum,
+        ARG_TYPE.OTHER: _iadd_mutablenpvsum_other,
+    }
 )
 
 
@@ -2493,35 +2561,20 @@ def _iadd_mutablelinear_other(a, b):
     return _iadd_mutablesum_other(a, b)
 
 
-_iadd_mutablelinear_type_handler_mapping = {
-    ARG_TYPE.INVALID: _invalid,
-    ARG_TYPE.ASNUMERIC: _iadd_mutablelinear_asnumeric,
-    ARG_TYPE.MUTABLE: _iadd_mutablelinear_mutable,
-    ARG_TYPE.NATIVE: _iadd_mutablelinear_native,
-    ARG_TYPE.NPV: _iadd_mutablelinear_npv,
-    ARG_TYPE.PARAM: _iadd_mutablelinear_param,
-    ARG_TYPE.VAR: _iadd_mutablelinear_var,
-    ARG_TYPE.MONOMIAL: _iadd_mutablelinear_monomial,
-    ARG_TYPE.LINEAR: _iadd_mutablelinear_linear,
-    ARG_TYPE.SUM: _iadd_mutablelinear_sum,
-    ARG_TYPE.OTHER: _iadd_mutablelinear_other,
-}
-
-
-def _register_new_iadd_mutablelinear_handler(a, b):
-    types = _categorize_arg_types(b)
-    # Retrieve the appropriate handler, record it in the main
-    # _iadd_mutablelinear_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _iadd_mutablelinear_dispatcher[
-        b.__class__
-    ] = handler = _iadd_mutablelinear_type_handler_mapping[types[0]]
-    # Call the appropriate handler
-    return handler(a, b)
-
-
-_iadd_mutablelinear_dispatcher = collections.defaultdict(
-    lambda: _register_new_iadd_mutablelinear_handler
+_iadd_mutablelinear_dispatcher = SecondArgNumericExpressionDispatcher(
+    {
+        ARG_TYPE.INVALID: _invalid,
+        ARG_TYPE.ASNUMERIC: _iadd_mutablelinear_asnumeric,
+        ARG_TYPE.MUTABLE: _iadd_mutablelinear_mutable,
+        ARG_TYPE.NATIVE: _iadd_mutablelinear_native,
+        ARG_TYPE.NPV: _iadd_mutablelinear_npv,
+        ARG_TYPE.PARAM: _iadd_mutablelinear_param,
+        ARG_TYPE.VAR: _iadd_mutablelinear_var,
+        ARG_TYPE.MONOMIAL: _iadd_mutablelinear_monomial,
+        ARG_TYPE.LINEAR: _iadd_mutablelinear_linear,
+        ARG_TYPE.SUM: _iadd_mutablelinear_sum,
+        ARG_TYPE.OTHER: _iadd_mutablelinear_other,
+    }
 )
 
 
@@ -2594,35 +2647,20 @@ def _iadd_mutablesum_other(a, b):
     return a
 
 
-_iadd_mutablesum_type_handler_mapping = {
-    ARG_TYPE.INVALID: _invalid,
-    ARG_TYPE.ASNUMERIC: _iadd_mutablesum_asnumeric,
-    ARG_TYPE.MUTABLE: _iadd_mutablesum_mutable,
-    ARG_TYPE.NATIVE: _iadd_mutablesum_native,
-    ARG_TYPE.NPV: _iadd_mutablesum_npv,
-    ARG_TYPE.PARAM: _iadd_mutablesum_param,
-    ARG_TYPE.VAR: _iadd_mutablesum_var,
-    ARG_TYPE.MONOMIAL: _iadd_mutablesum_monomial,
-    ARG_TYPE.LINEAR: _iadd_mutablesum_linear,
-    ARG_TYPE.SUM: _iadd_mutablesum_sum,
-    ARG_TYPE.OTHER: _iadd_mutablesum_other,
-}
-
-
-def _register_new_iadd_mutablesum_handler(a, b):
-    types = _categorize_arg_types(b)
-    # Retrieve the appropriate handler, record it in the main
-    # _iadd_mutablesum_dispatcher dict (so this method is not called a
-    # second time for these types)
-    _iadd_mutablesum_dispatcher[
-        b.__class__
-    ] = handler = _iadd_mutablesum_type_handler_mapping[types[0]]
-    # Call the appropriate handler
-    return handler(a, b)
-
-
-_iadd_mutablesum_dispatcher = collections.defaultdict(
-    lambda: _register_new_iadd_mutablesum_handler
+_iadd_mutablesum_dispatcher = SecondArgNumericExpressionDispatcher(
+    {
+        ARG_TYPE.INVALID: _invalid,
+        ARG_TYPE.ASNUMERIC: _iadd_mutablesum_asnumeric,
+        ARG_TYPE.MUTABLE: _iadd_mutablesum_mutable,
+        ARG_TYPE.NATIVE: _iadd_mutablesum_native,
+        ARG_TYPE.NPV: _iadd_mutablesum_npv,
+        ARG_TYPE.PARAM: _iadd_mutablesum_param,
+        ARG_TYPE.VAR: _iadd_mutablesum_var,
+        ARG_TYPE.MONOMIAL: _iadd_mutablesum_monomial,
+        ARG_TYPE.LINEAR: _iadd_mutablesum_linear,
+        ARG_TYPE.SUM: _iadd_mutablesum_sum,
+        ARG_TYPE.OTHER: _iadd_mutablesum_other,
+    }
 )
 
 
@@ -2667,20 +2705,7 @@ def _neg_other(a):
     return NegationExpression((a,))
 
 
-def _register_new_neg_handler(a):
-    types = _categorize_arg_types(a)
-    # Retrieve the appropriate handler, record it in the main
-    # _neg_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _neg_dispatcher[a.__class__] = handler = _neg_type_handler_mapping[types[0]]
-    # Call the appropriate handler
-    return handler(a)
-
-
-_neg_dispatcher = collections.defaultdict(lambda: _register_new_neg_handler)
-
-_neg_type_handler_mapping = _unary_op_dispatcher_type_mapping(
-    _neg_dispatcher,
+_neg_dispatcher = UnaryNumericExpressionDispatcher(
     {
         ARG_TYPE.NATIVE: _neg_native,
         ARG_TYPE.NPV: _neg_npv,
@@ -2690,7 +2715,7 @@ _neg_type_handler_mapping = _unary_op_dispatcher_type_mapping(
         ARG_TYPE.LINEAR: _neg_sum,
         ARG_TYPE.SUM: _neg_sum,
         ARG_TYPE.OTHER: _neg_other,
-    },
+    }
 )
 
 
@@ -3085,22 +3110,7 @@ def _mul_other_other(a, b):
     return ProductExpression((a, b))
 
 
-def _register_new_mul_handler(a, b):
-    types = _categorize_arg_types(a, b)
-    # Retrieve the appropriate handler, record it in the main
-    # _mul_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _mul_dispatcher[a.__class__, b.__class__] = handler = _mul_type_handler_mapping[
-        types
-    ]
-    # Call the appropriate handler
-    return handler(a, b)
-
-
-_mul_dispatcher = collections.defaultdict(lambda: _register_new_mul_handler)
-
-_mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _mul_dispatcher,
+_mul_dispatcher = NumericExpressionDispatcher(
     {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _mul_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _mul_native_npv,
@@ -3166,7 +3176,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _mul_other_linear,
         (ARG_TYPE.OTHER, ARG_TYPE.SUM): _mul_other_sum,
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _mul_other_other,
-    },
+    }
 )
 
 
@@ -3583,22 +3593,7 @@ def _div_other_other(a, b):
     return DivisionExpression((a, b))
 
 
-def _register_new_div_handler(a, b):
-    types = _categorize_arg_types(a, b)
-    # Retrieve the appropriate handler, record it in the main
-    # _div_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _div_dispatcher[a.__class__, b.__class__] = handler = _div_type_handler_mapping[
-        types
-    ]
-    # Call the appropriate handler
-    return handler(a, b)
-
-
-_div_dispatcher = collections.defaultdict(lambda: _register_new_div_handler)
-
-_div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _div_dispatcher,
+_div_dispatcher = NumericExpressionDispatcher(
     {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _div_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _div_native_npv,
@@ -3664,7 +3659,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _div_other_linear,
         (ARG_TYPE.OTHER, ARG_TYPE.SUM): _div_other_sum,
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _div_other_other,
-    },
+    }
 )
 
 
@@ -3768,22 +3763,7 @@ def _pow_other_other(a, b):
     return PowExpression((a, b))
 
 
-def _register_new_pow_handler(a, b):
-    types = _categorize_arg_types(a, b)
-    # Retrieve the appropriate handler, record it in the main
-    # _pow_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _pow_dispatcher[a.__class__, b.__class__] = handler = _pow_type_handler_mapping[
-        types
-    ]
-    # Call the appropriate handler
-    return handler(a, b)
-
-
-_pow_dispatcher = collections.defaultdict(lambda: _register_new_pow_handler)
-
-_pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
-    _pow_dispatcher,
+_pow_dispatcher = NumericExpressionDispatcher(
     {
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _pow_native_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _pow_native_npv,
@@ -3825,14 +3805,7 @@ _pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.NPV): _pow_other_npv,
         (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _pow_other_param,
     },
-)
-_pow_type_handler_mapping.update(
-    {
-        (i, j): _pow_other_other
-        for i in ARG_TYPE
-        for j in ARG_TYPE
-        if (i, j) not in _pow_type_handler_mapping
-    }
+    default=_pow_other_other,
 )
 
 
@@ -3861,20 +3834,7 @@ def _abs_other(a):
     return AbsExpression((a,))
 
 
-def _register_new_abs_handler(a):
-    types = _categorize_arg_types(a)
-    # Retrieve the appropriate handler, record it in the main
-    # _abs_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _abs_dispatcher[a.__class__] = handler = _abs_type_handler_mapping[types[0]]
-    # Call the appropriate handler
-    return handler(a)
-
-
-_abs_dispatcher = collections.defaultdict(lambda: _register_new_abs_handler)
-
-_abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
-    _abs_dispatcher,
+_abs_dispatcher = UnaryNumericExpressionDispatcher(
     {
         ARG_TYPE.NATIVE: _abs_native,
         ARG_TYPE.NPV: _abs_npv,
@@ -3884,7 +3844,7 @@ _abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
         ARG_TYPE.LINEAR: _abs_other,
         ARG_TYPE.SUM: _abs_other,
         ARG_TYPE.OTHER: _abs_other,
-    },
+    }
 )
 
 
@@ -3893,66 +3853,56 @@ _abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
 #
 
 
-def _fcn_asnumeric(a, name, fcn):
+def _fcn_asnumeric(fcn, a, name):
     a = a.as_numeric()
-    return _fcn_dispatcher[a.__class__](a, name, fcn)
+    return _fcn_dispatcher[a.__class__](fcn, a, name)
 
 
-def _fcn_mutable(a, name, fcn):
+def _fcn_mutable(fcn, a, name):
     a = _recast_mutable(a)
-    return _fcn_dispatcher[a.__class__](a, name, fcn)
+    return _fcn_dispatcher[a.__class__](fcn, a, name)
 
 
-def _fcn_invalid(a, name, fcn):
+def _fcn_invalid(fcn, a, name):
     fcn(a)
     # returns None
 
 
-def _fcn_native(a, name, fcn):
+def _fcn_native(fcn, a, name):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return fcn(a)
 
 
-def _fcn_npv(a, name, fcn):
+def _fcn_npv(fcn, a, name):
     # This can be hit because of the asnumeric / mutable wrapper handlers.
     return NPV_UnaryFunctionExpression((a,), name, fcn)
 
 
-def _fcn_param(a, name, fcn):
+def _fcn_param(fcn, a, name):
     if a.is_constant():
         return fcn(a.value)
     return NPV_UnaryFunctionExpression((a,), name, fcn)
 
 
-def _fcn_other(a, name, fcn):
+def _fcn_other(fcn, a, name):
     return UnaryFunctionExpression((a,), name, fcn)
 
 
-def _register_new_fcn_dispatcher(a, name, fcn):
-    types = _categorize_arg_types(a)
-    # Retrieve the appropriate handler, record it in the main
-    # _fcn_dispatcher dict (so this method is not called a second time for
-    # these types)
-    _fcn_dispatcher[a.__class__] = handler = _fcn_type_handler_mapping[types[0]]
-    # Call the appropriate handler
-    return handler(a, name, fcn)
-
-
-_fcn_dispatcher = collections.defaultdict(lambda: _register_new_fcn_dispatcher)
-
-_fcn_type_handler_mapping = {
-    ARG_TYPE.ASNUMERIC: _fcn_asnumeric,
-    ARG_TYPE.MUTABLE: _fcn_mutable,
-    ARG_TYPE.INVALID: _fcn_invalid,
-    ARG_TYPE.NATIVE: _fcn_native,
-    ARG_TYPE.NPV: _fcn_npv,
-    ARG_TYPE.PARAM: _fcn_param,
-    ARG_TYPE.VAR: _fcn_other,
-    ARG_TYPE.MONOMIAL: _fcn_other,
-    ARG_TYPE.LINEAR: _fcn_other,
-    ARG_TYPE.SUM: _fcn_other,
-    ARG_TYPE.OTHER: _fcn_other,
-}
+_fcn_dispatcher = SecondArgNumericExpressionDispatcher(
+    {
+        ARG_TYPE.ASNUMERIC: _fcn_asnumeric,
+        ARG_TYPE.MUTABLE: _fcn_mutable,
+        ARG_TYPE.INVALID: _fcn_invalid,
+        ARG_TYPE.NATIVE: _fcn_native,
+        ARG_TYPE.NPV: _fcn_npv,
+        ARG_TYPE.PARAM: _fcn_param,
+        ARG_TYPE.VAR: _fcn_other,
+        ARG_TYPE.MONOMIAL: _fcn_other,
+        ARG_TYPE.LINEAR: _fcn_other,
+        ARG_TYPE.SUM: _fcn_other,
+        ARG_TYPE.OTHER: _fcn_other,
+    }
+)
 
 
 #
@@ -3960,79 +3910,79 @@ _fcn_type_handler_mapping = {
 # Python operators.
 #
 def ceil(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'ceil', math.ceil)
+    return _fcn_dispatcher[arg.__class__](math.ceil, arg, 'ceil')
 
 
 def floor(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'floor', math.floor)
+    return _fcn_dispatcher[arg.__class__](math.floor, arg, 'floor')
 
 
 # e ** x
 def exp(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'exp', math.exp)
+    return _fcn_dispatcher[arg.__class__](math.exp, arg, 'exp')
 
 
 def log(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'log', math.log)
+    return _fcn_dispatcher[arg.__class__](math.log, arg, 'log')
 
 
 def log10(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'log10', math.log10)
+    return _fcn_dispatcher[arg.__class__](math.log10, arg, 'log10')
 
 
 # FIXME: this is nominally the same as x ** 0.5, but follows a different
 # path and produces a different NL file!
 def sqrt(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'sqrt', math.sqrt)
+    return _fcn_dispatcher[arg.__class__](math.sqrt, arg, 'sqrt')
     # return _pow_dispatcher[arg.__class__, float](arg, 0.5)
 
 
 def sin(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'sin', math.sin)
+    return _fcn_dispatcher[arg.__class__](math.sin, arg, 'sin')
 
 
 def cos(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'cos', math.cos)
+    return _fcn_dispatcher[arg.__class__](math.cos, arg, 'cos')
 
 
 def tan(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'tan', math.tan)
+    return _fcn_dispatcher[arg.__class__](math.tan, arg, 'tan')
 
 
 def sinh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'sinh', math.sinh)
+    return _fcn_dispatcher[arg.__class__](math.sinh, arg, 'sinh')
 
 
 def cosh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'cosh', math.cosh)
+    return _fcn_dispatcher[arg.__class__](math.cosh, arg, 'cosh')
 
 
 def tanh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'tanh', math.tanh)
+    return _fcn_dispatcher[arg.__class__](math.tanh, arg, 'tanh')
 
 
 def asin(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'asin', math.asin)
+    return _fcn_dispatcher[arg.__class__](math.asin, arg, 'asin')
 
 
 def acos(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'acos', math.acos)
+    return _fcn_dispatcher[arg.__class__](math.acos, arg, 'acos')
 
 
 def atan(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'atan', math.atan)
+    return _fcn_dispatcher[arg.__class__](math.atan, arg, 'atan')
 
 
 def asinh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'asinh', math.asinh)
+    return _fcn_dispatcher[arg.__class__](math.asinh, arg, 'asinh')
 
 
 def acosh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'acosh', math.acosh)
+    return _fcn_dispatcher[arg.__class__](math.acosh, arg, 'acosh')
 
 
 def atanh(arg):
-    return _fcn_dispatcher[arg.__class__](arg, 'atanh', math.atanh)
+    return _fcn_dispatcher[arg.__class__](math.atanh, arg, 'atanh')
 
 
 #
@@ -4046,7 +3996,7 @@ def _process_expr_if_arg(arg, kwargs, name):
         if arg is not None:
             raise ValueError(f'Cannot specify both {name}_ and {name}')
         arg = alt
-    _type = _categorize_arg_type(arg)
+    _type = NumericExpressionDispatcher.categorize_arg_type(arg)
     # Note that relational expressions get mapped to INVALID
     while _type < ARG_TYPE.INVALID:
         if _type is ARG_TYPE.MUTABLE:
@@ -4054,8 +4004,8 @@ def _process_expr_if_arg(arg, kwargs, name):
         elif _type is ARG_TYPE.ASNUMERIC:
             arg = arg.as_numeric()
         else:
-            raise DeveloperError('_categorize_arg_type() returned unexpected ARG_TYPE')
-        _type = _categorize_arg_type(arg)
+            raise DeveloperError('categorize_arg_type() returned unexpected ARG_TYPE')
+        _type = NumericExpressionDispatcher.categorize_arg_type(arg)
     return arg, _type
 
 
@@ -4080,7 +4030,7 @@ def Expr_if(IF_=None, THEN_=None, ELSE_=None, **kwargs):
     if kwargs:
         raise ValueError('Unrecognized arguments: ' + ', '.join(kwargs))
     # Notes:
-    # - side effect: IF is the last iteration, so _type == _categorize_arg_type(IF)
+    # - side effect: IF is the last iteration, so _type == categorize_arg_type(IF)
     # - we do NO error checking as to the actual arg types.  That is
     #   left to the writer (and as of writing [Jul 2023], the NL writer
     #   is the only writer that recognized Expr_if)
@@ -4092,6 +4042,311 @@ def Expr_if(IF_=None, THEN_=None, ELSE_=None, **kwargs):
         return Expr_ifExpression((IF_, THEN_, ELSE_))
     else:
         return NPV_Expr_ifExpression((IF_, THEN_, ELSE_))
+
+
+#
+# EQUALITY expression handlers
+#
+
+
+def _equality_native_native(a, b):
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
+    return a == b
+
+
+def _equality_native_param(a, b):
+    if b.is_constant():
+        return a == (b.value)
+    return EqualityExpression((a, b))
+
+
+def _equality_npv_param(a, b):
+    if b.is_constant():
+        b = b.value
+    return EqualityExpression((a, b))
+
+
+def _equality_param_native(a, b):
+    if a.is_constant():
+        return a.value == b
+    return EqualityExpression((a, b))
+
+
+def _equality_param_npv(a, b):
+    if a.is_constant():
+        a = a.value
+    return EqualityExpression((a, b))
+
+
+def _equality_param_param(a, b):
+    if a.is_constant():
+        a = a.value
+        if b.is_constant():
+            return a == b.value
+    elif b.is_constant():
+        b = b.value
+    return EqualityExpression((a, b))
+
+
+def _equality_param_other(a, b):
+    if a.is_constant():
+        a = a.value
+    return EqualityExpression((a, b))
+
+
+def _equality_other_param(a, b):
+    if b.is_constant():
+        b = b.value
+    return EqualityExpression((a, b))
+
+
+def _equality_other_other(a, b):
+    return EqualityExpression((a, b))
+
+
+def _equality_invalid(a, b):
+    if _equality_dispatcher.categorize_arg_type(a) == ARG_TYPE.INVALID:
+        obj = a
+    else:
+        obj = b
+
+    if hasattr(obj, 'is_expression_type') and obj.is_expression_type(
+        ExpressionType.RELATIONAL
+    ):
+        raise TypeError(
+            "Cannot create an EqualityExpression where one of the "
+            "sub-expressions is a relational expression:\n"
+            "    %s\n    {==}\n    %s" % (a, b)
+        )
+    if (
+        hasattr(obj, 'is_component_type')
+        and obj.is_component_type()
+        and obj.is_indexed()
+    ):
+        raise TypeError(
+            "Argument for expression is an indexed numeric "
+            "value\nspecified without an index:\n\t%s\nIs this "
+            "value defined over an index that you did not specify?" % (obj.name,)
+        )
+    raise TypeError(
+        "Attempting to use a non-numeric type (%s) in a "
+        "numeric expression context." % (obj.__class__.__name__,)
+    )
+
+
+_equality_dispatcher = NumericExpressionDispatcher(
+    {
+        (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _equality_native_native,
+        (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _equality_native_param,
+        (ARG_TYPE.NPV, ARG_TYPE.PARAM): _equality_npv_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _equality_param_native,
+        (ARG_TYPE.PARAM, ARG_TYPE.NPV): _equality_param_npv,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _equality_param_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.VAR): _equality_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.MONOMIAL): _equality_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _equality_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.SUM): _equality_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _equality_param_other,
+        (ARG_TYPE.VAR, ARG_TYPE.PARAM): _equality_other_param,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _equality_other_param,
+        (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _equality_other_param,
+        (ARG_TYPE.SUM, ARG_TYPE.PARAM): _equality_other_param,
+        (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _equality_other_param,
+    },
+    default=_equality_other_other,
+    invalid=_equality_invalid,
+)
+
+
+#
+# INEQ expression handlers
+#
+
+
+class REL_ARG_TYPE(enum.IntEnum):
+    INEQ = 100  # MUST not overlap with ARG_TYPE
+
+
+class InequalityExpressionDispatcher(NumericExpressionDispatcher):
+    known_arg_types = {}
+    _ARG_TYPES = list(ARG_TYPE) + list(REL_ARG_TYPE)
+
+    def register_dispatcher(self, a, b, strict):
+        types = (self.categorize_arg_type(a), self.categorize_arg_type(b))
+        # Retrieve the appropriate handler, record it in the main
+        # _add_dispatcher dict (so this method is not called a second time for
+        # these types)
+        handler = self.type_handler_mapping[types]
+        self[a.__class__, b.__class__] = handler
+        # Call the appropriate handler
+        return handler(a, b, strict)
+
+    @classmethod
+    def categorize_arg_type(cls, arg):
+        if arg.__class__ in cls.known_arg_types:
+            return cls.known_arg_types[arg.__class__]
+
+        if isinstance(arg, InequalityExpression):
+            ans = REL_ARG_TYPE.INEQ
+        else:
+            ans = super().categorize_arg_type(arg)
+
+        cls.register_arg_type(arg.__class__, ans)
+        return ans
+
+    @classmethod
+    def register_arg_type(cls, arg_class, etype):
+        try:
+            cls.known_arg_types.setdefault(arg_class, ARG_TYPE(etype))
+        except:
+            cls.known_arg_types.setdefault(arg_class, REL_ARG_TYPE(etype))
+
+
+def _ineq_native_native(a, b, strict):
+    # This can be hit because of the asnumeric / mutable wrapper handlers.
+    if strict:
+        return a < b
+    else:
+        return a <= b
+
+
+def _ineq_native_param(a, b, strict):
+    if b.is_constant():
+        if strict:
+            return a < (b.value)
+        else:
+            return a <= (b.value)
+    return InequalityExpression((a, b), strict)
+
+
+def _ineq_param_native(a, b, strict):
+    if a.is_constant():
+        if strict:
+            return a.value < b
+        else:
+            return a.value <= b
+    return InequalityExpression((a, b), strict)
+
+
+def _ineq_param_param(a, b, strict):
+    if a.is_constant():
+        a = a.value
+        if b.is_constant():
+            if strict:
+                return a < b.value
+            else:
+                return a <= b.value
+    elif b.is_constant():
+        b = b.value
+    return InequalityExpression((a, b), strict)
+
+
+def _ineq_param_other(a, b, strict):
+    if a.is_constant():
+        a = a.value
+    return InequalityExpression((a, b), strict)
+
+
+def _ineq_param_inequality(a, b, strict):
+    if a.is_constant():
+        a = a.value
+    return RangedExpression((a,) + b.args, (strict, b.strict))
+
+
+def _ineq_other_param(a, b, strict):
+    if b.is_constant():
+        b = b.value
+    return InequalityExpression((a, b), strict)
+
+
+def _ineq_other_other(a, b, strict):
+    return InequalityExpression((a, b), strict)
+
+
+def _ineq_other_inequality(a, b, strict):
+    return RangedExpression((a,) + b.args, (strict, b.strict))
+
+
+def _ineq_inequality_param(a, b, strict):
+    if b.is_constant():
+        b = b.value
+    return RangedExpression(a.args + (b,), (a.strict, strict))
+
+
+def _ineq_inequality_other(a, b, strict):
+    return RangedExpression(a.args + (b,), (a.strict, strict))
+
+
+def _ineq_inequality_inequality(a, b, strict):
+    raise TypeError(
+        "Cannot create an InequalityExpression where both "
+        "sub-expressions are relational expressions:\n"
+        "    %s\n    {%s}\n    %s" % (a, '<' if strict else '<=', b)
+    )
+
+
+def _ineq_invalid(a, b):
+    if _equality_dispatcher.categorize_arg_type(a) == ARG_TYPE.INVALID:
+        obj = a
+    else:
+        obj = b
+
+    if (
+        hasattr(obj, 'is_component_type')
+        and obj.is_component_type()
+        and obj.is_indexed()
+    ):
+        raise TypeError(
+            "Argument for expression is an indexed numeric "
+            "value\nspecified without an index:\n\t%s\nIs this "
+            "value defined over an index that you did not specify?" % (obj.name,)
+        )
+    raise TypeError(
+        "Attempting to use a non-numeric type (%s) in a "
+        "numeric expression context." % (obj.__class__.__name__,)
+    )
+
+
+_inequality_dispatcher = InequalityExpressionDispatcher(
+    {
+        (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _ineq_native_native,
+        (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _ineq_native_param,
+        (ARG_TYPE.NPV, ARG_TYPE.PARAM): _ineq_other_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _ineq_param_native,
+        (ARG_TYPE.PARAM, ARG_TYPE.NPV): _ineq_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _ineq_param_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.VAR): _ineq_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.MONOMIAL): _ineq_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _ineq_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.SUM): _ineq_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _ineq_param_other,
+        (ARG_TYPE.VAR, ARG_TYPE.PARAM): _ineq_other_param,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _ineq_other_param,
+        (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _ineq_other_param,
+        (ARG_TYPE.SUM, ARG_TYPE.PARAM): _ineq_other_param,
+        (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _ineq_other_param,
+        # Special Inequality functions
+        (ARG_TYPE.NATIVE, REL_ARG_TYPE.INEQ): _ineq_other_inequality,
+        (ARG_TYPE.NPV, REL_ARG_TYPE.INEQ): _ineq_other_inequality,
+        (ARG_TYPE.PARAM, REL_ARG_TYPE.INEQ): _ineq_param_inequality,
+        (ARG_TYPE.VAR, REL_ARG_TYPE.INEQ): _ineq_other_inequality,
+        (ARG_TYPE.MONOMIAL, REL_ARG_TYPE.INEQ): _ineq_other_inequality,
+        (ARG_TYPE.LINEAR, REL_ARG_TYPE.INEQ): _ineq_other_inequality,
+        (ARG_TYPE.SUM, REL_ARG_TYPE.INEQ): _ineq_other_inequality,
+        (ARG_TYPE.OTHER, REL_ARG_TYPE.INEQ): _ineq_other_inequality,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.NATIVE): _ineq_inequality_other,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.NPV): _ineq_inequality_other,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.PARAM): _ineq_inequality_param,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.VAR): _ineq_inequality_other,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.MONOMIAL): _ineq_inequality_other,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.LINEAR): _ineq_inequality_other,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.SUM): _ineq_inequality_other,
+        (REL_ARG_TYPE.INEQ, ARG_TYPE.OTHER): _ineq_inequality_other,
+        (REL_ARG_TYPE.INEQ, REL_ARG_TYPE.INEQ): _ineq_inequality_inequality,
+    },
+    default=_ineq_other_other,
+    invalid=_ineq_invalid,
+)
 
 
 #

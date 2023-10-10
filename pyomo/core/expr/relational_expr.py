@@ -10,6 +10,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import enum
 import operator
 
 from pyomo.common.deprecation import deprecated
@@ -23,8 +24,9 @@ from pyomo.common.numeric_types import (
 from .base import ExpressionBase
 from .boolean_value import BooleanValue
 from .expr_common import _lt, _le, _eq, ExpressionType
-from .numvalue import is_potentially_variable, is_constant
 from .visitor import polynomial_degree
+
+from . import numeric_expr
 
 # -------------------------------------------------------
 #
@@ -80,7 +82,10 @@ would both cause this exception.""".strip()
         return self.is_expression_type(ExpressionType.RELATIONAL)
 
     def is_potentially_variable(self):
-        return any(is_potentially_variable(arg) for arg in self._args_)
+        return any(
+            arg.__class__ not in native_numeric_types and arg.is_potentially_variable()
+            for arg in self._args_
+        )
 
     def polynomial_degree(self):
         """
@@ -107,56 +112,13 @@ would both cause this exception.""".strip()
         """
         Equal to operator
 
-        This method is called when Python processes statements of the form::
+        This method is called when Python processes the statement::
 
             self == other
-            other == self
         """
-        return _generate_relational_expression(_eq, self, other)
-
-    def __lt__(self, other):
-        """
-        Less than operator
-
-        This method is called when Python processes statements of the form::
-
-            self < other
-            other > self
-        """
-        return _generate_relational_expression(_lt, self, other)
-
-    def __gt__(self, other):
-        """
-        Greater than operator
-
-        This method is called when Python processes statements of the form::
-
-            self > other
-            other < self
-        """
-        return _generate_relational_expression(_lt, other, self)
-
-    def __le__(self, other):
-        """
-        Less than or equal operator
-
-        This method is called when Python processes statements of the form::
-
-            self <= other
-            other >= self
-        """
-        return _generate_relational_expression(_le, self, other)
-
-    def __ge__(self, other):
-        """
-        Greater than or equal operator
-
-        This method is called when Python processes statements of the form::
-
-            self >= other
-            other <= self
-        """
-        return _generate_relational_expression(_le, other, self)
+        return numeric_expr._equality_dispatcher[self.__class__, other.__class__](
+            self, other
+        )
 
 
 class RangedExpression(RelationalExpression):
@@ -260,6 +222,58 @@ class InequalityExpression(RelationalExpression):
     def strict(self):
         return self._strict
 
+    def __lt__(self, other):
+        """
+        Less than operator
+
+        This method is called when Python processes statements of the form::
+
+            self < other
+            other > self
+        """
+        return numeric_expr._inequality_dispatcher[self.__class__, other.__class__](
+            self, other, True
+        )
+
+    def __gt__(self, other):
+        """
+        Greater than operator
+
+        This method is called when Python processes statements of the form::
+
+            self > other
+            other < self
+        """
+        return numeric_expr._inequality_dispatcher[other.__class__, self.__class__](
+            other, self, True
+        )
+
+    def __le__(self, other):
+        """
+        Less than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self <= other
+            other >= self
+        """
+        return numeric_expr._inequality_dispatcher[self.__class__, other.__class__](
+            self, other, False
+        )
+
+    def __ge__(self, other):
+        """
+        Greater than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self >= other
+            other <= self
+        """
+        return numeric_expr._inequality_dispatcher[other.__class__, self.__class__](
+            other, self, False
+        )
+
 
 def inequality(lower=None, body=None, upper=None, strict=False):
     """
@@ -300,13 +314,19 @@ def inequality(lower=None, body=None, upper=None, strict=False):
     if lower is None:
         if body is None or upper is None:
             raise ValueError("Invalid inequality expression.")
-        return InequalityExpression((body, upper), strict)
+        return numeric_expr._inequality_dispatcher[body.__class__, upper.__class__](
+            body, upper, strict
+        )
     if body is None:
         if lower is None or upper is None:
             raise ValueError("Invalid inequality expression.")
-        return InequalityExpression((lower, upper), strict)
+        return numeric_expr._inequality_dispatcher[lower.__class__, upper.__class__](
+            lower, upper, strict
+        )
     if upper is None:
-        return InequalityExpression((lower, body), strict)
+        return numeric_expr._inequality_dispatcher[lower.__class__, body.__class__](
+            lower, body, strict
+        )
     return RangedExpression((lower, body, upper), strict)
 
 
@@ -361,103 +381,6 @@ class NotEqualExpression(RelationalExpression):
 
     def _to_string(self, values, verbose, smap):
         return "%s  !=  %s" % (values[0], values[1])
-
-
-_relational_op = {
-    _eq: (operator.eq, '==', None),
-    _le: (operator.le, '<=', False),
-    _lt: (operator.lt, '<', True),
-}
-
-
-def _process_nonnumeric_arg(obj):
-    if hasattr(obj, 'as_numeric'):
-        # We assume non-numeric types that have an as_numeric method
-        # are instances of AutoLinkedBooleanVar.  Calling as_numeric
-        # will return a valid Binary Var (and issue the appropriate
-        # deprecation warning)
-        obj = obj.as_numeric()
-    elif check_if_numeric_type(obj):
-        return obj
-    else:
-        # User assistance: provide a helpful exception when using an
-        # indexed object in an expression
-        if obj.is_component_type() and obj.is_indexed():
-            raise TypeError(
-                "Argument for expression is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?" % (obj.name,)
-            )
-
-        raise TypeError(
-            "Attempting to use a non-numeric type (%s) in a "
-            "numeric expression context." % (obj.__class__.__name__,)
-        )
-
-
-def _process_relational_arg(arg, n):
-    try:
-        _numeric = arg.is_numeric_type()
-    except AttributeError:
-        _numeric = False
-    if _numeric:
-        if arg.is_constant():
-            arg = value(arg)
-        else:
-            _process_relational_arg.constant = False
-    else:
-        if arg.__class__ is InequalityExpression:
-            _process_relational_arg.relational += n
-            _process_relational_arg.constant = False
-        else:
-            arg = _process_nonnumeric_arg(arg)
-            if arg.__class__ not in native_numeric_types:
-                _process_relational_arg.constant = False
-    return arg
-
-
-def _generate_relational_expression(etype, lhs, rhs):
-    # Note that the use of "global" state flags is fast, but not
-    # thread-safe.  This should not be an issue because the GIL
-    # effectively prevents parallel model construction.  If we ever need
-    # to revisit this design, we can pass in a "state" to
-    # _process_relational_arg() - at the cost of creating/destroying the
-    # state and an extra function argument.
-    _process_relational_arg.relational = 0
-    _process_relational_arg.constant = True
-    if lhs.__class__ not in native_numeric_types:
-        lhs = _process_relational_arg(lhs, 1)
-    if rhs.__class__ not in native_numeric_types:
-        rhs = _process_relational_arg(rhs, 2)
-
-    if _process_relational_arg.constant:
-        return _relational_op[etype][0](value(lhs), value(rhs))
-
-    if etype == _eq:
-        if _process_relational_arg.relational:
-            raise TypeError(
-                "Cannot create an EqualityExpression where one of the "
-                "sub-expressions is a relational expression:\n"
-                "    %s\n    {==}\n    %s" % (lhs, rhs)
-            )
-        return EqualityExpression((lhs, rhs))
-    elif _process_relational_arg.relational:
-        if _process_relational_arg.relational == 1:
-            return RangedExpression(
-                lhs._args_ + (rhs,), (lhs._strict, _relational_op[etype][2])
-            )
-        elif _process_relational_arg.relational == 2:
-            return RangedExpression(
-                (lhs,) + rhs._args_, (_relational_op[etype][2], rhs._strict)
-            )
-        else:  # _process_relational_arg.relational == 3
-            raise TypeError(
-                "Cannot create an InequalityExpression where both "
-                "sub-expressions are relational expressions:\n"
-                "    %s\n    {%s}\n    %s" % (lhs, _relational_op[etype][1], rhs)
-            )
-    else:
-        return InequalityExpression((lhs, rhs), _relational_op[etype][2])
 
 
 def tuple_to_relational_expr(args):
