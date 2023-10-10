@@ -1682,7 +1682,28 @@ def _invalid(*args):
 
 
 class NumericExpressionDispatcher(collections.defaultdict):
-    """"""
+    """Dispatcher (defaultdict) for generating expressions
+
+    This is the base class dispatcher for generating expression nodes.
+    By default, it is designed to process binary operations.  Instances
+    of this class handle a singler operator (e.g., addition,
+    subtraction, product, division).
+
+    Parameters
+    ----------
+    type_mapping: Dict[Tuple[ARG_TYPE, ARG_TYPE], Function]
+        Dictionary mapping tuples of argument types to the appropriate
+        handler function.
+
+    default: Function, optional
+        If not None, missing entries in the `type_mapping` will use this
+        function.
+
+    invalid: Function, optional
+        Callback function to process invalid argument types before
+        redispatching
+
+    """
 
     __slots__ = ('type_handler_mapping',)
 
@@ -1706,9 +1727,9 @@ class NumericExpressionDispatcher(collections.defaultdict):
 
     def register_dispatcher(self, *args):
         types = tuple(self.categorize_arg_type(arg) for arg in args)
-        # Retrieve the appropriate handler, record it in the main
-        # _add_dispatcher dict (so this method is not called a second time for
-        # these types)
+        # Retrieve the appropriate handler, record it in the dispatcher
+        # dict (so this method is not called a second time for these
+        # types)
         handler = self.type_handler_mapping[types]
         self[tuple(map(operator.attrgetter('__class__'), args))] = handler
         # Call the appropriate handler
@@ -1796,15 +1817,31 @@ class NumericExpressionDispatcher(collections.defaultdict):
 
 
 class UnaryNumericExpressionDispatcher(NumericExpressionDispatcher):
-    """"""
+    """Specialization of the NumericExpressionDispatcher for unary operators
+
+    Parameters
+    ----------
+    type_mapping: Dict[Tuple[ARG_TYPE, ARG_TYPE], Function]
+        Dictionary mapping tuples of argument types to the appropriate
+        handler function.
+
+    default: Function, optional
+        If not None, missing entries in the `type_mapping` will use this
+        function.
+
+    invalid: Function, optional
+        Callback function to process invalid argument types before
+        redispatching
+
+    """
 
     __slots__ = ()
 
     def register_dispatcher(self, a):
         type_ = self.categorize_arg_type(a)
-        # Retrieve the appropriate handler, record it in the main
-        # _add_dispatcher dict (so this method is not called a second time for
-        # these types)
+        # Retrieve the appropriate handler, record it in the dispatcher
+        # dict (so this method is not called a second time for these
+        # types)
         self[a.__class__] = handler = self.type_handler_mapping[type_]
         # Call the appropriate handler
         return handler(a)
@@ -1825,21 +1862,44 @@ class UnaryNumericExpressionDispatcher(NumericExpressionDispatcher):
 
 
 class SecondArgNumericExpressionDispatcher(NumericExpressionDispatcher):
-    """"""
+    """NumericExpressionDispatcher specialization for nary operators that
+    dispatch based on only the second argument type.
+
+    This is a special-purpose dispatcher used for inplace operators
+    (e.g., `__iadd__`) and unary function operators where we provide the
+    function as the first argument (e.g., `sin`, `log`).
+
+    Parameters
+    ----------
+    type_mapping: Dict[Tuple[ARG_TYPE, ARG_TYPE], Function]
+        Dictionary mapping tuples of argument types to the appropriate
+        handler function.
+
+    default: Function, optional
+        If not None, missing entries in the `type_mapping` will use this
+        function.
+
+    invalid: Function, optional
+        Callback function to process invalid argument types before
+        redispatching
+
+    """
 
     __slots__ = ()
 
     def register_dispatcher(self, *args):
         type_ = self.categorize_arg_type(args[1])
-        # Retrieve the appropriate handler, record it in the main
-        # _add_dispatcher dict (so this method is not called a second time for
-        # these types)
+        # Retrieve the appropriate handler, record it in the dispatcher
+        # dict (so this method is not called a second time for these
+        # types)
         handler = self.type_handler_mapping[type_]
         self[args[1].__class__] = handler
         # Call the appropriate handler
         return handler(*args)
 
     def _initialize_dispatcher_type_mapping(self, updates, invalid):
+        # Note: instances must explicitly register handlers for
+        # ASNUMERIC and INVALID
         self.type_handler_mapping.update(updates)
 
 
