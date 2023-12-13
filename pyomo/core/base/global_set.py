@@ -180,6 +180,12 @@ class _UnindexedComponent_set(GlobalSetBase):
     def prevw(self, item, step=1):
         return self.nextw(item, -step)
 
+    def parent_block(self):
+        return None
+
+    def parent_component(self):
+        return self
+
 
 UnindexedComponent_set = _UnindexedComponent_set('UnindexedComponent_set')
 GlobalSets[UnindexedComponent_set.local_name] = UnindexedComponent_set

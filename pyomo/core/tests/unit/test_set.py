@@ -993,8 +993,6 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i = SetOf([1, 2, 3])
-            self.assertEqual(output.getvalue(), "")
-            i.construct()
             ref = 'Constructing SetOf, name=OrderedSetOf, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bypasses construction the second

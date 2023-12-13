@@ -850,6 +850,22 @@ class _BlockData(ActiveComponentData):
         """TODO: This method has known issues (see tickets) and needs to be
         reviewed. [JDS 9/2014]"""
 
+        _set = val.index_set()
+        if _set.parent_block() is not None or isinstance(_set, GlobalSetBase):
+            return
+
+        queue = [_set]
+        blk = weakref.ref(self)
+        _set.parent_component()._parent = blk
+        while queue:
+            _set = queue.pop()
+            if _set.parent_block() is not None or isinstance(_set, GlobalSetBase):
+                continue
+            _set.parent_component()._parent = weakref.ref(self)
+            if isinstance(_set, SetOperator):
+                queue.extend(_set.subsets(expand_all_set_operators=True))
+        return
+
         _component_sets = getattr(val, '_implicit_subsets', None)
         #
         # FIXME: The name attribute should begin with "_", and None
@@ -1181,6 +1197,8 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                     _blockName,
                     str(data),
                 )
+            if not val.index_set()._constructed:
+                val.index_set().construct():
             try:
                 val.construct(data)
             except:

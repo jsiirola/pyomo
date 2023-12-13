@@ -717,8 +717,6 @@ class Constraint(ActiveIndexedComponent):
             A dictionary from the index set to component data objects
         _index
             The set of valid indices
-        _implicit_subsets
-            A tuple of set objects that represents the index set
         _model
             A weakref to the model that owns this component
         _parent

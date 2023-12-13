@@ -2450,6 +2450,7 @@ class SetOf(_SetData, Component):
         kwds.setdefault('ctype', SetOf)
         Component.__init__(self, **kwds)
         self._ref = reference
+        self.construct()
 
     def __str__(self):
         if self.parent_block() is not None:
@@ -3234,17 +3235,9 @@ class SetOperator(_SetData, Set):
     def __init__(self, *args, **kwds):
         _SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
-        implicit = []
-        sets = []
-        for _set in args:
-            _new_set = process_setarg(_set)
-            sets.append(_new_set)
-            if _new_set is not _set or _new_set.parent_block() is None:
-                implicit.append(_new_set)
-        self._sets = tuple(sets)
-        self._implicit_subsets = tuple(implicit)
-        # We will implicitly construct all set operators if the operands
-        # are all constructed.
+        self._sets = tuple(process_setarg(_set) for _set in args)
+        # We will immediately construct all set operators if the operands
+        # are all themselves constructed.
         if all(_.parent_component()._constructed for _ in self._sets):
             self.construct()
 
