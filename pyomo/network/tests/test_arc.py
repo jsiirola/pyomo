@@ -36,6 +36,8 @@ from pyomo.common.collections.component_set import ComponentSet
 
 
 class TestArc(unittest.TestCase):
+    maxDiff = None
+
     def test_default_scalar_constructor(self):
         m = ConcreteModel()
         m.c1 = Arc()
@@ -504,11 +506,11 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """c_expanded : Size=1, Index=None, Active=True
     3 Constraint Declarations
-        a_equality : Size=2, Index=x_index, Active=True
+        a_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body        : Upper : Active
               1 :   0.0 : x[1] - t[1] :   0.0 :   True
               2 :   0.0 : x[2] - t[2] :   0.0 :   True
-        b_equality : Size=4, Index=y_index, Active=True
+        b_equality : Size=4, Index={1, 2}*{1, 2}, Active=True
             Key    : Lower : Body            : Upper : Active
             (1, 1) :   0.0 : y[1,1] - u[1,1] :   0.0 :   True
             (1, 2) :   0.0 : y[1,2] - u[1,2] :   0.0 :   True
@@ -677,7 +679,7 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=x_index, Active=True
+        x_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body                  : Upper : Active
               1 :   0.0 : x[1] - EPRT_auto_x[1] :   0.0 :   True
               2 :   0.0 : x[2] - EPRT_auto_x[2] :   0.0 :   True
@@ -739,7 +741,7 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=x_index, Active=True
+        x_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body                   : Upper : Active
               1 :   0.0 : x[1] - EPRT1_auto_x[1] :   0.0 :   True
               2 :   0.0 : x[2] - EPRT1_auto_x[2] :   0.0 :   True
@@ -757,7 +759,7 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=x_index, Active=True
+        x_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body                              : Upper : Active
               1 :   0.0 : EPRT2_auto_x[1] - EPRT1_auto_x[1] :   0.0 :   True
               2 :   0.0 : EPRT2_auto_x[2] - EPRT1_auto_x[2] :   0.0 :   True
@@ -812,7 +814,7 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=x_index, Active=True
+        x_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body         : Upper : Active
               1 :   0.0 : x[1] - a1[1] :   0.0 :   True
               2 :   0.0 : x[2] - a1[2] :   0.0 :   True
@@ -830,7 +832,7 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=x_index, Active=True
+        x_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body          : Upper : Active
               1 :   0.0 : a2[1] - a1[1] :   0.0 :   True
               2 :   0.0 : a2[2] - a1[2] :   0.0 :   True
@@ -903,7 +905,7 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=a2_index, Active=True
+        x_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body         : Upper : Active
               1 :   0.0 : a2[1] - x[1] :   0.0 :   True
               2 :   0.0 : a2[2] - x[2] :   0.0 :   True
@@ -921,7 +923,7 @@ class TestArc(unittest.TestCase):
             os.getvalue(),
             """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=a2_index, Active=True
+        x_equality : Size=2, Index={1, 2}, Active=True
             Key : Lower : Body                   : Upper : Active
               1 :   0.0 : EPRT2_auto_x[1] - x[1] :   0.0 :   True
               2 :   0.0 : EPRT2_auto_x[2] - x[2] :   0.0 :   True
@@ -964,7 +966,7 @@ class TestArc(unittest.TestCase):
         m.component('eq_expanded').pprint(ostream=os)
         self.assertEqual(
             os.getvalue(),
-            """eq_expanded : Size=2, Index=eq_index, Active=True
+            """eq_expanded : Size=2, Index={1, 2}, Active=True
     eq_expanded[1] : Active=True
         1 Constraint Declarations
             v_equality : Size=1, Index=None, Active=True
