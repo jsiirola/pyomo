@@ -51,7 +51,7 @@ from pyomo.core.base.component import (
 from pyomo.core.base.enums import SortComponents, TraversalStrategy
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.set import Any, GlobalSetBase, SetOperator
+from pyomo.core.base.set import Any, GlobalSetBase, SetOperator, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
@@ -847,64 +847,27 @@ class _BlockData(ActiveComponentData):
                 setattr(self, k, v)
 
     def _register_anonymous_sets(self, val):
-        """TODO: This method has known issues (see tickets) and needs to be
-        reviewed. [JDS 9/2014]"""
+        anonymous_sets = []
+        queue = []
+        if val.is_indexed():
+            queue.append(val.index_set())
+        #
+        # TODO: This should be managed by the individual components and
+        # not "automagically" by the Block.  Preserving for the moment
+        # for backwards compatibility
+        for _set in (getattr(val, 'initialize', None), getattr(val, 'domain', None)):
+            if _set is not None and isinstance(_set, _SetDataBase):
+                queue.append(_set)
 
-        _set = val.index_set()
-        if _set.parent_block() is not None or isinstance(_set, GlobalSetBase):
-            return
-
-        queue = [_set]
-        blk_ref = weakref.ref(self)
         while queue:
             _set = queue.pop()
             if _set.parent_block() is not None or isinstance(_set, GlobalSetBase):
                 continue
-            _set.parent_component()._parent = blk_ref
+            _set.parent_component()._parent = val._parent
+            anonymous_sets.append(_set)
             if isinstance(_set, SetOperator):
                 queue.extend(_set.subsets(expand_all_set_operators=True))
-        return
-
-    def _add_implicit_sets(self, val):
-        """TODO: This method has known issues (see tickets) and needs to be
-        reviewed. [JDS 9/2014]"""
-
-        _component_sets = getattr(val, '_implicit_subsets', None)
-        #
-        # FIXME: The name attribute should begin with "_", and None
-        # should replace "_unknown_"
-        #
-        if _component_sets is not None:
-            for ctr, tset in enumerate(_component_sets):
-                if tset.parent_component().parent_block() is None and not isinstance(
-                    tset.parent_component(), GlobalSetBase
-                ):
-                    self.add_component("%s_index_%d" % (val.local_name, ctr), tset)
-        if (
-            getattr(val, '_index_set', None) is not None
-            and isinstance(val._index_set, _SetDataBase)
-            and val._index_set.parent_component().parent_block() is None
-            and not isinstance(val._index_set.parent_component(), GlobalSetBase)
-        ):
-            self.add_component(
-                "%s_index" % (val.local_name,), val._index_set.parent_component()
-            )
-        if (
-            getattr(val, 'initialize', None) is not None
-            and isinstance(val.initialize, _SetDataBase)
-            and val.initialize.parent_component().parent_block() is None
-            and not isinstance(val.initialize.parent_component(), GlobalSetBase)
-        ):
-            self.add_component(
-                "%s_index_init" % (val.local_name,), val.initialize.parent_component()
-            )
-        if (
-            getattr(val, 'domain', None) is not None
-            and isinstance(val.domain, _SetDataBase)
-            and val.domain.parent_block() is None
-            and not isinstance(val.domain, GlobalSetBase)
-        ):
-            self.add_component("%s_domain" % (val.local_name,), val.domain)
+        return anonymous_sets
 
     def collect_ctypes(self, active=None, descend_into=True):
         """
@@ -1088,8 +1051,7 @@ component, use the block del_component() and add_component() methods.
         # We want to add the temporary / implicit sets first so that
         # they get constructed before this component
         #
-        if val.is_indexed():
-            self._register_anonymous_sets(val)
+        val._implicit_subsets = self._register_anonymous_sets(val)
         #
         # Add the component to the underlying Component store
         #
@@ -2211,11 +2173,9 @@ class Block(ActiveIndexedComponent):
                     if data is None:
                         data = {}
                     for name, obj in _predefined_components.items():
-                        if obj.is_indexed():
-                            parent_comp_set = obj.index_set().parent_component()
-                            if not parent_comp_set.is_constructed():
-                                parent_comp_set.construct()
                         if not obj._constructed:
+                            for _set in getattr(obj, '_implicit_subsets', ()):
+                                _set.construct()
                             obj.construct(data.get(name, None))
                 # Trigger the (normal) initialization of the block
                 self._getitem_when_not_present(_idx)
