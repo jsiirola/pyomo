@@ -563,6 +563,8 @@ class _SetData(_SetDataBase):
         # ranges (or no ranges).  We will re-generate non-finite sets to
         # make sure we get an accurate "finiteness" flag.
         if hasattr(other, 'isfinite'):
+            if not other.parent_component().is_constructed():
+                return False
             other_isfinite = other.isfinite()
             if not other_isfinite:
                 try:
@@ -1318,7 +1320,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return len(self._values)
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self.parent_component()._name is not None:
             return self.name
         if not self.parent_component()._constructed:
             return type(self).__name__
@@ -2166,6 +2168,11 @@ class Set(IndexedComponent):
             _d = None
 
         domain = self._init_domain(_block, index)
+        if domain is not None:
+            _dpc = domain.parent_component()
+            if _dpc.parent_block() is None and not isinstance(_dpc, GlobalSetBase):
+                _dpc._parent = self._parent
+            _dpc.construct()
         if _d is UnknownSetDimen and domain is not None and domain.dimen is not None:
             _d = domain.dimen
 
@@ -2189,11 +2196,9 @@ class Set(IndexedComponent):
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         obj._index = index
+        obj._domain = domain
         if _d is not UnknownSetDimen:
             obj._dimen = _d
-        if domain is not None:
-            obj._domain = domain
-            domain.parent_component().construct()
         if self._init_validate is not None:
             try:
                 obj._validate = Initializer(self._init_validate(_block, index))
@@ -2453,7 +2458,7 @@ class SetOf(_SetData, Component):
         self.construct()
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return str(self._ref)
 
@@ -2937,14 +2942,12 @@ class RangeSet(Component):
             pass
 
     def __str__(self):
-        if self.parent_block() is not None:
+        # Named, components should return their name e.g., Reals
+        if self._name is not None:
             return self.name
         # Unconstructed floating components return their type
         if not self._constructed:
             return type(self).__name__
-        # Named, constructed components should return their name e.g., Reals
-        if type(self).__name__ != self._name:
-            return self.name
         # Floating, unnamed constructed components return their ranges()
         ans = ' | '.join(str(_) for _ in self.ranges())
         if ' | ' in ans:
@@ -3298,7 +3301,7 @@ class SetOperator(_SetData, Set):
         )
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return self._expression_str()
 
@@ -4170,6 +4173,7 @@ class _AnySet(_SetData, Set):
         # accept (and ignore) this value.
         kwds.setdefault('domain', self)
         Set.__init__(self, **kwds)
+        self.construct()
 
     def get(self, val, default=None):
         return val if val is not Ellipsis else default
@@ -4197,7 +4201,7 @@ class _AnySet(_SetData, Set):
         return Any
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return type(self).__name__
 
@@ -4218,6 +4222,7 @@ class _EmptySet(_FiniteSetMixin, _SetData, Set):
     def __init__(self, **kwds):
         _SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
+        self.construct()
 
     def get(self, val, default=None):
         return default
@@ -4242,7 +4247,7 @@ class _EmptySet(_FiniteSetMixin, _SetData, Set):
         return EmptySet
 
     def __str__(self):
-        if self.parent_block() is not None:
+        if self._name is not None:
             return self.name
         return type(self).__name__
 

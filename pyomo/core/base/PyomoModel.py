@@ -867,6 +867,10 @@ arguments (which have been ignored):"""
                 _blockName,
                 str(data),
             )
+        if declaration.is_indexed():
+            set_parent_comp = declaration.index_set().parent_component()
+            if not set_parent_comp.is_constructed():
+                set_parent_comp.construct()
         try:
             declaration.construct(data)
         except:

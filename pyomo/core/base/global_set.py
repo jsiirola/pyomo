@@ -74,6 +74,7 @@ class _UnindexedComponent_set(GlobalSetBase):
 
     def __init__(self, name):
         self.name = name
+        self._constructed = True
 
     def __contains__(self, val):
         return val is None

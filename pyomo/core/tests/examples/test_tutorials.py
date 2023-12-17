@@ -88,7 +88,7 @@ class PyomoTutorials(unittest.TestCase):
             open(tutorial_dir + name + ".out", 'r').read(),
             open(currdir + name + ".log", 'r').read(),
         )
-        os.remove(currdir + name + ".log")
+        #os.remove(currdir + name + ".log")
 
     def test_data(self):
         self.driver('data')

@@ -51,7 +51,7 @@ from pyomo.core.base.component import (
 from pyomo.core.base.enums import SortComponents, TraversalStrategy
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.set import Any, GlobalSetBase, _SetDataBase
+from pyomo.core.base.set import Any, GlobalSetBase, SetOperator
 from pyomo.core.base.var import Var
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
@@ -846,7 +846,7 @@ class _BlockData(ActiveComponentData):
             ):
                 setattr(self, k, v)
 
-    def _add_implicit_sets(self, val):
+    def _register_anonymous_sets(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
         reviewed. [JDS 9/2014]"""
 
@@ -855,16 +855,19 @@ class _BlockData(ActiveComponentData):
             return
 
         queue = [_set]
-        blk = weakref.ref(self)
-        _set.parent_component()._parent = blk
+        blk_ref = weakref.ref(self)
         while queue:
             _set = queue.pop()
             if _set.parent_block() is not None or isinstance(_set, GlobalSetBase):
                 continue
-            _set.parent_component()._parent = weakref.ref(self)
+            _set.parent_component()._parent = blk_ref
             if isinstance(_set, SetOperator):
                 queue.extend(_set.subsets(expand_all_set_operators=True))
         return
+
+    def _add_implicit_sets(self, val):
+        """TODO: This method has known issues (see tickets) and needs to be
+        reviewed. [JDS 9/2014]"""
 
         _component_sets = getattr(val, '_implicit_subsets', None)
         #
@@ -1085,13 +1088,8 @@ component, use the block del_component() and add_component() methods.
         # We want to add the temporary / implicit sets first so that
         # they get constructed before this component
         #
-        # FIXME: This is sloppy and wasteful (most components trigger
-        # this, even when there is no need for it).  We should
-        # reconsider the whole _implicit_subsets logic to defer this
-        # kind of thing to an "update_parent()" method on the
-        # components.
-        #
-        self._add_implicit_sets(val)
+        if val.is_indexed():
+            self._register_anonymous_sets(val)
         #
         # Add the component to the underlying Component store
         #
@@ -1197,8 +1195,10 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
                     _blockName,
                     str(data),
                 )
-            if not val.index_set()._constructed:
-                val.index_set().construct():
+            if val.is_indexed():
+                set_parent_comp = val.index_set().parent_component()
+                if not set_parent_comp.is_constructed():
+                    set_parent_comp.construct()
             try:
                 val.construct(data)
             except:
@@ -2211,6 +2211,10 @@ class Block(ActiveIndexedComponent):
                     if data is None:
                         data = {}
                     for name, obj in _predefined_components.items():
+                        if obj.is_indexed():
+                            parent_comp_set = obj.index_set().parent_component()
+                            if not parent_comp_set.is_constructed():
+                                parent_comp_set.construct()
                         if not obj._constructed:
                             obj.construct(data.get(name, None))
                 # Trigger the (normal) initialization of the block
