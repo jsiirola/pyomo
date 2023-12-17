@@ -999,7 +999,9 @@ value() function."""
                 # Scalar component.
                 set_dim = 0
             else:
-                set_dim = sum(1 for _ in self.index_set().subsets())
+                set_dim = self.index_set().dimen
+                if set_dim is None:
+                    set_dim = 1
 
             structurally_valid = False
             if slice_dim == set_dim or set_dim is None:

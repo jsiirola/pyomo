@@ -3068,7 +3068,7 @@ J : Size=1, Index=None, Ordered=False
             x = I * J
 
             normalize_index.flatten = False
-            self.assertIs(x.dimen, None)
+            self.assertIs(x.dimen, 2)
             self.assertIn(((1, 2), 3), x)
             self.assertIn((1, (2, 3)), x)
             # if we are not flattening, then lookup must match the
@@ -3243,7 +3243,7 @@ J : Size=1, Index=None, Ordered=False
                 ((3, 4), (7, 8)),
             ]
             self.assertEqual(list(x), ref)
-            self.assertEqual(x.dimen, None)
+            self.assertEqual(x.dimen, 2)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -3287,7 +3287,7 @@ J : Size=1, Index=None, Ordered=False
                 (1, (2, 3), 5),
             ]
             self.assertEqual(list(x), ref)
-            self.assertEqual(x.dimen, None)
+            self.assertEqual(x.dimen, 3)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -3339,7 +3339,7 @@ J : Size=1, Index=None, Ordered=False
             self.assertEqual(list(x), ref)
             for i, v in enumerate(ref):
                 self.assertEqual(x[i + 1], v)
-            self.assertEqual(x.dimen, None)
+            self.assertEqual(x.dimen, 4)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -5221,7 +5221,7 @@ I : Size=2, Index={1, 2, 3, 4, 5}, Ordered=Insertion
             m.I = Set()
             self.assertIs(m.I._dimen, UnknownSetDimen)
             self.assertTrue(m.I.add((1, (2, 3))))
-            self.assertIs(m.I._dimen, None)
+            self.assertIs(m.I._dimen, 2)
             self.assertNotIn(((1, 2), 3), m.I)
             self.assertIn((1, (2, 3)), m.I)
             self.assertNotIn((1, 2, 3), m.I)
@@ -6299,11 +6299,11 @@ c : Size=3, Index=CHOICES, Active=True
     arc_keys : Set of arcs
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain              : Size : Members
-        None :  None : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
+        None :     2 : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
     node_keys : Set of nodes
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
-        None :  None :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
+        None :     1 :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
 
 1 Var Declarations
     arc_variables : Size=2, Index=arc_keys
