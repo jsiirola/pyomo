@@ -319,7 +319,6 @@ class TestCategorize(_TestFlattenBase, unittest.TestCase):
 
 
 class TestFlatten(_TestFlattenBase, unittest.TestCase):
-
     def setUp(self):
         self._orig_flatten = normalize_index.flatten
 
