@@ -770,6 +770,10 @@ class Constraint(ActiveIndexedComponent):
         if is_debug_set(logger):
             logger.debug("Constructing constraint %s" % (self.name))
 
+        if getattr(self, '_anonymous_sets', None) is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         rule = self.rule
         try:
             # We do not (currently) accept data for constructing Constraints
@@ -1043,8 +1047,7 @@ class ConstraintList(IndexedConstraint):
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
-        args = (Set(dimen=1),)
-        super(ConstraintList, self).__init__(*args, **kwargs)
+        super(ConstraintList, self).__init__(Set(dimen=1), **kwargs)
 
         self.rule = Initializer(
             _rule, treat_sequences_as_mappings=False, allow_generators=True
@@ -1066,7 +1069,9 @@ class ConstraintList(IndexedConstraint):
         if is_debug_set(logger):
             logger.debug("Constructing constraint list %s" % (self.name))
 
-        self.index_set().construct()
+        if getattr(self, '_anonymous_sets', None) is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self.rule is not None:
             _rule = self.rule(self.parent_block(), ())

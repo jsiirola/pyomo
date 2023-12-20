@@ -846,29 +846,6 @@ class _BlockData(ActiveComponentData):
             ):
                 setattr(self, k, v)
 
-    def _register_anonymous_sets(self, val):
-        anonymous_sets = []
-        queue = []
-        if val.is_indexed():
-            queue.append(val.index_set())
-        #
-        # TODO: This should be managed by the individual components and
-        # not "automagically" by the Block.  Preserving for the moment
-        # for backwards compatibility
-        for _set in (getattr(val, 'initialize', None), getattr(val, 'domain', None)):
-            if _set is not None and isinstance(_set, _SetDataBase):
-                queue.append(_set)
-
-        while queue:
-            _set = queue.pop()
-            if _set.parent_block() is not None or isinstance(_set, GlobalSetBase):
-                continue
-            _set.parent_component()._parent = val._parent
-            anonymous_sets.append(_set)
-            if isinstance(_set, SetOperator):
-                queue.extend(_set.subsets(expand_all_set_operators=True))
-        return anonymous_sets
-
     def collect_ctypes(self, active=None, descend_into=True):
         """
         Count all component types stored on or under this
@@ -1048,10 +1025,11 @@ component, use the block del_component() and add_component() methods.
         val._parent = weakref.ref(self)
         val._name = name
         #
-        # We want to add the temporary / implicit sets first so that
-        # they get constructed before this component
+        # Update the context of any anonymous sets
         #
-        val._implicit_subsets = self._register_anonymous_sets(val)
+        if getattr(val, '_anonymous_sets', None) is not None:
+            for _set in val._anonymous_sets:
+                _set._parent = val._parent
         #
         # Add the component to the underlying Component store
         #
@@ -1124,9 +1102,8 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
         #   added to the class by Block.__init__()
         #
         if getattr(_component, '_constructed', False):
-            # NB: we don't have to construct the temporary / implicit
-            # sets here: if necessary, that happens when
-            # _add_implicit_sets() calls add_component().
+            # NB: we don't have to construct the anonymous sets here: if
+            # necessary, that happens in component.construct()
             if _BlockConstruction.data:
                 data = _BlockConstruction.data.get(id(self), None)
                 if data is not None:
@@ -1216,6 +1193,10 @@ Components must now specify their rules explicitly using 'rule=' keywords."""
 
         # Clear the _parent attribute
         obj._parent = None
+        # Update the context of any anonymous sets
+        if getattr(obj, '_anonymous_sets', None) is not None:
+            for _set in obj._anonymous_sets:
+                _set._parent = None
 
         # Now that this component is not in the _decl map, we can call
         # delattr as usual.
@@ -2130,6 +2111,10 @@ class Block(ActiveIndexedComponent):
         timer = ConstructionTimer(self)
         self._constructed = True
 
+        if getattr(self, '_anonymous_sets', None) is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         # Constructing blocks is tricky.  Scalar blocks are already
         # partially constructed (they have _data[None] == self) in order
         # to support Abstract blocks.  The block may therefore already
@@ -2174,8 +2159,6 @@ class Block(ActiveIndexedComponent):
                         data = {}
                     for name, obj in _predefined_components.items():
                         if not obj._constructed:
-                            for _set in getattr(obj, '_implicit_subsets', ()):
-                                _set.construct()
                             obj.construct(data.get(name, None))
                 # Trigger the (normal) initialization of the block
                 self._getitem_when_not_present(_idx)

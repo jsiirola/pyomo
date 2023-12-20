@@ -700,6 +700,10 @@ class Disjunction(ActiveIndexedComponent):
         timer = ConstructionTimer(self)
         self._constructed = True
 
+        if getattr(self, '_anonymous_sets', None) is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         _self_parent = self.parent_block()
         if not self.is_indexed():
             if self._init_rule is not None:

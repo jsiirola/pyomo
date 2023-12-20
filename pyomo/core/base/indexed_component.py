@@ -32,6 +32,7 @@ from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import fast_deepcopy
+from pyomo.common.collections import ComponentSet
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
@@ -307,11 +308,13 @@ class IndexedComponent(Component):
             # If no indexing sets are provided, generate a dummy index
             #
             self._index_set = UnindexedComponent_set
+            if not hasattr(self, '_anonymous_sets'):
+                self._anonymous_sets = None
         elif len(args) == 1:
             #
             # If a single indexing set is provided, just process it.
             #
-            self._index_set = BASE.set.process_setarg(args[0])
+            self._index_set, self._anonymous_sets = BASE.set.process_setarg(args[0])
         else:
             #
             # If multiple indexing sets are provided, process them all,
@@ -324,8 +327,10 @@ class IndexedComponent(Component):
             # make up names and instead store them on the model as
             # "anonymous components"
             #
-            tmp = [BASE.set.process_setarg(x) for x in args]
-            self._index_set = tmp[0].cross(*tmp[1:])
+            self._index_set = BASE.set.SetProduct(*args)
+            self._anonymous_sets = ComponentSet((self._index_set,))
+            if self._index_set._anonymous_sets is not None:
+                self._anonymous_sets.update(self._index_set._anonymous_sets)
 
     def _create_objects_for_deepcopy(self, memo, component_list):
         _new = self.__class__.__new__(self.__class__)

@@ -383,6 +383,10 @@ class BooleanVar(IndexedComponent):
         timer = ConstructionTimer(self)
         self._constructed = True
 
+        if getattr(self, '_anonymous_sets', None) is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         #
         # Construct _BooleanVarData objects for all index values
         #

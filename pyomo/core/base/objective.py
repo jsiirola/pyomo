@@ -289,6 +289,10 @@ class Objective(ActiveIndexedComponent):
         if is_debug_set(logger):
             logger.debug("Constructing objective %s" % (self.name))
 
+        if getattr(self, '_anonymous_sets', None) is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
+
         rule = self.rule
         try:
             # We do not (currently) accept data for constructing Objectives
@@ -563,8 +567,7 @@ class ObjectiveList(IndexedObjective):
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
-        args = (Set(dimen=1),)
-        super().__init__(*args, **kwargs)
+        super().__init__(Set(dimen=1), **kwargs)
 
         self.rule = Initializer(_rule, allow_generators=True)
         # HACK to make the "counted call" syntax work.  We wait until
@@ -584,7 +587,9 @@ class ObjectiveList(IndexedObjective):
         if is_debug_set(logger):
             logger.debug("Constructing objective list %s" % (self.name))
 
-        self.index_set().construct()
+        if getattr(self, '_anonymous_sets', None) is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self.rule is not None:
             _rule = self.rule(self.parent_block(), ())
