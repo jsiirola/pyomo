@@ -2987,16 +2987,7 @@ class RangeSet(Component):
         self._constructed = True
 
         args, ranges = self._init_data
-        if any(not is_constant(arg) for arg in args):
-            logger.warning(
-                "Constructing RangeSet '%s' from non-constant data (e.g., "
-                "Var or mutable Param).  The linkage between this RangeSet "
-                "and the original source data will be broken, so updating "
-                "the data value in the future will not be reflected in this "
-                "RangeSet.  To suppress this warning, explicitly convert "
-                "the source data to a constant type (e.g., float, int, or "
-                "immutable Param)" % (self,)
-            )
+        nonconstant_data_warning = any(not is_constant(arg) for arg in args)
         args = tuple(value(arg) for arg in args)
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
@@ -3156,6 +3147,22 @@ class RangeSet(Component):
                         "The value=%s violates the validation rule of "
                         "Set %s" % (val, self.name)
                     )
+
+        # Defer the warning about non-constant args until after the
+        # component has been constructed, so that the conversion of the
+        # component to a rational string will work (anonymous RangeSets
+        # will report their ranges, which aren't present until
+        # construction is over)
+        if nonconstant_data_warning:
+            logger.warning(
+                "Constructing RangeSet '%s' from non-constant data (e.g., "
+                "Var or mutable Param).  The linkage between this RangeSet "
+                "and the original source data will be broken, so updating "
+                "the data value in the future will not be reflected in this "
+                "RangeSet.  To suppress this warning, explicitly convert "
+                "the source data to a constant type (e.g., float, int, or "
+                "immutable Param)" % (self,)
+            )
 
         timer.report()
 
