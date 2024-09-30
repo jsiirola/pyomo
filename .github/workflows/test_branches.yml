@@ -223,10 +223,6 @@ jobs:
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
         choco install pkgconfiglite
 
-    - name: Activate the Visual Studio environemnt
-      if: matrix.TARGET == 'win'
-      uses: microsoft/setup-msbuild@v2
-
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
       uses: actions/setup-python@v5
@@ -606,6 +602,10 @@ jobs:
       run: |
         $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
             || echo "WARNING: highspy is not available"
+
+    - name: Activate the Visual Studio environemnt
+      if: matrix.TARGET == 'win'
+      uses: microsoft/setup-msbuild@v2
 
     - name: Set up coverage tracking
       run: |
