@@ -246,6 +246,10 @@ jobs:
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
         choco install pkgconfiglite
 
+    - name: Activate the Visual Studio environemnt
+      if: matrix.TARGET == 'win'
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
       uses: actions/setup-python@v5
