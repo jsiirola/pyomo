@@ -427,6 +427,14 @@ jobs:
         echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
         echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
+    - name: Activate the Visual Studio environemnt (msbuild)
+      if: matrix.TARGET == 'win'
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Activate the Visual Studio environemnt (cl)
+      if: matrix.TARGET == 'win'
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Install Ipopt
       if: ${{ ! matrix.slim }}
       run: |
@@ -602,10 +610,6 @@ jobs:
       run: |
         $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
             || echo "WARNING: highspy is not available"
-
-    - name: Activate the Visual Studio environemnt
-      if: matrix.TARGET == 'win'
-      uses: microsoft/setup-msbuild@v2
 
     - name: Set up coverage tracking
       run: |
