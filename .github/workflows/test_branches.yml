@@ -632,7 +632,7 @@ jobs:
     - name: Download and install extensions
       if: ${{ ! matrix.slim }}
       run: |
-        vcvarsall
+        vcvarsall x86_amd64
         echo ""
         echo "Pyomo download-extensions"
         echo ""
