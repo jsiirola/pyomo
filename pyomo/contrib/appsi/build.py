@@ -61,6 +61,9 @@ def build_appsi(args=[]):
     from pyomo.common.envvar import PYOMO_CONFIG_DIR
     from pyomo.common.fileutils import this_file_dir
 
+    import os
+    print(f"%PATH%={os.environ['PATH']}")
+
     class appsi_build_ext(build_ext):
         def run(self):
             basedir = os.path.abspath(os.path.curdir)
