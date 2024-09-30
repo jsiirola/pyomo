@@ -225,7 +225,7 @@ jobs:
 
     - name: Activate the Visual Studio environemnt
       if: matrix.TARGET == 'win'
-      uses: ilammy/msvc-dev-cmd@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
