@@ -982,7 +982,7 @@ def _finalize_matplotlib(module, available):
     # 'Agg', otherwise attempts to generate plots on CI services without
     # terminal windows will fail.
     if in_testing_environment():
-        module.use('Agg')
+        module.use('Agg', force=True)
     import matplotlib.pyplot
     import matplotlib.pylab
     import matplotlib.backends

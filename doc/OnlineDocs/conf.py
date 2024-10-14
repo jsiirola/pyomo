@@ -281,12 +281,16 @@ system_info = (
     platform.python_implementation()
 )
 
+os.environ['ETS_TOOLKIT'] = 'null'
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+
+# Mark that we are testing code (in this case, testing the documentation)
+from pyomo.common.flags import in_testing_environment
+in_testing_environment(True)
+
 # We need multiprocessing because some doctests must be skipped if the
 # start method is not "fork"
 import multiprocessing
-
-# (register plugins, make environ available to tests)
-import pyomo.environ as pyo
 
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
@@ -295,6 +299,11 @@ from pyomo.common.dependencies import (
     numpy as np,
 )
 from pyomo.contrib.parmest.parmest import parmest_available
+
+bool(matplotlib_available)
+
+# (register plugins, make environ available to tests)
+import pyomo.environ as pyo
 
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to suppress warnings when 
@@ -326,9 +335,9 @@ else:
     ma27_available = False
     mumps_available = False
 
-# Mark that we are testing code (in this case, testing the documentation)
-from pyomo.common.flags import in_testing_environment
-in_testing_environment(True)
+for attr in list(globals()):
+    if attr.endswith('_available'):
+        bool(globals()[attr])
 
 # Prevent any Pyomo logs from propagating up to the doctest logger
 import logging

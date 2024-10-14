@@ -173,6 +173,7 @@ community_map attribute or the `repr()` function can be used:
     {0: ([<pyomo.core.base.constraint.ScalarConstraint object at ...>, <pyomo.core.base.constraint.ScalarConstraint object at ...>], [<pyomo.core.base.var.ScalarVar object at ...>, <pyomo.core.base.var.ScalarVar object at ...>]), 1: ([<pyomo.core.base.constraint.ScalarConstraint object at ...>, <pyomo.core.base.constraint.ScalarConstraint object at ...>, <pyomo.core.base.constraint.ScalarConstraint object at ...>], [<pyomo.core.base.var.ScalarVar object at ...>, <pyomo.core.base.var.ScalarVar object at ...>])}
 
 `generate_structured_model` method of CommunityMap objects
+
     It may be useful to create a new model based on the communities found in the model - we can use the
     ``generate_structured_model`` method of the CommunityMap class to do this. Calling this method on a CommunityMap object
     returns a new model made up of blocks that correspond to each of the communities found in the original model. Let's
