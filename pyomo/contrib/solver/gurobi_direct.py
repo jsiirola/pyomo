@@ -299,24 +299,7 @@ class GurobiDirect(SolverBase):
                 # gurobi_model.update()
                 timer.stop('transfer_model')
 
-                options = config.solver_options
-
-                gurobi_model.setParam('LogToConsole', 1)
-
-                if config.threads is not None:
-                    gurobi_model.setParam('Threads', config.threads)
-                if config.time_limit is not None:
-                    gurobi_model.setParam('TimeLimit', config.time_limit)
-                if config.rel_gap is not None:
-                    gurobi_model.setParam('MIPGap', config.rel_gap)
-                if config.abs_gap is not None:
-                    gurobi_model.setParam('MIPGapAbs', config.abs_gap)
-
-                if config.use_mipstart:
-                    raise MouseTrap("MIPSTART not yet supported")
-
-                for key, option in options.items():
-                    gurobi_model.setParam(key, option)
+                self._set_options_from_config(gurobi_model, config)
 
                 timer.start('optimize')
                 gurobi_model.optimize()
@@ -342,6 +325,83 @@ class GurobiDirect(SolverBase):
         res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
         res.timing_info.timer = timer
         return res
+
+    def update_bounds_and_resolve(self, old_results, **kwds) -> Results:
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        config = self.config(value=kwds, preserve_implicit=True)
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
+
+        StaleFlagManager.mark_all_as_stale()
+
+        timer.start('prepare_matrices')
+        inf = float('inf')
+        ninf = -inf
+        bounds = list(
+            map(operator.attrgetter('bounds'), old_results.solution_loader._pyo_vars)
+        )
+        lb = [ninf if _b is None else _b for _b in map(operator.itemgetter(0), bounds)]
+        ub = [inf if _b is None else _b for _b in map(operator.itemgetter(1), bounds)]
+        timer.stop('prepare_matrices')
+
+        ostreams = [io.StringIO()] + config.tee
+        res = Results()
+
+        try:
+            orig_cwd = os.getcwd()
+            if config.working_dir:
+                os.chdir(config.working_dir)
+            with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
+                gurobi_model = old_results.solution_loader._grb_model
+                x = old_results.solution_loader._grb_vars.tolist()
+
+                timer.start('transfer_model')
+                gurobi_model.setAttr('LB', x, lb)
+                gurobi_model.setAttr('UB', x, ub)
+                gurobi_model.update()
+                timer.stop('transfer_model')
+
+                self._set_options_from_config(gurobi_model, config)
+
+                timer.start('optimize')
+                gurobi_model.optimize()
+                timer.stop('optimize')
+        finally:
+            os.chdir(orig_cwd)
+
+        res = self._postsolve(timer, config, old_results.solution_loader)
+
+        res.solver_configuration = config
+        res.solver_name = 'Gurobi'
+        res.solver_version = self.version()
+        res.solver_log = ostreams[0].getvalue()
+
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        res.timing_info.start_timestamp = start_timestamp
+        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.timer = timer
+        return res
+
+    def _set_options_from_config(self, gurobi_model, config):
+        options = config.solver_options
+
+        gurobi_model.setParam('LogToConsole', 1)
+
+        if config.threads is not None:
+            gurobi_model.setParam('Threads', config.threads)
+        if config.time_limit is not None:
+            gurobi_model.setParam('TimeLimit', config.time_limit)
+        if config.rel_gap is not None:
+            gurobi_model.setParam('MIPGap', config.rel_gap)
+        if config.abs_gap is not None:
+            gurobi_model.setParam('MIPGapAbs', config.abs_gap)
+
+        if config.use_mipstart:
+            raise MouseTrap("MIPSTART not yet supported")
+
+        for key, option in options.items():
+            gurobi_model.setParam(key, option)
 
     def _postsolve(self, timer: HierarchicalTimer, config, loader):
         grb_model = loader._grb_model
