@@ -607,7 +607,7 @@ jobs:
     # this has to be done after Pyomo is installed because highspy 
     # depends on pyomo's find_library function
     - name: Install HiGHS
-      if: ${{ ! matrix.slim }}
+      if: ${{ matrix.slim == 10 }}
       shell: bash
       run: |
         $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
@@ -632,7 +632,7 @@ jobs:
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
-      if: ${{ ! matrix.slim }}
+      if: ${{ matrix.slim == 10}}
       run: |
         echo ""
         echo "Pyomo download-extensions"
