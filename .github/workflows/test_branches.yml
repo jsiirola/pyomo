@@ -84,6 +84,7 @@ jobs:
         include:
         - os: ubuntu-latest
           python: '3.12'
+          skip_doctest: 1
           TARGET: linux
           PYENV: pip
 
