@@ -2327,10 +2327,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.b.y[1].parent_component(), n.b.y)
 
         self.assertNotEqual(id(m.b.c), id(n.b.c))
-        self.assertIs(m.b.c.parent_block(), m.b)
         self.assertIs(m.b.c.parent_component(), m.b.c)
-        self.assertIs(n.b.c.parent_block(), n.b)
+        self.assertIs(m.b.c.parent_block(), m.b)
+        print(n.b.c._parent)
         self.assertIs(n.b.c.parent_component(), n.b.c)
+        self.assertIs(n.b.c.parent_block(), n.b)
         self.assertEqual(
             sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
