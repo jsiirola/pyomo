@@ -93,7 +93,37 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
+          python: 3.8
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
+        - os: windows-latest
           python: 3.9
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
+        - os: windows-latest
+          python: 3.10
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
+        - os: windows-latest
+          python: 3.11
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
+        - os: windows-latest
+          python: 3.12
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
+        - os: windows-latest
+          python: 3.13
           TARGET: win
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
