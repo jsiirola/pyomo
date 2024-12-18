@@ -210,7 +210,9 @@ def check_if_native_type(obj):
         return True
     if check_if_numeric_type(obj):
         return True
-    return False
+    # Note that the tests above could have added the type to the
+    # native_types set
+    return obj.__class__ in native_types
 
 
 def check_if_logical_type(obj):
