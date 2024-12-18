@@ -365,7 +365,9 @@ def value(obj, exception=True):
         # from value().  We should revisit if that is worthwhile to do
         # here.
         #
-        if check_if_numeric_type(obj):
+        if check_if_native_type(obj):
+            return obj
+        elif obj.__class__ in {tuple, list, tuple, dict}:
             return obj
         else:
             if not exception:
