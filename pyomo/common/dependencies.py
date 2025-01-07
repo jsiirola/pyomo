@@ -1101,7 +1101,11 @@ with declare_modules_as_importable(globals()):
         'mpi4py', deferred_submodules=['MPI'], callback=_finalize_mpi4py
     )
     networkx, networkx_available = attempt_import('networkx')
-    numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
+    # Note: pynumero.sparse.BlockVector leverages the __array__ufunc__
+    # interface released in numpy 1.13
+    numpy, numpy_available = attempt_import(
+        'numpy', minimum_version='1.13.0', callback=_finalize_numpy
+    )
     pandas, pandas_available = attempt_import('pandas')
     pint, pint_available = attempt_import(
         'pint',
