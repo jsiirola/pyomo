@@ -21,7 +21,11 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
-from pyomo.common.numeric_types import native_types, value as expr_value
+from pyomo.common.numeric_types import (
+    native_types,
+    native_numeric_types,
+    value as expr_value,
+)
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
@@ -168,14 +172,14 @@ class ParamData(ComponentData, NumericValue):
         # required to be mutable.
         #
         _comp = self.parent_component()
-        if value.__class__ in native_types:
+        if value.__class__ in native_numeric_types:
             # TODO: warn/error: check if this Param has units: assigning
             # a dimensionless value to a united param should be an error
             pass
         elif _comp._units is not None:
             _src_magnitude = expr_value(value)
             # Note: expr_value() could have just registered a new numeric type
-            if value.__class__ in native_types:
+            if value.__class__ in native_numeric_types:
                 value = _src_magnitude
             else:
                 _src_units = units.get_units(value)
@@ -184,15 +188,18 @@ class ParamData(ComponentData, NumericValue):
                     from_units=_src_units,
                     to_units=_comp._units,
                 )
-        # FIXME: we should call value() here [to ensure types get
-        # registered], but doing so breaks non-numeric Params (which we
-        # allow).  The real fix will be to follow the precedent from
-        # GetItemExpression and have separate types based on which
-        # expression "system" the Param should participate in (numeric,
-        # logical, or structural).
-        #
-        # else:
-        #     value = expr_value(value)
+        else:
+            # FIXME: we call value() here [to ensure types get
+            # registered].  We are (slowly) moving to a paradigm where
+            # value() will return a type that is "native" to the
+            # expression system being evaluated.  This can be a a bit
+            # strange because we allow Params to contain non-numeric
+            # values.  The real might be to follow the precedent from
+            # GetItemExpression and have separate types based on which
+            # expression "system" the Param should participate in
+            # (numeric, logical, or structural).
+            #
+            value = expr_value(value)
 
         old_value, self._value = self._value, value
         try:
@@ -724,18 +731,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         if self._constructed and not self._mutable:
             _raise_modifying_immutable_error(self, index)
         #
-        # Params should contain *values*.  Note that if we just call
-        # value(), then that forces the value to be a numeric value.
-        # Notably, we allow Params with domain==Any to hold strings, tuples,
-        # etc.  The following lets us use NumericValues to initialize
-        # Params, but is optimized to check for "known" native types to
-        # bypass a potentially expensive isinstance()==False call.
-        #
-        if value.__class__ not in native_types:
-            if isinstance(value, NumericValue):
-                value = value()
-
-        #
         # Set the value depending on the type of param value.
         #
         try:
@@ -750,6 +745,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 obj._index = index
                 return obj
             else:
+                if value.__class__ not in native_numeric_types:
+                    # Note that we don't need to worry about units, as
+                    # immutable Params cannut have units
+                    value = expr_value(value)
                 self._data[index] = value
                 # Because we do not have a ParamData, we cannot rely on the
                 # validation that occurs in ParamData.set_value()
