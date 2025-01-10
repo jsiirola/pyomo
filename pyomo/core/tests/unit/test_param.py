@@ -67,7 +67,12 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.set import SetData
-from pyomo.core.base.units_container import units, pint_available, UnitsError
+from pyomo.core.base.units_container import (
+    units,
+    pint_available,
+    UnitsError,
+    as_quantity,
+)
 
 from io import StringIO
 
@@ -1431,7 +1436,6 @@ p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True
         m.q[2]
         m.q['a'] = 'b'
         buf = StringIO()
-        m.q.pprint()
         m.q.pprint(ostream=buf)
         self.assertEqual(
             buf.getvalue().strip(),
@@ -1513,6 +1517,39 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
         None : 7000.0
 
 1 Declarations: p
+        """.strip(),
+        )
+
+    @unittest.skipUnless(pint_available, "units test requires pint module")
+    def test_set_value_quantity(self):
+        m = ConcreteModel()
+        m.p = Param(units=units.g)
+        m.p = 5
+        self.assertEqual(value(m.p), 5)
+        m.p = as_quantity(6 * units.g)
+        self.assertEqual(value(m.p), 6)
+        m.p = as_quantity(7 * units.kg)
+        self.assertEqual(value(m.p), 7000)
+        with self.assertRaises(UnitsError):
+            m.p = as_quantity(1 * units.s)
+
+        m.q = Param([1, 2], initialize={1: units.cm, 2: 3 * units.m}, units=units.mm)
+
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(
+            out.getvalue().strip(),
+            """
+2 Param Declarations
+    p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True, Units=g
+        Key  : Value
+        None : 7000.0
+    q : Size=2, Index={1, 2}, Domain=Any, Default=None, Mutable=True, Units=mm
+        Key : Value
+          1 :   10.0
+          2 : 3000.0
+
+2 Declarations: p q
         """.strip(),
         )
 

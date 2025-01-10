@@ -1416,10 +1416,7 @@ class PyomoUnitsContainer(object):
 
 
 class _QuantityVisitor(ExpressionValueVisitor):
-    def __init__(self):
-        self.native_types = set(nonpyomo_leaf_types)
-        self.native_types.add(units._pint_registry.Quantity)
-        self._unary_inverse_trig = {'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh'}
+    _unary_inverse_trig = {'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh'}
 
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
@@ -1433,7 +1430,7 @@ class _QuantityVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in self.native_types:
+        if node.__class__ in native_types:
             return True, node
 
         if node.is_expression_type():

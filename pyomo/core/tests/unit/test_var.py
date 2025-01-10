@@ -51,7 +51,12 @@ from pyomo.environ import (
     Binary,
     value,
 )
-from pyomo.core.base.units_container import units, pint_available, UnitsError
+from pyomo.core.base.units_container import (
+    units,
+    pint_available,
+    UnitsError,
+    as_quantity,
+)
 
 
 class TestVarData(unittest.TestCase):
@@ -1703,6 +1708,41 @@ class MiscVarTests(unittest.TestCase):
         None :  None : 7000.0 :  None : False : False :  Reals
 
 1 Declarations: x
+        """.strip(),
+        )
+
+    @unittest.skipUnless(pint_available, "units test requires pint module")
+    def test_set_value_quantity(self):
+        m = ConcreteModel()
+        m.x = Var(units=units.g)
+        m.x = 5
+        self.assertEqual(value(m.x), 5)
+        m.x = as_quantity(6 * units.g)
+        self.assertEqual(value(m.x), 6)
+        m.x = None
+        self.assertIsNone(m.x.value, None)
+        m.x = as_quantity(7 * units.kg)
+        self.assertEqual(value(m.x), 7000)
+        with self.assertRaises(UnitsError):
+            m.x = as_quantity(1 * units.s)
+
+        m.y = Var([1, 2], initialize={1: units.cm, 2: 3 * units.m}, units=units.mm)
+
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(
+            out.getvalue().strip(),
+            """
+2 Var Declarations
+    x : Size=1, Index=None, Units=g
+        Key  : Lower : Value  : Upper : Fixed : Stale : Domain
+        None :  None : 7000.0 :  None : False : False :  Reals
+    y : Size=2, Index={1, 2}, Units=mm
+        Key : Lower : Value  : Upper : Fixed : Stale : Domain
+          1 :  None :   10.0 :  None : False : False :  Reals
+          2 :  None : 3000.0 :  None : False : False :  Reals
+
+2 Declarations: x y
         """.strip(),
         )
 
