@@ -1345,13 +1345,23 @@ class PyomoUnitsContainer(object):
            float : The converted value
 
         """
-        if type(num_value) not in native_numeric_types:
+        if num_value.__class__ is units._pint_registry.Quantity:
+            from_pint_unit = self._get_pint_units(from_units)
+            if from_pint_unit.dimensionless:
+                from_pint_unit = num_value.units
+            elif from_pint_unit != num_value.units:
+                raise UnitsError(
+                    f"convert_value() num_value quantity '{num_value}' "
+                    f"inconsistent with from_units '{from_pint_unit}'"
+                )
+            num_value = num_value.magnitude
+        elif num_value.__class__ not in native_numeric_types:
             raise UnitsError(
                 'The argument "num_value" in convert_value must be a native '
-                'numeric type, but instead type {type(num_value)} was found.'
+                f'numeric type, but instead type {type(num_value)} was found.'
             )
-
-        from_pint_unit = self._get_pint_units(from_units)
+        else:
+            from_pint_unit = self._get_pint_units(from_units)
         to_pint_unit = self._get_pint_units(to_units)
         if from_pint_unit == to_pint_unit:
             return num_value
