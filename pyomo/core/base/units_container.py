@@ -214,6 +214,10 @@ class _PyomoUnit(NumericValue):
         """Return the pint registry (pint.UnitRegistry) object used to create this unit."""
         return self._pint_registry
 
+    @property
+    def dimensionless(self):
+        return self._pint_unit.dimensionless
+
     def getname(self, fully_qualified=False, name_buffer=None):
         """
         Returns the name of this unit as a string.
