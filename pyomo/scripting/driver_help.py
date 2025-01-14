@@ -239,6 +239,8 @@ def help_solvers():
         # suppress ALL output
         with capture_output(capture_fd=True):
             for s in solver_list:
+                # Log the solver being checked
+                print(f"Checking solver: {s}", file=sys.stderr)
                 # Create a solver, and see if it is available
                 with pyomo.opt.SolverFactory(s) as opt:
                     ver = ''
@@ -257,6 +259,8 @@ def help_solvers():
                             else:
                                 ver = ''
                         except (AttributeError, NameError):
+                            # Log that a solver was not found/skipped
+                            print(f"Error retrieving version for solver: {s}", file=sys.stderr)
                             pass
                     elif s == 'py':
                         # py is a metasolver, but since we don't specify a subsolver
@@ -274,6 +278,8 @@ def help_solvers():
                     else:
                         avail = ''
                     _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
+                    # Log the result
+                    print(f"Solver: {s}, Availability: {avail}, Version: {ver}", file=sys.stderr)
     finally:
         # Reset logging level
         logging.disable(logging.NOTSET)
