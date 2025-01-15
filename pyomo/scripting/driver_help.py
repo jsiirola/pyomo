@@ -243,14 +243,20 @@ def help_solvers():
                 continue
             # Log the solver being checked
             print(f"Checking solver: {s}")
+            sys.stdout.flush()
+            sys.stderr.write(f"Checking solver: {s}\n")
             # Create a solver, and see if it is available
             with pyomo.opt.SolverFactory(s) as opt:
                 ver = ''
                 if opt.available(False):
                     print(f"Solver {s} is available.")
+                    sys.stdout.flush()
+                    sys.stderr.write(f"Solver {s} is available.\n")
                     avail = '-'
                     if opt.license_is_valid():
                         print(f"Solver {s} has a valid license.")
+                        sys.stdout.flush()
+                        sys.stderr.write(f"Solver {s} has a valid license.\n")
                         avail = '+'
                     try:
                         ver = opt.version()
@@ -286,6 +292,7 @@ def help_solvers():
                 # Log the result
                 print(f"Solver: {s}, Availability: {avail}, Version: {ver}")
                 sys.stdout.flush()
+                sys.stderr.write(f"Solver: {s}, Availability: {avail}, Version: {ver}")
     finally:
         # Reset logging level
         logging.disable(logging.NOTSET)
