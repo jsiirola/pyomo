@@ -240,7 +240,7 @@ def help_solvers():
         # with capture_output(capture_fd=True):
         for s in solver_list:
             if s == 'cplex_persistent':
-                pass
+                continue
             # Log the solver being checked
             print(f"Checking solver: {s}")
             # Create a solver, and see if it is available
