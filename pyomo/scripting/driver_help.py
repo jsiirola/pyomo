@@ -239,8 +239,6 @@ def help_solvers():
         # suppress ALL output
         # with capture_output(capture_fd=True):
         for s in solver_list:
-            if s == 'cplex_persistent':
-                continue
             # Log the solver being checked
             print(f"Checking solver: {s}")
             sys.stdout.flush()
