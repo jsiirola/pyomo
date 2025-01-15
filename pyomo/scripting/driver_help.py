@@ -247,8 +247,10 @@ def help_solvers():
             with pyomo.opt.SolverFactory(s) as opt:
                 ver = ''
                 if opt.available(False):
+                    print(f"Solver {s} is available.")
                     avail = '-'
                     if opt.license_is_valid():
+                        print(f"Solver {s} has a valid license.")
                         avail = '+'
                     try:
                         ver = opt.version()
@@ -260,6 +262,7 @@ def help_solvers():
                             ver = '.'.join(str(v) for v in ver)
                         else:
                             ver = ''
+                        print(f"Solver {s} reports version {ver}.")
                     except (AttributeError, NameError):
                         # Log that a solver was not found/skipped
                         print(f"Error retrieving version for solver: {s}")
@@ -282,6 +285,7 @@ def help_solvers():
                 _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
                 # Log the result
                 print(f"Solver: {s}, Availability: {avail}, Version: {ver}")
+                sys.stdout.flush()
     finally:
         # Reset logging level
         logging.disable(logging.NOTSET)
