@@ -87,7 +87,7 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
-          python: 3.9
+          python: '3.10'
           TARGET: win
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock

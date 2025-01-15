@@ -237,49 +237,49 @@ def help_solvers():
         # Disable warnings
         logging.disable(logging.WARNING)
         # suppress ALL output
-        with capture_output(capture_fd=True):
-            for s in solver_list:
-                # Log the solver being checked
-                print(f"Checking solver: {s}", file=sys.stderr)
-                # Create a solver, and see if it is available
-                with pyomo.opt.SolverFactory(s) as opt:
-                    ver = ''
-                    if opt.available(False):
-                        avail = '-'
-                        if opt.license_is_valid():
-                            avail = '+'
-                        try:
-                            ver = opt.version()
-                            if isinstance(ver, str):
-                                pass
-                            elif ver:
-                                while len(ver) > 2 and ver[-1] == 0:
-                                    ver = ver[:-1]
-                                ver = '.'.join(str(v) for v in ver)
-                            else:
-                                ver = ''
-                        except (AttributeError, NameError):
-                            # Log that a solver was not found/skipped
-                            print(f"Error retrieving version for solver: {s}", file=sys.stderr)
+        # with capture_output(capture_fd=True):
+        for s in solver_list:
+            # Log the solver being checked
+            print(f"Checking solver: {s}")
+            # Create a solver, and see if it is available
+            with pyomo.opt.SolverFactory(s) as opt:
+                ver = ''
+                if opt.available(False):
+                    avail = '-'
+                    if opt.license_is_valid():
+                        avail = '+'
+                    try:
+                        ver = opt.version()
+                        if isinstance(ver, str):
                             pass
-                    elif s == 'py':
-                        # py is a metasolver, but since we don't specify a subsolver
-                        # for this test, opt is actually an UnknownSolver, so we
-                        # can't try to get the _metasolver attribute from it.
-                        avail = '*'
-                    elif isinstance(s, pyomo.opt.solvers.UnknownSolver):
-                        # We can get here if creating a registered
-                        # solver failed (i.e., an exception was raised
-                        # in __init__)
-                        avail = ''
-                    elif getattr(opt, "_metasolver", False):
-                        # Note: default to False if the attribute isn't implemented
-                        avail = '*'
-                    else:
-                        avail = ''
-                    _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
-                    # Log the result
-                    print(f"Solver: {s}, Availability: {avail}, Version: {ver}", file=sys.stderr)
+                        elif ver:
+                            while len(ver) > 2 and ver[-1] == 0:
+                                ver = ver[:-1]
+                            ver = '.'.join(str(v) for v in ver)
+                        else:
+                            ver = ''
+                    except (AttributeError, NameError):
+                        # Log that a solver was not found/skipped
+                        print(f"Error retrieving version for solver: {s}")
+                        pass
+                elif s == 'py':
+                    # py is a metasolver, but since we don't specify a subsolver
+                    # for this test, opt is actually an UnknownSolver, so we
+                    # can't try to get the _metasolver attribute from it.
+                    avail = '*'
+                elif isinstance(s, pyomo.opt.solvers.UnknownSolver):
+                    # We can get here if creating a registered
+                    # solver failed (i.e., an exception was raised
+                    # in __init__)
+                    avail = ''
+                elif getattr(opt, "_metasolver", False):
+                    # Note: default to False if the attribute isn't implemented
+                    avail = '*'
+                else:
+                    avail = ''
+                _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
+                # Log the result
+                print(f"Solver: {s}, Availability: {avail}, Version: {ver}")
     finally:
         # Reset logging level
         logging.disable(logging.NOTSET)
