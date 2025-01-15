@@ -241,8 +241,11 @@ class XpressDirect(DirectSolver):
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
-
+        print("in xpress_direct.init()")
+        sys.stdout.flush()
         if not xpress_available:
+            print("not available")
+            sys.stdout.flush()
             if exception_flag:
                 xpress.log_import_warning(logger=__name__)
                 raise ApplicationError(
@@ -251,15 +254,25 @@ class XpressDirect(DirectSolver):
             return False
 
         # Check that there is a valid license
+        print("init()...")
+        sys.stdout.flush()
         try:
             xpress.init()
+            print("init() OK")
+            sys.stdout.flush()
             return True
         except:
+            print("init() FAIL")
+            sys.stdout.flush()
             if exception_flag:
                 raise
             return False
         finally:
+            print("free()")
+            sys.stdout.flush()
             xpress.free()
+            print("free() DONE")
+            sys.stdout.flush()
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
