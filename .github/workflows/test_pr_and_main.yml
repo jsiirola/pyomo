@@ -414,6 +414,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
+            TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
             for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
@@ -443,14 +444,17 @@ jobs:
                         # we will run "conda install" in a subshell and
                         # kill it after 5-minutes.
                         (conda install -q -y $PKG) &
-                        conda_pid=$!
+                        sleep 1
+                        conda_pid=$(ps | grep conda | sed 's/^ *//' | sed 's/ .*//')
                         (sleep 30 \
-                            && echo "TIMEOUT: killing conda install process $conda_pid (HUP)" \
-                            && kill -HUP -$conda_pid && sleep 5 \
-                            && echo "TIMEOUT: killing conda install process (TERM)" \
-                            && kill -TERM -$conda_pid && sleep 10 \
-                            && echo "TIMEOUT: killing conda install process (KILL)" \
-                            && kill -KILL -$conda_pid) &
+                            && echo "$TIMEOUT_MSG $conda_pid (INT)" \
+                            && kill -INT $conda_pid && sleep 5 \
+                            && echo "$TIMEOUT_MSG $conda_pid (HUP)" \
+                            && kill -HUP $conda_pid && sleep 5 \
+                            && echo "$TIMEOUT_MSG $conda_pid (TERM)" \
+                            && kill -TERM $conda_pid && sleep 10 \
+                            && echo "$TIMEOUT_MSG $conda_pid (KILL)" \
+                            && kill -KILL $conda_pid) &
                         timeout_pid=$!
                         ps
                         wait $conda_pid || _BUILDS=""
