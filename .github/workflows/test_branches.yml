@@ -407,12 +407,16 @@ jobs:
                         # kill it after 5-minutes.
                         (conda install -q -y $PKG) &
                         conda_pid=$!
-                        (sleep 30 && kill -HUP -$conda_pid \
-                            && sleep 5 && kill -TERM -$conda_pid \
-                            && sleep 10 && kill -KILL -$conda_pid) &
+                        (sleep 30 \
+                            && echo "TIMEOUT: killing conda install process (HUP) \
+                            && kill -HUP -$conda_pid sleep 5 \
+                            && echo "TIMEOUT: killing conda install process (TERM) \
+                            && kill -TERM -$conda_pid && sleep 10 \
+                            && echo "TIMEOUT: killing conda install process (KILL) \
+                            && kill -KILL -$conda_pid) &
                         timeout_pid=$!
                         wait $conda_pid || _BUILDS=""
-                        kill -$timeout_pid 2>/dev/null \
+                        kill $timeout_pid 2>/dev/null \
                             || echo "TIMEOUT: killed conda install process"
                     fi
                 fi
