@@ -444,9 +444,10 @@ jobs:
                         # we will run "conda install" in a subshell and
                         # kill it after 5-minutes.
                         (conda install -q -y $PKG) &
+                        conda_subshell_pid=$!
                         sleep 1
                         conda_pid=$(ps | grep conda | sed 's/^ *//' | sed 's/ .*//')
-                        (sleep 30 \
+                        (sleep 20 \
                             && echo "$TIMEOUT_MSG $conda_pid (INT)" \
                             && kill -INT $conda_pid && sleep 5 \
                             && echo "$TIMEOUT_MSG $conda_pid (HUP)" \
@@ -457,7 +458,7 @@ jobs:
                             && kill -KILL $conda_pid) &
                         timeout_pid=$!
                         ps
-                        wait $conda_pid || _BUILDS=""
+                        wait $conda_subshell_pid || _BUILDS=""
                         kill $timeout_pid 2>/dev/null \
                             || echo "TIMEOUT: killed conda install process"
                     fi
