@@ -450,8 +450,6 @@ jobs:
                         (sleep 20 \
                             && echo "$TIMEOUT_MSG $conda_pid (INT)" \
                             && kill -INT $conda_pid && sleep 5 \
-                            && echo "$TIMEOUT_MSG $conda_pid (HUP)" \
-                            && kill -HUP $conda_pid && sleep 5 \
                             && echo "$TIMEOUT_MSG $conda_pid (TERM)" \
                             && kill -TERM $conda_pid && sleep 10 \
                             && echo "$TIMEOUT_MSG $conda_pid (KILL)" \
