@@ -412,7 +412,7 @@ jobs:
                         conda_pid=$(ps | grep conda | sed 's/^ *//' | sed 's/ .*//')
                         echo "Conda PID: '$conda_pid'"
                         ps
-                        (sleep 20 \
+                        (sleep 300 \
                             && echo "$TIMEOUT_MSG $conda_pid (INT)" \
                             && kill -INT $conda_pid && sleep 5 \
                             && echo "$TIMEOUT_MSG $conda_pid (TERM)" \
