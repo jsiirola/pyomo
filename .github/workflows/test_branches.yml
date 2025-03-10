@@ -380,7 +380,7 @@ jobs:
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in scip 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps; do
+            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -435,9 +435,8 @@ jobs:
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
-        conda install -q -y --force-reinstall pip
         if test -n "$PYPI_DEPENDENCIES"; then
-            python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+            python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES || _PASS=
         fi
         # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
