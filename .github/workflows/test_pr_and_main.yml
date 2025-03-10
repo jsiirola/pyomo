@@ -452,8 +452,8 @@ jobs:
                         # hasn't gotten to the installation phase yet.
                         (sleep 300 \
                             && if test `grep 'Package Plan' conda.log | wc -l` -eq 0; \
-                            then echo "$TIMEOUT_MSG $conda_pid (INT) " \
-                            && kill -INT $conda_pid 2>/dev/null ; fi) &
+                            then echo "$TIMEOUT_MSG $conda_pid (TERM)" \
+                            && kill -TERM $conda_pid 2>/dev/null ; fi) &
                         timeout_pid=$!
                         wait $conda_subshell_pid || _BUILDS=""
                         kill $timeout_pid 2>/dev/null \
