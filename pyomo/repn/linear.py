@@ -14,8 +14,6 @@ import sys
 from operator import itemgetter
 from itertools import filterfalse
 
-print("LINEAR!")
-
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.numeric_types import (
     native_types,
