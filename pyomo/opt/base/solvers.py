@@ -131,7 +131,13 @@ The original solver was created with the following parameters:
 
 
 class SolverFactoryClass(Factory):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(f"(solvers.SolverFactoryClass) instantiated {self.__class__}: {args}, kwargs:{kwargs}")
+        super().__init__(*args, **kwargs)
+
     def __call__(self, _name=None, **kwds):
+        logging.debug(f"{self.__class__} (solvers.SolverFactoryClass) __call__: _name='{_name}', kwds={kwds}")
         if _name is None:
             return self
         _name = str(_name)
@@ -145,15 +151,20 @@ class SolverFactoryClass(Factory):
         opt = None
         try:
             if _name in self._cls:
+                logger.debug(f"'name('{_name}') in self._cls.keys()")
                 opt = self._cls[_name](**kwds)
             else:
                 mode = kwds.get('solver_io', 'nl')
+                logger.debug(f"mode = {mode}")
                 if mode is None:
                     mode = 'nl'
+                logger.debug(f"mode = {mode}")
                 _implicit_solvers = {'nl': 'asl'}
                 if "executable" not in kwds:
                     kwds["executable"] = _name
+                    logger.debug(f"kwds['executable'] = {kwds['executable']}")
                 if mode in _implicit_solvers:
+                    logger.debug(f"{mode} in _implicit_solvers")
                     if _implicit_solvers[mode] not in self._cls:
                         raise RuntimeError(
                             "  The solver plugin was not registered.\n"

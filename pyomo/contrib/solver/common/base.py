@@ -38,6 +38,8 @@ from pyomo.contrib.solver.common.results import (
     legacy_solution_status_map,
 )
 
+import logging
+LOGGER = logging.getLogger(__name__)
 
 class Availability(IntEnum):
     """
@@ -609,6 +611,8 @@ class LegacySolverWrapper:
             Legacy results object
 
         """
+        LOGGER.info(f"LegacySolverWrapper.solve() {self.__class__}")
+
         original_config = self.config
 
         map_args = (

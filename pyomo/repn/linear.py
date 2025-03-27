@@ -14,6 +14,8 @@ import sys
 from operator import itemgetter
 from itertools import filterfalse
 
+print("LINEAR!")
+
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.numeric_types import (
     native_types,
@@ -93,6 +95,7 @@ class LinearRepn(object):
         self.constant = 0
         self.linear = {}
         self.nonlinear = None
+        print("(LinearRepn) Instantiated:", self.__class__)
 
     def __str__(self):
         return (
@@ -761,6 +764,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         return ans
 
     def initializeWalker(self, expr):
+        print(f"(LinearRepnVisitor) {self.__class__}.initializeWalker({expr})")
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
             return False, self.finalizeResult(result)

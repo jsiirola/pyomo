@@ -35,6 +35,7 @@ class LinearTemplateRepn(LinearRepn):
     def __init__(self):
         super().__init__()
         self.linear_sum = []
+        print("(LinearTemplateRepn) Instantiated:", self.__class__)
 
     def __str__(self):
         return (
@@ -174,10 +175,12 @@ class LinearTemplateRepn(LinearRepn):
         remove_fixed_vars=False,
         check_duplicates=False,
     ):
+        print(f"> (LinearTemplateRepn) {self.__class__}.compile(...)")
         ans, constant = self._build_evaluator(
             smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates
         )
         if not ans:
+            print("* compile RETURNING: constant=", constant,"\n")
             return constant
         indent = '\n    '
         if not constant and ans and ans[0].startswith('const +='):
@@ -202,6 +205,7 @@ class LinearTemplateRepn(LinearRepn):
                 0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
             )
         ans = indent.join(ans)
+        print(f"EXECUTING:\n{ans}\n\n* compile RETURNING: build_expr\n")
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
@@ -292,6 +296,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}
         self.remove_fixed_vars = remove_fixed_vars
+        print("(LinearTemplateRepnVisitor): instantiated", self.__class__)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
@@ -305,37 +310,73 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
 
     def expand_expression(self, obj, template_info):
         env = self.env
+        print(f"(LinearTemplateRepnVisitor) {self.__class__.__name__}.expand_expression(..)")
+        print("  obj:", type(obj))
+        print("  template_info:", type(template_info), [type(ti) for ti in template_info])
         try:
+            # attempt to look up already-constructed template
             body, lb, ub = self.expanded_templates[id(template_info)]
+            print("   body:", body)
+            print(f"   bounds: [ {lb}, {ub} ]")
         except KeyError:
+            # create a new expanded template
+            print("! KeyError (create new expanded template)")
             smap = self.symbolmap
+            print("  smap:", smap)
             expr, indices = template_info
+            print("  expr:", expr)
+            print("  indices:", indices)
             args = [smap.getSymbol(i) for i in indices]
+            print("  args:", args)
             if expr.is_expression_type(ExpressionType.RELATIONAL):
+                print("\n* expression_type = RELATIONAL")
+                print(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
                 lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
-                    body = self.walk_expression(body).compile(
+                    print("\n - self.walk_expression(BODY)")
+                    _body = self.walk_expression(body)
+                    print("   ... _body:", type(_body), _body)
+
+                    # body = self.walk_expression(body).compile(
+                    body = _body.compile(
                         env, smap, self.expr_cache, args, False
                     )
+                    print("   ... body:", type(body), body)
                 if lb is not None:
-                    lb = self.walk_expression(lb).compile(
+                    print("\n - self.walk_expression(LB)")
+                    _lb = self.walk_expression(lb)
+                    print("   ... _lb:", type(_lb), _lb)
+                    lb = _lb.compile(
+                    # lb = self.walk_expression(lb).compile(
                         env, smap, self.expr_cache, args, True
                     )
+                    print("   ... lb:", type(lb), lb)
                 if ub is not None:
-                    ub = self.walk_expression(ub).compile(
+                    print("\n - self.walk_expression(UB)")
+                    _ub = self.walk_expression(ub)
+                    print("   ... _ub:", type(_ub), _ub)
+                    ub = _ub.compile(
+                    # ub = self.walk_expression(ub).compile(
                         env, smap, self.expr_cache, args, True
                     )
+                    print("   ... ub:", type(ub), ub)
+
             elif expr is not None:
+                print("\n* expr is not None")
                 lb = ub = None
+                print(" - self.walk_expression(expr)")
                 body = self.walk_expression(expr).compile(
                     env, smap, self.expr_cache, args, False
                 )
             else:
+                print("\n* expr else")
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
+            print(f"SET: self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []
+
         index = obj.index()
         if index.__class__ is not tuple:
             if index is None and not obj.parent_component().is_indexed():

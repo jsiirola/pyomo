@@ -43,6 +43,10 @@ from pyomo.contrib.solver.common.results import (
 )
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
@@ -233,6 +237,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
     _tc_map = None
 
     def __init__(self, **kwds):
+        logger.info(f"(GurobiDirect (Legacy)): {self.__class__} __init__: {kwds} ")
         super().__init__(**kwds)
         GurobiDirect._num_instances += 1
 
@@ -249,6 +254,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 self.release_license()
 
     def solve(self, model, **kwds) -> Results:
+        logger.info(f"(GurobiDirect (Legacy)) {self.__class__.__name__}.solve(): {kwds}")
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         config = self.config(value=kwds, preserve_implicit=True)
         if not self.available():
@@ -264,9 +270,14 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
         StaleFlagManager.mark_all_as_stale()
 
         timer.start('compile_model')
-        repn = LinearStandardFormCompiler().write(
+        logger.info("prior to LinearStandardFormCompiler()")
+        _lsfc = LinearStandardFormCompiler()
+        logger.info(f"created: {_lsfc}")
+        # repn = LinearStandardFormCompiler().write(
+        repn = _lsfc.write(
             model, mixed_form=True, set_sense=None
         )
+        logger.info(f"repn: {repn}")
         timer.stop('compile_model')
 
         if len(repn.objectives) > 1:

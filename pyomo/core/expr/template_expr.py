@@ -706,6 +706,7 @@ class _TemplateResolver(StreamBasedExpressionVisitor):
             return node.create_node_with_local_data(args)
 
     def initializeWalker(self, expr):
+        logger.info(f"(IndexTemplate) {self.__class__}.initializeWalker({expr})")
         return self.beforeChild(None, expr, None)
 
 
@@ -776,6 +777,7 @@ def _reduce_template_to_component(expr):
     level = -1
 
     def beforeChild(node, child, child_idx):
+        logger.info(f"  (_reduce_template_to_component).before_child({node}, {child}, {child_idx})")
         # Efficiency: do not descend into leaf nodes.
         if type(child) in native_types:
             return False, child

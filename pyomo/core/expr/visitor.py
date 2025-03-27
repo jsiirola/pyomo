@@ -207,6 +207,7 @@ class StreamBasedExpressionVisitor(object):
         # to override both.  The hasattr check prevents the "None"
         # defaults from overriding attributes or methods defined on
         # derived classes.
+        logger.info(f"(StreamBasedExpressionVisitor) {self.__class__}.init({kwds})")
         for field in self.client_methods:
             if field in kwds:
                 setattr(self, field, kwds.pop(field))
@@ -250,6 +251,7 @@ class StreamBasedExpressionVisitor(object):
                 for f in self.client_methods.items()
             )
         )
+        # print("StreamBasedExpressionVisitor.__init__: recursive_node_handler=", recursive_node_handler)
         self._process_node = getattr(
             self, recursive_node_handler, self._process_node_general
         )
@@ -263,25 +265,33 @@ class StreamBasedExpressionVisitor(object):
         if the recursion stack gets too deep.
 
         """
+        logger.info(f"[WALK] (StreamBasedExpressionVisitor) {self.__class__}.walk_expression({expr})")
         if self.initializeWalker is not None:
+            logger.info("  - initializing walker")
             walk, root = self.initializeWalker(expr)
+            logger.info(f"  - walker initialized: walk={walk}, root={root}")
             if not walk:
+                logger.info(f" * RETURNING root: {type(root)}, {root}")
                 return root
             elif root is None:
                 root = expr
         else:
+            logger.info("  - NOT initializing walker")
             root = expr
 
         try:
+            logger.info(f"  - process_node: {self._process_node}")
             result = self._process_node(root, RECURSION_LIMIT)
             _nonrecursive = None
         except RevertToNonrecursive:
+            logger.info("    - RevertToNonrecursive")
             ptr = (None,) + self.recursion_stack.pop()
             while self.recursion_stack:
                 ptr = (ptr,) + self.recursion_stack.pop()
             self.recursion_stack = None
             _nonrecursive = self._nonrecursive_walker_loop, ptr
         except RecursionError:
+            logger.info("    ! RecursionError")
             logger.warning(
                 'Unexpected RecursionError walking an expression tree.',
                 extra={'id': 'W1003'},
@@ -292,8 +302,11 @@ class StreamBasedExpressionVisitor(object):
             return _nonrecursive[0](_nonrecursive[1])
 
         if self.finalizeResult is not None:
-            return self.finalizeResult(result)
+            sr = self.finalizeResult(result)
+            logger.info(f"   * RETURNING: self.finalizeResult = {type(sr)}, {sr}")
+            return sr
         else:
+            logger.info(f"   * RETURNING result: {type(result)}, {result}")
             return result
 
     def _compute_actual_recursion_limit(self):
@@ -389,6 +402,7 @@ class StreamBasedExpressionVisitor(object):
         also the definition of the client_methods dict).
 
         """
+        logger.info(f"(StreamBasedExpressionVisitor) {self.__class__}._process_node_bex({node},{recursion_limit})")
         if not recursion_limit:
             recursion_limit = self._compute_actual_recursion_limit()
         else:
@@ -527,6 +541,7 @@ class StreamBasedExpressionVisitor(object):
         # parent pointer.
         #
         if self.initializeWalker is not None:
+            logger.info("walk_expression_NONRECURSIVE: initializeWalker")
             walk, result = self.initializeWalker(expr)
             if not walk:
                 return result
@@ -1031,6 +1046,7 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
         super().__init__(**kwds)
 
     def initializeWalker(self, expr):
+        logger.info(f"(ExpressionReplacementVisitor) {self.__class__}.initializeWalker({expr})")
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
             return False, result
@@ -1356,6 +1372,7 @@ class _ComponentVisitor(StreamBasedExpressionVisitor):
         self._types = types
 
     def initializeWalker(self, expr):
+        logger.info(f"(ComponentVisitor) {self.__class__}.initializeWalker({expr})")
         self._objs = []
         self._seen = set()
         return True, None
@@ -1421,6 +1438,7 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         # self._exprs: list of (e, e.expr) for any (nested) named expressions
 
     def initializeWalker(self, expr):
+        logger.info(f"(IndentifyVariableVisitor) {self.__class__}.initializeWalker({expr})")
         assert not self._expr_stack
         self._seen = {}
         self._exprs = None

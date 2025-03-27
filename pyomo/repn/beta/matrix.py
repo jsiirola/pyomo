@@ -592,6 +592,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
 
     def to_bounded_expression(self, evaluate_bounds=False):
         """Access this constraint as a single expression."""
+        print(f"(_LinearMatrixConstraintData) {self.__class__}.to_bounded_expression(evaluate_bounds={evaluate_bounds})")
         # Note that the bounds are always going to be floats...
         return self.lower, self.body, self.upper
 

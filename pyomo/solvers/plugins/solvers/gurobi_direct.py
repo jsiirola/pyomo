@@ -148,6 +148,7 @@ class GurobiDirect(DirectSolver):
     _default_env_started = False
 
     def __init__(self, manage_env=False, **kwds):
+        logger.info("(GurobiDirect) __init__: {self.__class__}, manage_env={manage_env}, kwds={kwds}")
         if 'type' not in kwds:
             kwds['type'] = 'gurobi_direct'
         super(GurobiDirect, self).__init__(**kwds)

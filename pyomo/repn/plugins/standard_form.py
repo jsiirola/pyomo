@@ -292,6 +292,7 @@ class _LinearStandardFormCompiler_impl(object):
             timing_logger.isEnabledFor(logging.DEBUG) and timing_logger.hasHandlers()
         )
 
+        print("config.file_determinism:", self.config.file_determinism)
         sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
             model,
@@ -327,8 +328,12 @@ class _LinearStandardFormCompiler_impl(object):
                 )
             )
 
+        print("component_map:", component_map)
+        print("unknown:", unknown)
+
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
+        print("var_map:", var_map)
 
         var_recorder = TemplateVarRecorder(var_map, None, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
@@ -364,8 +369,11 @@ class _LinearStandardFormCompiler_impl(object):
         # Process objective
         #
         set_sense = self.config.set_sense
+        print("set_sense:", set_sense)
+
         objectives = []
         for blk in component_map[Objective]:
+            print("component_map[Objective] blk:", blk)
             objectives.extend(
                 blk.component_data_objects(
                     Objective, active=True, descend_into=False, sort=sorter
@@ -376,8 +384,10 @@ class _LinearStandardFormCompiler_impl(object):
         obj_data = []
         obj_index = []
         obj_index_ptr = [0]
-        for obj in objectives:
+        print()
+        for _i, obj in enumerate(objectives):
             if hasattr(obj, 'template_expr'):
+                print("+", __file__, f"({_i}) objective: template_expression")
                 offset, linear_index, linear_data, _, _ = (
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
@@ -386,6 +396,7 @@ class _LinearStandardFormCompiler_impl(object):
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
             else:
+                print("-", __file__, f"({_i}) objective: non_template_expression")
                 repn = visitor.walk_expression(obj.expr)
                 N = len(repn.linear)
                 obj_index.append(map(var_recorder.var_order.__getitem__, repn.linear))
@@ -420,18 +431,23 @@ class _LinearStandardFormCompiler_impl(object):
         con_index = []
         con_index_ptr = [0]
         last_parent = None
-        for con in ordered_active_constraints(model, self.config):
+        print()
+        for _i, con in enumerate(ordered_active_constraints(model, self.config)):
             if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
                     timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
+                print("+", __file__, f"({_i}) constraint: template_expression")
                 offset, linear_index, linear_data, lb, ub = (
                     template_visitor.expand_expression(con, con.template_expr())
                 )
                 N = len(linear_data)
+                print(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
+                      f"lb: {lb}, ub: {ub}")
             else:
+                print("-", __file__, f"({_i}) constraint: non_template_expression")
                 # Note: lb and ub could be a number, expression, or None
                 lb, body, ub = con.to_bounded_expression()
                 if lb.__class__ not in native_types:

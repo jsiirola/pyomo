@@ -208,7 +208,10 @@ class ConstraintData(ActiveComponentData):
             variable lower or upper bounds.
 
         """
+        logger.info(f"(ConstraintData) {self.__class__}.to_bounded_expression(evaluate_bounds={evaluate_bounds})")
         expr = self._expr
+        logger.info(f"  expr.__class__: {expr.__class__}")
+        logger.info(f"  expr.args: {expr.args}")
         if expr.__class__ is RangedExpression:
             lb, body, ub = ans = expr.args
             if (
@@ -235,6 +238,15 @@ class ConstraintData(ActiveComponentData):
             ans = None, None, None
         else:
             lhs, rhs = expr.args
+            _lhs_potentially_variable = (hasattr(lhs, "is_potentially_variable") and
+                  lhs.is_potentially_variable())
+            _rhs_potentially_variable = (hasattr(rhs, "is_potentially_variable") and
+                  rhs.is_potentially_variable())
+            logger.info(
+                "  is_potentially_variable():"
+                f" lhs: {_lhs_potentially_variable}"
+                f" rhs: {_rhs_potentially_variable}")
+
             if rhs.__class__ in native_types or not rhs.is_potentially_variable():
                 ans = rhs if expr.__class__ is EqualityExpression else None, lhs, rhs
             elif lhs.__class__ in native_types or not lhs.is_potentially_variable():
@@ -568,6 +580,7 @@ class TemplateConstraintData(ConstraintData):
         return self.set_value(expr)
 
     def to_bounded_expression(self):
+        logger.info(f"(TemplateConstraintData) {self.__class__}.to_bounded_expression()")
         tmp, self._expr = self._expr, self._expr[0]
         try:
             return super().to_bounded_expression()

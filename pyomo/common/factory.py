@@ -16,6 +16,8 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
+import logging
+LOGGER = logging.getLogger(__name__)
 
 class Factory(object):
     """
@@ -28,8 +30,11 @@ class Factory(object):
         self._description = description
         self._cls = {}
         self._doc = {}
+        # if "SolverFactoryClass" in self.__class__.__name__:
+        #     LOGGER.info(f"(Factory): instantiated {self.__class__}, description='{description}'")
 
     def __call__(self, name, **kwds):
+        LOGGER.info(f"(Factory.__call__) {self.__class__}, name='{name}'")
         exception = kwds.pop('exception', False)
         name = str(name)
         if not name in self._cls:
@@ -60,7 +65,13 @@ class Factory(object):
             del self._doc[name]
 
     def register(self, name, doc=None):
+        # if "SolverFactoryClass" in self.__class__.__name__ and not name.startswith("_"):
+        #     if "gurobi" in name.lower():
+        #         LOGGER.info(f"(Factory) {self.__class__} register() -> fn(): name='{name}'")
         def fn(cls):
+            if "SolverFactoryClass" in self.__class__.__name__ and not name.startswith("_"):
+                if name.lower().startswith("gurobi"):
+                    LOGGER.debug(f"Factory.register(self._cls['{name}'] = {cls})")
             self._cls[name] = cls
             self._doc[name] = doc
             return cls

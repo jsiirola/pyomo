@@ -61,6 +61,7 @@ logger = logging.getLogger(__name__)
 
 
 def _import_gurobipy():
+    print("GUROBIPY!")
     try:
         import gurobipy
     except ImportError:
