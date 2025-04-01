@@ -8,7 +8,6 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import pyomo.apr_fls as af
 
 from pyomo.core.expr.numvalue import (
     ZeroConstant,
@@ -25,6 +24,7 @@ from pyomo.core.expr.relational_expr import (
 )
 from pyomo.core.kernel.base import ICategorizedObject, _abstract_readonly_property
 from pyomo.core.kernel.container_utils import define_simple_containers
+import pyomo.apr_fls as af
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
@@ -379,7 +379,6 @@ class constraint(_MutableBoundsConstraintMixin, IConstraint):
         "_lb",
         "_ub",
         "_equality",
-        "__weakref__",
     )
 
     def __init__(self, expr=None, body=None, lb=None, ub=None, rhs=None):
