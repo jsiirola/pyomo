@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import os
@@ -170,7 +171,7 @@ def _finalize_xpress_import(xpress, avail):
         ComponentMap.hasher.hashable(xpress.var, False)
 
 
-class _xpress_importer_class(object):
+class _xpress_importer_class(af.StubbornSiirolaSubclass):
     # We want to be able to *update* the message that the deferred
     # import generates using the stdout recorded during the actual
     # import.  As strings are immutable in Python, we will give this

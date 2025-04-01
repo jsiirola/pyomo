@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from collections import namedtuple
 from pyomo.common.timing import HierarchicalTimer
@@ -15,7 +16,7 @@ from pyomo.common.config import ConfigBlock
 from pyomo.util.subsystems import create_subsystem_block
 
 
-class SquareNlpSolverBase(object):
+class SquareNlpSolverBase(af.StubbornSiirolaSubclass):
     """A base class for NLP solvers that act on a square system
     of equality constraints.
 

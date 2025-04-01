@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # Imports from Pyomo
 from pyomo.core import *
@@ -16,7 +17,7 @@ from pyomo.opt import *
 
 
 @plugin_factory(SolverFactory)
-class MySolver(object):
+class MySolver(af.StubbornSiirolaSubclass):
     alias('greedy')
 
     # Declare that this is an IOptSolver plugin

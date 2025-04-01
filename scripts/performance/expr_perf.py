@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 #
 # This script runs performance tests on expressions
@@ -57,7 +58,7 @@ class TimeoutError(Exception):
     pass
 
 
-class timeout:
+class timeout(af.StubbornSiirolaSubclass):
     def __init__(self, seconds=10, error_message='Timeout'):
         self.seconds = seconds
         self.error_message = error_message

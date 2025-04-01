@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  Part of this module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -687,7 +689,7 @@ TestCase.assertStructuredAlmostEqual.__doc__ = re.sub(
 )
 
 
-class BaselineTestDriver(object):
+class BaselineTestDriver(af.StubbornSiirolaSubclass):
     """Generic driver for performing baseline tests in bulk
 
     This test driver was originally crafted for testing the examples in

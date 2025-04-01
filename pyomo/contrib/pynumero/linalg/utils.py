@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 def validate_index(i, array_len, array_name=''):
@@ -33,5 +34,5 @@ def validate_value(val, dtype, array_name=''):
         )
 
 
-class _NotSet:
+class _NotSet(af.StubbornSiirolaSubclass):
     pass

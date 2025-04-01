@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 
@@ -20,7 +21,7 @@ _virtual_sets = []
 #
 # Dummy types used by Kernel as domain flags
 #
-class RealSet(object):
+class RealSet(af.StubbornSiirolaSubclass):
     @staticmethod
     def get_interval():
         return (None, None, 0)
@@ -38,7 +39,7 @@ class RealSet(object):
         return False
 
 
-class IntegerSet(object):
+class IntegerSet(af.StubbornSiirolaSubclass):
     @staticmethod
     def get_interval():
         return (None, None, 1)
@@ -56,7 +57,7 @@ class IntegerSet(object):
         return False
 
 
-class BinarySet(object):
+class BinarySet(af.StubbornSiirolaSubclass):
     @staticmethod
     def get_interval():
         return (0, 1, 1)

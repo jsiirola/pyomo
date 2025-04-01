@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.dae.flatten import flatten_dae_components
 from pyomo.common.modeling import NOTSET
@@ -49,7 +50,7 @@ def _to_iterable(item):
         yield item
 
 
-class DynamicModelInterface(object):
+class DynamicModelInterface(af.StubbornSiirolaSubclass):
     """A helper class for working with dynamic models, e.g. those where
     many components are indexed by some ordered set referred to as "time."
 

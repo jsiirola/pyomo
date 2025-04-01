@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os.path
 import subprocess
@@ -20,7 +21,7 @@ from pyomo.opt.base.convert import ProblemConverterFactory
 
 
 @ProblemConverterFactory.register('ampl')
-class AmplMIPConverter(object):
+class AmplMIPConverter(af.StubbornSiirolaSubclass):
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
         #

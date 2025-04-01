@@ -14,9 +14,10 @@
 #
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
-class FilterElement:
+class FilterElement(af.StubbornSiirolaSubclass):
     def __init__(self, objective, feasible):
         self.objective = objective
         self.feasible = feasible
@@ -40,7 +41,7 @@ class FilterElement:
         return 0
 
 
-class Filter:
+class Filter(af.StubbornSiirolaSubclass):
     """
     Trust region filter
 

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """Main driver module for GDPopt solver.
 
@@ -67,7 +68,7 @@ def _handle_strategy_deprecation(config):
     doc='The GDPopt decomposition-based '
     'Generalized Disjunctive Programming (GDP) solver',
 )
-class GDPoptSolver(object):
+class GDPoptSolver(af.StubbornSiirolaSubclass):
     """Decomposition solver for Generalized Disjunctive Programming (GDP)
     problems.
 

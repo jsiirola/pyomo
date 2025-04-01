@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for Python numeric values
 #
@@ -44,7 +46,7 @@ from pyomo.core.expr.numvalue import (
 from pyomo.common.numeric_types import _native_boolean_types
 
 
-class MyBogusType(object):
+class MyBogusType(af.StubbornSiirolaSubclass):
     def __init__(self, val=0):
         self.val = float(val)
 

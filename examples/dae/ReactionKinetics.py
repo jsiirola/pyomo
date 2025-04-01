@@ -9,6 +9,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 #
 # This example illustrates a simple toolbox for developing chemical
@@ -28,7 +29,7 @@ colloc = TransformationFactory('dae.collocation')
 solver = SolverFactory('ipopt')
 
 
-class Reaction(object):
+class Reaction(af.StubbornSiirolaSubclass):
     """A simple class to hold the stoichiometry of a single reaction
 
     Reaction data is stored in two dictionaries:
@@ -84,7 +85,7 @@ class Reaction(object):
         return coef, species.strip()
 
 
-class ReactionNetwork(object):
+class ReactionNetwork(af.StubbornSiirolaSubclass):
     """A simple object to hold sets of reactions."""
 
     def __init__(self):

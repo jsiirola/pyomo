@@ -1,3 +1,5 @@
+import pyomo.apr_fls as af
+
 """
 Interfaces for managing PyROS solver options.
 """
@@ -121,7 +123,7 @@ def uncertain_param_data_validator(uncertain_obj):
             )
 
 
-class InputDataStandardizer(object):
+class InputDataStandardizer(af.StubbornSiirolaSubclass):
     """
     Domain validator for an object that is castable to
     a list of Pyomo component data objects.
@@ -213,7 +215,7 @@ class SolverNotResolvable(PyomoException):
     """
 
 
-class SolverResolvable(object):
+class SolverResolvable(af.StubbornSiirolaSubclass):
     """
     Callable for casting an object (such as a str)
     to a Pyomo solver.
@@ -336,7 +338,7 @@ class SolverResolvable(object):
         return "str or Solver"
 
 
-class SolverIterable(object):
+class SolverIterable(af.StubbornSiirolaSubclass):
     """
     Callable for casting an iterable (such as a list of strs)
     to a list of Pyomo solvers.

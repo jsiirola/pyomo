@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 This module contains transformations for representing a
@@ -57,7 +58,7 @@ registered_transforms = {}
 
 # wrapper that allows a list containing parameters to be
 # used with the bisect module
-class _shadow_list(object):
+class _shadow_list(af.StubbornSiirolaSubclass):
     __slots__ = ("_x",)
 
     def __init__(self, x):
@@ -214,7 +215,7 @@ def piecewise(
     )
 
 
-class PiecewiseLinearFunction(object):
+class PiecewiseLinearFunction(af.StubbornSiirolaSubclass):
     """A piecewise linear function
 
     Piecewise linear functions are defined by a list of

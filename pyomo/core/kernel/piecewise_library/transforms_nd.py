@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 This module contains transformations for representing a
@@ -101,7 +102,7 @@ def piecewise_nd(tri, values, input=None, output=None, bound='eq', repn='cc'):
     return transform(func, input=input, output=output, bound=bound)
 
 
-class PiecewiseLinearFunctionND(object):
+class PiecewiseLinearFunctionND(af.StubbornSiirolaSubclass):
     """A multi-variate piecewise linear function
 
     Multi-varite piecewise linear functions are defined by a

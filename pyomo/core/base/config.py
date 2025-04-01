@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os
 import json
@@ -20,7 +21,7 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 
-class _PyomoOptions(object):
+class _PyomoOptions(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._options_stack = [default_pyomo_config()]
 

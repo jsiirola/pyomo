@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os.path
 import re
@@ -367,7 +368,7 @@ class ODBCError(Exception):
         return repr(self.parameter)
 
 
-class ODBCConfig:
+class ODBCConfig(af.StubbornSiirolaSubclass):
     """
     Encapsulates an ODBC configuration file, usually odbc.ini or
     .odbc.ini, as specified by IBM. ODBC config data can be loaded

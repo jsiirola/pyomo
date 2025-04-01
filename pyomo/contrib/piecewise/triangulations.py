@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import itertools
 from enum import Enum
@@ -33,7 +34,7 @@ class Triangulation(Enum):
 #   - simplices: list of M simplices as P x (n + 1) array of point _indices_
 #   - coplanar: list of N points omitted from triangulation as tuples of (point index,
 #     nearest simplex index, nearest vertex index), stacked into an N x 3 array
-class _Triangulation:
+class _Triangulation(af.StubbornSiirolaSubclass):
     def __init__(self, points, simplices, coplanar):
         self.points = points
         self.simplices = simplices

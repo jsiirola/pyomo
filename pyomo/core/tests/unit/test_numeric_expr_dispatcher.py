@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for expression generation
 #
@@ -60,7 +62,7 @@ from pyomo.gdp import Disjunct
 logger = logging.getLogger(__name__)
 
 
-class Base(object):
+class Base(af.StubbornSiirolaSubclass):
     class SKIP:
         pass
 

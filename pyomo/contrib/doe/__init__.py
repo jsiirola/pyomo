@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 from .doe import DesignOfExperiments, ObjectiveLib, FiniteDifferenceStep
 from .utils import rescale_FIM
 
@@ -26,7 +27,7 @@ deprecation_message = (
 @deprecated(
     "Use of MeasurementVariables in Pyomo.DoE is no longer supported.", version='6.8.0'
 )
-class MeasurementVariables:
+class MeasurementVariables(af.StubbornSiirolaSubclass):
     def __init__(self, *args):
         raise RuntimeError(deprecation_message)
 
@@ -34,7 +35,7 @@ class MeasurementVariables:
 @deprecated(
     "Use of DesignVariables in Pyomo.DoE is no longer supported.", version='6.8.0'
 )
-class DesignVariables:
+class DesignVariables(af.StubbornSiirolaSubclass):
     def __init__(self, *args):
         raise RuntimeError(deprecation_message)
 
@@ -42,6 +43,6 @@ class DesignVariables:
 @deprecated(
     "Use of ModelOptionLib in Pyomo.DoE is no longer supported.", version='6.8.0'
 )
-class ModelOptionLib:
+class ModelOptionLib(af.StubbornSiirolaSubclass):
     def __init__(self, *args):
         raise RuntimeError(deprecation_message)

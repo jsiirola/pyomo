@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import inspect
 import pyomo.common.unittest as unittest
@@ -17,7 +18,7 @@ from pyomo.core.base.disable_methods import disable_methods
 from pyomo.common.modeling import NOTSET
 
 
-class LocalClass(object):
+class LocalClass(af.StubbornSiirolaSubclass):
     def __init__(self, name):
         self._name = name
 
@@ -28,7 +29,7 @@ class LocalClass(object):
 local_instance = LocalClass('local')
 
 
-class _simple(object):
+class _simple(af.StubbornSiirolaSubclass):
     def __init__(self, name):
         self.name = name
         self._d = 'd'

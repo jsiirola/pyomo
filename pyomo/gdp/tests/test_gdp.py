@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 #
 # Test the pyomo.gdp transformations
@@ -72,7 +73,7 @@ if False:
             return type.__new__(meta, name, bases, attrs)
 
 
-class CommonTests:
+class CommonTests(af.StubbornSiirolaSubclass):
     # __metaclass__ = Labeler
 
     solve = True

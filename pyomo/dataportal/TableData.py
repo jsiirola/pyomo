@@ -8,12 +8,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.collections import Bunch
 from pyomo.dataportal.process_data import _process_data
 
 
-class TableData(object):
+class TableData(af.StubbornSiirolaSubclass):
     """
     A class used to read/write data from/to a table in an external
     data source.

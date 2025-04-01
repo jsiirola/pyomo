@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import math
 import pyomo.common.unittest as unittest
@@ -23,7 +24,7 @@ except AttributeError:
         return not (math.isnan(x) or math.isinf(x))
 
 
-class IntervalTestBase(object):
+class IntervalTestBase(af.StubbornSiirolaSubclass):
     """
     These tests are set up weird, but it is for a good reason.
     The interval arithmetic code is duplicated in pyomo.contrib.appsi for

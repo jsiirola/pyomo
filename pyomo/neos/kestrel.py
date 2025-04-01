@@ -9,6 +9,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 #
 # This software is a modified version of the Kestrel interface
@@ -35,7 +36,7 @@ logger = logging.getLogger('pyomo.neos')
 _email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
 
 
-class NEOS(object):
+class NEOS(af.StubbornSiirolaSubclass):
     # NEOS currently only supports HTTPS access
     scheme = 'https'
     host = 'neos-server.org'
@@ -79,7 +80,7 @@ def ProxiedTransport():
     return ProxiedTransport_PY3()
 
 
-class kestrelAMPL(object):
+class kestrelAMPL(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.setup_connection()
 

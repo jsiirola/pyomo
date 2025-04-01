@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from collections import defaultdict
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -1577,7 +1578,7 @@ def compute_bounds_on_expr(expr, ignore_fixed=False):
     return lb, ub
 
 
-class BoundsManager(object):
+class BoundsManager(af.StubbornSiirolaSubclass):
     def __init__(self, comp):
         self._vars = ComponentSet()
         self._saved_bounds = list()

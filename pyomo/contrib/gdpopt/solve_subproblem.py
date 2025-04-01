@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """Functions for solving the nonlinear subproblem."""
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -240,7 +241,7 @@ def detect_unfixed_discrete_vars(model):
     return var_set
 
 
-class preprocess_subproblem(object):
+class preprocess_subproblem(af.StubbornSiirolaSubclass):
     def __init__(self, util_block, config):
         self.util_block = util_block
         self.config = config

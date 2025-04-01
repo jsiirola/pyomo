@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """Iteration loop for MindtPy."""
 import math
@@ -83,7 +84,7 @@ egb, egb_available = attempt_import(
 )
 
 
-class _MindtPyAlgorithm(object):
+class _MindtPyAlgorithm(af.StubbornSiirolaSubclass):
     def __init__(self, **kwds):
         """
         This is a common init method for all the MindtPy algorithms, so that we

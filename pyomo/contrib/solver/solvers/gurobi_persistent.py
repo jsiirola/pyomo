@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import io
 import logging
@@ -109,7 +110,7 @@ class GurobiSolutionLoader(PersistentSolutionLoader):
         )
 
 
-class _MutableLowerBound:
+class _MutableLowerBound(af.StubbornSiirolaSubclass):
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -118,7 +119,7 @@ class _MutableLowerBound:
         self.var.setAttr('lb', value(self.expr))
 
 
-class _MutableUpperBound:
+class _MutableUpperBound(af.StubbornSiirolaSubclass):
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -127,7 +128,7 @@ class _MutableUpperBound:
         self.var.setAttr('ub', value(self.expr))
 
 
-class _MutableLinearCoefficient:
+class _MutableLinearCoefficient(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.expr = None
         self.var = None
@@ -138,7 +139,7 @@ class _MutableLinearCoefficient:
         self.gurobi_model.chgCoeff(self.con, self.var, value(self.expr))
 
 
-class _MutableRangeConstant:
+class _MutableRangeConstant(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.lhs_expr = None
         self.rhs_expr = None
@@ -154,7 +155,7 @@ class _MutableRangeConstant:
         slack.ub = rhs_val - lhs_val
 
 
-class _MutableConstant:
+class _MutableConstant(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.expr = None
         self.con = None
@@ -163,7 +164,7 @@ class _MutableConstant:
         self.con.rhs = value(self.expr)
 
 
-class _MutableQuadraticConstraint:
+class _MutableQuadraticConstraint(af.StubbornSiirolaSubclass):
     def __init__(
         self, gurobi_model, gurobi_con, constant, linear_coefs, quadratic_coefs
     ):
@@ -198,7 +199,7 @@ class _MutableQuadraticConstraint:
         return value(self.constant.expr)
 
 
-class _MutableObjective:
+class _MutableObjective(af.StubbornSiirolaSubclass):
     def __init__(self, gurobi_model, constant, linear_coefs, quadratic_coefs):
         self.gurobi_model = gurobi_model
         self.constant = constant
@@ -226,7 +227,7 @@ class _MutableObjective:
         return gurobi_expr
 
 
-class _MutableQuadraticCoefficient:
+class _MutableQuadraticCoefficient(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.expr = None
         self.var1 = None

@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #### Using mpi-sppy instead of PySP; May 2020
 #### Adding option for "local" EF starting Sept 2020
 #### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
@@ -235,7 +237,7 @@ def SSE(model):
     return expr
 
 
-class Estimator(object):
+class Estimator(af.StubbornSiirolaSubclass):
     """
     Parameter estimation class
 
@@ -1425,7 +1427,7 @@ def group_data(data, groupby_column_name, use_mean=None):
     return grouped_data
 
 
-class _DeprecatedSecondStageCostExpr(object):
+class _DeprecatedSecondStageCostExpr(af.StubbornSiirolaSubclass):
     """
     Class to pass objective expression into the Pyomo model
     """
@@ -1438,7 +1440,7 @@ class _DeprecatedSecondStageCostExpr(object):
         return self._ssc_function(model, self._data)
 
 
-class _DeprecatedEstimator(object):
+class _DeprecatedEstimator(af.StubbornSiirolaSubclass):
     """
     Parameter estimation class
 

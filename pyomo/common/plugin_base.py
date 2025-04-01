@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -23,7 +25,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.deprecation import deprecated, deprecation_warning
 
 
-class PluginGlobals(object):
+class PluginGlobals(af.StubbornSiirolaSubclass):
     @staticmethod
     @deprecated(
         "The PluginGlobals environment manager is deprecated: "
@@ -254,7 +256,7 @@ class SingletonPlugin(Plugin):
     __singleton__ = True
 
 
-class ExtensionPoint(object):
+class ExtensionPoint(af.StubbornSiirolaSubclass):
     def __init__(self, interface):
         assert issubclass(interface, Interface)
         self._interface = interface
@@ -302,7 +304,7 @@ class ExtensionPoint(object):
             )
 
 
-class PluginFactory(object):
+class PluginFactory(af.StubbornSiirolaSubclass):
     def __init__(self, interface):
         self.interface = interface
 

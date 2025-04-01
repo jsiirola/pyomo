@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import re
@@ -39,7 +40,7 @@ class DegreeError(ValueError):
     pass
 
 
-class _CplexExpr(object):
+class _CplexExpr(af.StubbornSiirolaSubclass):
     def __init__(
         self,
         variables,
@@ -65,7 +66,7 @@ def _is_numeric(x):
     return True
 
 
-class _VariableData(object):
+class _VariableData(af.StubbornSiirolaSubclass):
     def __init__(self, solver_model):
         self._solver_model = solver_model
         self.lb = []
@@ -85,7 +86,7 @@ class _VariableData(object):
         )
 
 
-class _LinearConstraintData(object):
+class _LinearConstraintData(af.StubbornSiirolaSubclass):
     def __init__(self, solver_model):
         self._solver_model = solver_model
         self.lin_expr = []

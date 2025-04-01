@@ -9,6 +9,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import gc
 import itertools
@@ -26,7 +27,7 @@ from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.tee as tee
 
 
-class timestamper:
+class timestamper(af.StubbornSiirolaSubclass):
     """A 'TextIO'-like object that records the time when data was written to
     the stream."""
 
@@ -611,7 +612,7 @@ class TestCapture(unittest.TestCase):
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
 
 
-class BufferTester(object):
+class BufferTester(af.StubbornSiirolaSubclass):
     def setUp(self):
         sys.stdout.flush()
         sys.stderr.flush()

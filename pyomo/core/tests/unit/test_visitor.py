@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for expression generation
 #
@@ -1070,7 +1072,7 @@ class TestReplacementWithNPV(unittest.TestCase):
         assertExpressionsEqual(self, e3, abs(m.x))
 
 
-class BaseStreamBasedVisitorTests(object):
+class BaseStreamBasedVisitorTests(af.StubbornSiirolaSubclass):
     def setUp(self):
         self.m = m = ConcreteModel()
         m.x = Var()

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.dependencies import dill_available
 import pyomo.common.unittest as unittest
@@ -56,7 +57,7 @@ gurobi_available = (
 )
 
 
-class CommonTests:
+class CommonTests(af.StubbornSiirolaSubclass):
     def diff_apply_to_and_create_using(self, model):
         ct.diff_apply_to_and_create_using(self, model, 'gdp.bigm')
 

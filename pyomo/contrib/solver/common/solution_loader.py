@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from typing import Sequence, Dict, Optional, Mapping, NoReturn
 
@@ -16,7 +17,7 @@ from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 
 
-class SolutionLoaderBase:
+class SolutionLoaderBase(af.StubbornSiirolaSubclass):
     """
     Base class for all future SolutionLoader classes.
 

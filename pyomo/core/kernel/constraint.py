@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.core.expr.numvalue import (
     ZeroConstant,
@@ -172,7 +173,7 @@ class IConstraint(ICategorizedObject):
         return self.lower, self.body, self.upper
 
 
-class _MutableBoundsConstraintMixin(object):
+class _MutableBoundsConstraintMixin(af.StubbornSiirolaSubclass):
     """
     Use as a base class for IConstraint implementations
     that allow adjusting the lb, ub, rhs, and equality

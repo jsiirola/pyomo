@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 """Utility functions and a utility class for interfacing Pyomo components with
 useful graph algorithms.
 
@@ -244,7 +246,7 @@ def get_numeric_incidence_matrix(variables, constraints):
     return nlp.extract_submatrix_jacobian(variables, constraints)
 
 
-class IncidenceGraphInterface(object):
+class IncidenceGraphInterface(af.StubbornSiirolaSubclass):
     """An interface for applying graph algorithms to Pyomo variables and
     constraints
 

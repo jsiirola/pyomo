@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import json
 import pyomo.common.unittest as unittest
@@ -1237,7 +1238,7 @@ class TestCasadiSubstituters(unittest.TestCase):
         m.del_component('y')
 
 
-class TestSimulationInterface:
+class TestSimulationInterface(af.StubbornSiirolaSubclass):
     """
     Class to test running a simulation
     """

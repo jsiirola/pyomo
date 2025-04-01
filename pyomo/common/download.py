@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import argparse
 import io
@@ -38,7 +39,7 @@ logger = logging.getLogger('pyomo.common.download')
 DownloadFactory = pyomo.common.Factory('library downloaders')
 
 
-class FileDownloader(object):
+class FileDownloader(af.StubbornSiirolaSubclass):
     _os_version = None
 
     def __init__(self, insecure=False, cacert=None):

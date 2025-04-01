@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -20,7 +22,7 @@ import gc
 from pyomo.common.multithread import MultiThreadWrapper
 
 
-class __PauseGCCompanion(object):
+class __PauseGCCompanion(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._stack_depth = 0
 
@@ -41,7 +43,7 @@ PauseGCCompanion: __PauseGCCompanion = MultiThreadWrapper(__PauseGCCompanion)
 # the GC will be re-enabled (if it was not initially disabled).  It is
 # safe to nest instances of PauseGC That is, you don't have to worry
 # if an outer function/method has its own instance of PauseGC.
-class PauseGC(object):
+class PauseGC(af.StubbornSiirolaSubclass):
     __slots__ = ("reenable_gc", "stack_pointer")
 
     def __init__(self):

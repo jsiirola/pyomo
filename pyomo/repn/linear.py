@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import sys
@@ -85,7 +86,7 @@ def _merge_dict(dest_dict, mult, src_dict):
                 dest_dict[vid] = mult * coef
 
 
-class LinearRepn(object):
+class LinearRepn(af.StubbornSiirolaSubclass):
     __slots__ = ("multiplier", "constant", "linear", "nonlinear")
 
     def __init__(self):

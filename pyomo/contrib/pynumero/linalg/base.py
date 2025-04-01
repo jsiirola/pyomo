@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from abc import ABCMeta, abstractmethod
 import enum
@@ -27,7 +28,7 @@ class LinearSolverStatus(enum.Enum):
     max_iter = 5
 
 
-class LinearSolverResults(object):
+class LinearSolverResults(af.StubbornSiirolaSubclass):
     def __init__(self, status: Optional[LinearSolverStatus] = None):
         self.status = status
 

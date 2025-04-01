@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
@@ -29,7 +30,7 @@ from pyomo.dae.flatten import (
 )
 
 
-class _TestFlattenBase(object):
+class _TestFlattenBase(af.StubbornSiirolaSubclass):
     """A base class to hold the common _hashRef utility method.
     We don't just derive from Test... classes directly as this
     causes tests to run twice.

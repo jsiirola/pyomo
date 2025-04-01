@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 """This module provides general utilities for producing formatted I/O
 
 .. autosummary::
@@ -196,7 +198,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
             )
 
 
-class StreamIndenter(object):
+class StreamIndenter(af.StubbornSiirolaSubclass):
     """
     Mock-up of a file-like object that wraps another file-like object
     and indents all data using the specified string before passing it to

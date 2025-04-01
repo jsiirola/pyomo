@@ -8,13 +8,14 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Containers for PyROS subproblem solve results.
 """
 
 
-class ROSolveResults(object):
+class ROSolveResults(af.StubbornSiirolaSubclass):
     """
     PyROS solver results object.
 
@@ -87,7 +88,7 @@ class ROSolveResults(object):
         return "\n".join(lines)
 
 
-class MasterResults:
+class MasterResults(af.StubbornSiirolaSubclass):
     """
     Result of solving the master problem in a single PyROS iteration.
 
@@ -122,7 +123,7 @@ class MasterResults:
         self.pyros_termination_condition = pyros_termination_condition
 
 
-class SeparationSolveCallResults:
+class SeparationSolveCallResults(af.StubbornSiirolaSubclass):
     """
     Container for results of solve attempt for single separation
     problem.
@@ -232,7 +233,7 @@ class SeparationSolveCallResults:
         )
 
 
-class DiscreteSeparationSolveCallResults:
+class DiscreteSeparationSolveCallResults(af.StubbornSiirolaSubclass):
     """
     Container for results of solve attempt for single separation
     problem.
@@ -284,7 +285,7 @@ class DiscreteSeparationSolveCallResults:
         return all(res.subsolver_error for res in self.solver_call_results.values())
 
 
-class SeparationLoopResults:
+class SeparationLoopResults(af.StubbornSiirolaSubclass):
     """
     Container for results of all separation problems solved
     to a single desired optimality target (local or global).
@@ -453,7 +454,7 @@ class SeparationLoopResults:
         )
 
 
-class SeparationResults:
+class SeparationResults(af.StubbornSiirolaSubclass):
     """
     Container for results of PyROS separation problem routine.
 

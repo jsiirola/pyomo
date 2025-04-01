@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
@@ -30,7 +31,7 @@ timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"
 
 
 @unittest.pytest.mark.default
-class TestLPEnum:
+class TestLPEnum(af.StubbornSiirolaSubclass):
 
     def test_bad_solver(self, mip_solver):
         """

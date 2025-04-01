@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.dependencies import attempt_import
 
@@ -127,65 +128,65 @@ logger = logging.getLogger('pyomo.contrib.cp')
 
 
 # These are things that don't need special handling:
-class _GENERAL(object):
+class _GENERAL(af.StubbornSiirolaSubclass):
     pass
 
 
 # These are operations that need to be deferred sometimes, usually because of
 # indirection:
-class _START_TIME(object):
+class _START_TIME(af.StubbornSiirolaSubclass):
     pass
 
 
-class _END_TIME(object):
+class _END_TIME(af.StubbornSiirolaSubclass):
     pass
 
 
-class _DEFERRED_ELEMENT_CONSTRAINT(object):
+class _DEFERRED_ELEMENT_CONSTRAINT(af.StubbornSiirolaSubclass):
     pass
 
 
-class _ELEMENT_CONSTRAINT(object):
+class _ELEMENT_CONSTRAINT(af.StubbornSiirolaSubclass):
     pass
 
 
-class _DEFERRED_BEFORE(object):
+class _DEFERRED_BEFORE(af.StubbornSiirolaSubclass):
     pass
 
 
-class _DEFERRED_AFTER(object):
+class _DEFERRED_AFTER(af.StubbornSiirolaSubclass):
     pass
 
 
-class _DEFERRED_AT(object):
+class _DEFERRED_AT(af.StubbornSiirolaSubclass):
     pass
 
 
-class _BEFORE(object):
+class _BEFORE(af.StubbornSiirolaSubclass):
     pass
 
 
-class _AT(object):
+class _AT(af.StubbornSiirolaSubclass):
     pass
 
 
-class _IMPLIES(object):
+class _IMPLIES(af.StubbornSiirolaSubclass):
     pass
 
 
-class _LAND(object):
+class _LAND(af.StubbornSiirolaSubclass):
     pass
 
 
-class _LOR(object):
+class _LOR(af.StubbornSiirolaSubclass):
     pass
 
 
-class _XOR(object):
+class _XOR(af.StubbornSiirolaSubclass):
     pass
 
 
-class _EQUIVALENT_TO(object):
+class _EQUIVALENT_TO(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -1130,7 +1131,7 @@ def collect_valid_components(model, active=True, sort=None, valid=set(), targets
 @WriterFactory.register(
     'docplex_model', 'Generate the corresponding docplex model object'
 )
-class DocplexWriter(object):
+class DocplexWriter(af.StubbornSiirolaSubclass):
     CONFIG = ConfigDict('docplex_model_writer')
     CONFIG.declare(
         'symbolic_solver_labels',
@@ -1247,7 +1248,7 @@ class DocplexWriter(object):
 
 
 @SolverFactory.register('cp_optimizer', doc='Direct interface to CPLEX CP Optimizer')
-class CPOptimizerSolver(object):
+class CPOptimizerSolver(af.StubbornSiirolaSubclass):
     CONFIG = ConfigDict("cp_optimizer_solver")
     CONFIG.declare(
         'symbolic_solver_labels',

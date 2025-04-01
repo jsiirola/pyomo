@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import sys
@@ -382,7 +383,7 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
 
 # The following should eventually be promoted so that all
 # IndexedComponents can use it
-class _Initializer(object):
+class _Initializer(af.StubbornSiirolaSubclass):
     """A simple function to process an argument to a Component constructor.
 
     This checks the incoming initializer type and maps it to a static

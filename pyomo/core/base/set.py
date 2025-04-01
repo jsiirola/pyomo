@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from __future__ import annotations
 import inspect
@@ -298,7 +299,7 @@ def simple_set_rule(rule):
     return rule_wrapper(rule, {None: Set.End})
 
 
-class UnknownSetDimen(object):
+class UnknownSetDimen(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -517,7 +518,7 @@ class TuplizeValuesInitializer(InitializerBase):
         return (tuple(_val[i : i + d]) for i in range(0, len(_val), d))
 
 
-class _NotFound(object):
+class _NotFound(af.StubbornSiirolaSubclass):
     "Internal type flag used to indicate if an object is not found in a set"
 
     pass
@@ -1201,7 +1202,7 @@ class _SetDataBase(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class _FiniteSetMixin(object):
+class _FiniteSetMixin(af.StubbornSiirolaSubclass):
     __slots__ = ()
 
     def __len__(self):
@@ -1607,7 +1608,7 @@ class _FiniteSetData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class _ScalarOrderedSetMixin(object):
+class _ScalarOrderedSetMixin(af.StubbornSiirolaSubclass):
     # This mixin is required because scalar ordered sets implement
     # __getitem__() as an alias of at()
     __slots__ = ()
@@ -1624,7 +1625,7 @@ class _ScalarOrderedSetMixin(object):
             yield _keys[0], self
 
 
-class _OrderedSetMixin(object):
+class _OrderedSetMixin(af.StubbornSiirolaSubclass):
     __slots__ = ()
     _valid_getitem_keys = {None, (None,), Ellipsis}
 
@@ -1941,7 +1942,7 @@ class _InsertionOrderSetData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class _SortedSetMixin(object):
+class _SortedSetMixin(af.StubbornSiirolaSubclass):
     """"""
 
     __slots__ = ()

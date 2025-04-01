@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common import Factory
 
@@ -15,7 +16,7 @@ from pyomo.common import Factory
 ReaderFactory = Factory('problem reader')
 
 
-class AbstractResultsReader(object):
+class AbstractResultsReader(af.StubbornSiirolaSubclass):
     """Base class that can read optimization results."""
 
     def __init__(self, results_format):

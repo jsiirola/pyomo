@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 
@@ -409,7 +410,7 @@ class AbstractSuffix(Suffix):
     pass
 
 
-class SuffixFinder(object):
+class SuffixFinder(af.StubbornSiirolaSubclass):
     def __init__(self, name, default=None, context=None):
         """This provides an efficient utility for finding suffix values on a
         (hierarchical) Pyomo model.

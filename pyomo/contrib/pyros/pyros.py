@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
 from datetime import datetime, timezone
@@ -81,7 +82,7 @@ def _get_pyomo_version_info():
     doc="Robust optimization (RO) solver implementing "
     "the generalized robust cutting-set algorithm (GRCS)",
 )
-class PyROS(object):
+class PyROS(af.StubbornSiirolaSubclass):
     '''
     PyROS (Pyomo Robust Optimization Solver) implementing a
     generalized robust cutting-set algorithm (GRCS)

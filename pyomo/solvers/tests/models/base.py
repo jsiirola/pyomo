@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from os.path import join, dirname, abspath
 import json
@@ -43,7 +44,7 @@ def register_model(cls):
     return cls
 
 
-class _BaseTestModel(object):
+class _BaseTestModel(af.StubbornSiirolaSubclass):
     """
     This is a base class for test models
     """

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import tempfile
 import os
@@ -1341,7 +1342,7 @@ class TestMisc(unittest.TestCase):
             objs.rotate(-1)
 
 
-class _Test_block_base(object):
+class _Test_block_base(af.StubbornSiirolaSubclass):
     _children = None
     _child_key = None
     _components_no_descend = None

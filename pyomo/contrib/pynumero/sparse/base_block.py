@@ -8,13 +8,14 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # These classes are for checking types consistently and raising errors
 
 from ..dependencies import numpy as np
 
 
-class BaseBlockVector(object):
+class BaseBlockVector(af.StubbornSiirolaSubclass):
     """Base class for block vectors"""
 
     def __init__(self):
@@ -132,7 +133,7 @@ class BaseBlockVector(object):
         raise NotImplementedError(msg)
 
 
-class BaseBlockMatrix(object):
+class BaseBlockMatrix(af.StubbornSiirolaSubclass):
     """Base class for block matrices"""
 
     def __init__(self):

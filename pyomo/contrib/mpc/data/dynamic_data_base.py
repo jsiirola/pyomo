@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.core.base.set import Set
 from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
@@ -38,7 +39,7 @@ def _is_iterable(obj):
                 raise err
 
 
-class _DynamicDataBase(object):
+class _DynamicDataBase(af.StubbornSiirolaSubclass):
     """
     A base class for storing data associated with time-indexed variables.
 

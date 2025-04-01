@@ -8,10 +8,12 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 
 # This is a simple module used as part of testing moved_module()
 
 
-class Bar(object):
+class Bar(af.StubbornSiirolaSubclass):
     data = 42

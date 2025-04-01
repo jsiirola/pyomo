@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import sys
@@ -64,7 +65,7 @@ gurobi_available = (
 )
 
 
-class CommonTests:
+class CommonTests(af.StubbornSiirolaSubclass):
     def setUp(self):
         # set seed so we can test name collisions predictably
         random.seed(666)

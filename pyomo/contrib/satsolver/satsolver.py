@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import math
 
@@ -51,7 +52,7 @@ def satisfiable(model, logger=None):
         raise ValueError('Unknown result: %s' % result)
 
 
-class SMTSatSolver(object):
+class SMTSatSolver(af.StubbornSiirolaSubclass):
     """
     Satisfiability solver that checks constraint feasibility through use of
     z3 Sat Solver. Object stores expressions and variables in form consistent

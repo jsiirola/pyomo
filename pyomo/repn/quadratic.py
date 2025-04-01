@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import copy
 
@@ -39,7 +40,7 @@ _GENERAL = linear.ExprType.GENERAL
 _QUADRATIC = linear.ExprType.QUADRATIC
 
 
-class QuadraticRepn(object):
+class QuadraticRepn(af.StubbornSiirolaSubclass):
     __slots__ = ("multiplier", "constant", "linear", "quadratic", "nonlinear")
 
     def __init__(self):

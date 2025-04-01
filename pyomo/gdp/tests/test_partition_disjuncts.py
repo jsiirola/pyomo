@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
@@ -47,7 +48,7 @@ from pyomo.opt import check_available_solvers
 solvers = check_available_solvers('gurobi_direct')
 
 
-class CommonTests:
+class CommonTests(af.StubbornSiirolaSubclass):
     def diff_apply_to_and_create_using(self, model, **kwargs):
         ct.diff_apply_to_and_create_using(
             self, model, 'gdp.partition_disjuncts', **kwargs

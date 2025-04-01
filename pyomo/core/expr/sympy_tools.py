@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 import operator
 from math import prod as _prod
 
@@ -132,7 +133,7 @@ def _configure_sympy(sympy, available):
 sympy, sympy_available = attempt_import('sympy', callback=_configure_sympy)
 
 
-class PyomoSympyBimap(object):
+class PyomoSympyBimap(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.pyomo2sympy = ComponentMap()
         self.sympy2pyomo = {}

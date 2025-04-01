@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for DataPortal objects
 #
@@ -1554,7 +1556,7 @@ class TestYamlPortal(TestTextPortal):
         }
 
 
-class LoadTests(object):
+class LoadTests(af.StubbornSiirolaSubclass):
     skiplist = []
 
     #

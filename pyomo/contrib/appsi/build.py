@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import shutil
 import glob
@@ -108,7 +109,7 @@ def build_appsi(args=[]):
         pybind11.setup_helpers.MACOS = original_pybind11_setup_helpers_macos
 
 
-class AppsiBuilder(object):
+class AppsiBuilder(af.StubbornSiirolaSubclass):
     def __call__(self, parallel):
         return build_appsi()
 

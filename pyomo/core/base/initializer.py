@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import collections
 import functools
@@ -361,7 +362,7 @@ class ParameterizedIndexedCallInitializer(IndexedCallInitializer):
             return self._fcn(parent, *args, idx)
 
 
-class CountedCallGenerator(object):
+class CountedCallGenerator(af.StubbornSiirolaSubclass):
     """Generator implementing the "counted call" initialization scheme
 
     This generator implements the older "counted call" scheme, where the

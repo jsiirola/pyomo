@@ -8,12 +8,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # class.py
 
 
 # @all:
-class IntLocker:
+class IntLocker(af.StubbornSiirolaSubclass):
     sint = None
 
     def __init__(self, i):

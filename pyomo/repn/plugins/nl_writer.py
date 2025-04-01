@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import os
@@ -86,7 +87,7 @@ ScalingFactors = namedtuple(
 
 
 # TODO: make a proper base class
-class NLWriterInfo(object):
+class NLWriterInfo(af.StubbornSiirolaSubclass):
     """Return type for NLWriter.write()
 
     Attributes
@@ -163,7 +164,7 @@ class NLWriterInfo(object):
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
-class NLWriter(object):
+class NLWriter(af.StubbornSiirolaSubclass):
     CONFIG = ConfigDict('nlwriter')
     CONFIG.declare(
         'show_section_timing',
@@ -387,7 +388,7 @@ class NLWriter(object):
         return symbol_map
 
 
-class _SuffixData(object):
+class _SuffixData(af.StubbornSiirolaSubclass):
     def __init__(self, name):
         self.name = name
         self.obj = {}
@@ -490,14 +491,14 @@ class CachingNumericSuffixFinder(SuffixFinder):
         return ans
 
 
-class _NoScalingFactor(object):
+class _NoScalingFactor(af.StubbornSiirolaSubclass):
     scale = False
 
     def __call__(self, obj):
         return 1
 
 
-class _NLWriter_impl(object):
+class _NLWriter_impl(af.StubbornSiirolaSubclass):
     def __init__(self, ostream, rowstream, colstream, config):
         self.ostream = ostream
         self.rowstream = rowstream

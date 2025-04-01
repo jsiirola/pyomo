@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import pickle
 
@@ -305,7 +306,7 @@ class Test_noclone(unittest.TestCase):
         del b.p
 
 
-class _Test_expression_base(object):
+class _Test_expression_base(af.StubbornSiirolaSubclass):
     _ctype_factory = None
 
     def test_pprint(self):

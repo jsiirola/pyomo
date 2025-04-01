@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Methods for constructing and solving PyROS separation problems
@@ -1223,7 +1224,7 @@ def discrete_solve(
     )
 
 
-class SeparationProblemData:
+class SeparationProblemData(af.StubbornSiirolaSubclass):
     """
     Container for objects related to the PyROS separation problem.
 

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import itertools
 import logging
@@ -48,7 +49,7 @@ from pyomo.core.expr.visitor import (
 logger = logging.getLogger(__name__)
 
 
-class _NotSpecified(object):
+class _NotSpecified(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -358,7 +359,7 @@ class CallExpression(NumericExpression):
         return self._apply_operation(args)
 
 
-class _TemplateSumExpression_argList(object):
+class _TemplateSumExpression_argList(af.StubbornSiirolaSubclass):
     """A virtual list to represent the expanded SumExpression args
 
     This class implements a "virtual args list" for
@@ -721,7 +722,7 @@ def resolve_template(expr):
 resolve_template.visitor = None
 
 
-class _wildcard_info(object):
+class _wildcard_info(af.StubbornSiirolaSubclass):
     __slots__ = ('iter', 'source', 'value', 'original_value', 'objects')
 
     def __init__(self, src, obj):
@@ -908,7 +909,7 @@ def substitute_template_expression(expr, substituter, *args, **kwargs):
     return visitor.walk_expression(expr)
 
 
-class _GetItemIndexer(object):
+class _GetItemIndexer(af.StubbornSiirolaSubclass):
     # Note that this class makes the assumption that only one template
     # ever appears in an expression for a single index
 
@@ -998,7 +999,7 @@ def substitute_template_with_value(expr):
         return resolve_template(expr)
 
 
-class _set_iterator_template_generator(object):
+class _set_iterator_template_generator(af.StubbornSiirolaSubclass):
     """Replacement iterator that returns IndexTemplates
 
     In order to generate template expressions, we hijack the normal Set
@@ -1042,7 +1043,7 @@ class _set_iterator_template_generator(object):
     next = __next__
 
 
-class _template_iter_context(object):
+class _template_iter_context(af.StubbornSiirolaSubclass):
     """Manage the iteration context when generating templatized rules
 
     This class manages the context tracking when generating templatized
@@ -1081,7 +1082,7 @@ class _template_iter_context(object):
         return TemplateSumExpression((expr,), self.npop_cache(final_cache - init_cache))
 
 
-class _template_iter_manager(object):
+class _template_iter_manager(af.StubbornSiirolaSubclass):
     class _iter_wrapper(object):
         __slots__ = ('_class', '_iter', '_old_iter')
 

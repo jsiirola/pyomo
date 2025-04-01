@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 from weakref import ref as weakref_ref, ReferenceType
@@ -34,7 +35,7 @@ logger = logging.getLogger('pyomo.core')
 _logical_var_types = {bool, type(None)}
 
 
-class _DeprecatedImplicitAssociatedBinaryVariable(object):
+class _DeprecatedImplicitAssociatedBinaryVariable(af.StubbornSiirolaSubclass):
     __slots__ = ('_boolvar',)
 
     def __init__(self, boolvar):

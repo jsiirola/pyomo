@@ -10,6 +10,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """Implementation of the MindtPy solver.
 
@@ -70,7 +71,7 @@ from pyomo.contrib.mindtpy.config_options import _supported_algorithms
 @SolverFactory.register(
     'mindtpy', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
 )
-class MindtPySolver(object):
+class MindtPySolver(af.StubbornSiirolaSubclass):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 

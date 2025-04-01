@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 
@@ -384,7 +385,7 @@ def convert_pyomo2casadi(expr):
     return visitor.dfs_postorder_stack(expr)
 
 
-class Simulator:
+class Simulator(af.StubbornSiirolaSubclass):
     """
     Simulator objects allow a user to simulate a dynamic model formulated
     using pyomo.dae.

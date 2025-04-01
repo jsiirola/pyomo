@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import collections.abc
 import pickle
@@ -33,11 +34,11 @@ from pyomo.core.kernel.block import block, block_list
 _pickle_test_protocol = pickle.HIGHEST_PROTOCOL
 
 
-class _bad_ctype(object):
+class _bad_ctype(af.StubbornSiirolaSubclass):
     ctype = "_this_is_definitely_not_the_ctype_being_tested"
 
 
-class _TestTupleContainerBase(object):
+class _TestTupleContainerBase(af.StubbornSiirolaSubclass):
     # set by derived class
     _container_type = None
     _ctype_factory = None

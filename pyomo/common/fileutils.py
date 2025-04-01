@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -505,7 +507,7 @@ def import_file(path, clear_cache=False, infer_package=True, module_name=None):
     return module
 
 
-class PathData(object):
+class PathData(af.StubbornSiirolaSubclass):
     """An object for storing and managing a :py:class:`PathManager` path"""
 
     def __init__(self, manager, name):
@@ -610,7 +612,7 @@ class ExecutableData(PathData):
         self.set_path(value)
 
 
-class PathManager(object):
+class PathManager(af.StubbornSiirolaSubclass):
     """The PathManager defines a registry class for path locations
 
     The :py:class:`PathManager` defines a class very similar to the

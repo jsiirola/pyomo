@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # Unit Tests for Param() Objects
 #
@@ -74,7 +75,7 @@ from io import StringIO
 NoValue = Param.NoValue
 
 
-class ParamTester(object):
+class ParamTester(af.StubbornSiirolaSubclass):
     def setUp(self, **kwds):
         #
         # Sparse single-index Param, no default

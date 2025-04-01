@@ -8,11 +8,12 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.contrib.mpc.interfaces.copy_values import copy_values_at_time
 
 
-class DynamicVarLinker(object):
+class DynamicVarLinker(af.StubbornSiirolaSubclass):
     """
     The purpose of this class is so that we do not have
     to call find_component or construct ComponentUIDs in a loop

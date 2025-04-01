@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import re
 import sys
@@ -54,7 +55,7 @@ def _extract_version(x, length=4):
     return None  # (0,0,0,0)[:length]
 
 
-class UnknownSolver(object):
+class UnknownSolver(af.StubbornSiirolaSubclass):
     def __init__(self, *args, **kwds):
         # super(UnknownSolver,self).__init__(**kwds)
 
@@ -236,7 +237,7 @@ def _raise_ephemeral_error(name, keyword=""):
     )
 
 
-class OptSolver(object):
+class OptSolver(af.StubbornSiirolaSubclass):
     """A generic optimization solver"""
 
     #

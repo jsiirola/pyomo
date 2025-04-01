@@ -8,9 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
-class _robust_sort_keyfcn(object):
+class _robust_sort_keyfcn(af.StubbornSiirolaSubclass):
     """Class for robustly generating sortable keys for arbitrary data.
 
     Generates keys (for use with Python `sorted()` that are

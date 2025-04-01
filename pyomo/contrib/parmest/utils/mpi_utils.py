@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from collections import OrderedDict
 import importlib
@@ -24,7 +25,7 @@ is needed to make this appropriate for general use.
 """
 
 
-class MPIInterface:
+class MPIInterface(af.StubbornSiirolaSubclass):
     __have_mpi__ = None
 
     def __init__(self):
@@ -70,7 +71,7 @@ class MPIInterface:
         return self._size
 
 
-class ParallelTaskManager:
+class ParallelTaskManager(af.StubbornSiirolaSubclass):
     def __init__(self, n_total_tasks, mpi_interface=None):
         if mpi_interface is None:
             self._mpi_interface = MPIInterface()

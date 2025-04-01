@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.examples.callback.reactor_design import model as m
@@ -19,7 +20,7 @@ values from each iteration in a class
 """
 
 
-class ResidualsTableCallback(object):
+class ResidualsTableCallback(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._residuals = None
 

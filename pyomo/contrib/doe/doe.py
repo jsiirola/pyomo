@@ -24,6 +24,7 @@
 #  public, prepare derivative works, and perform publicly and display
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from enum import Enum
 from itertools import permutations, product
@@ -63,7 +64,7 @@ class FiniteDifferenceStep(Enum):
     backward = "backward"
 
 
-class DesignOfExperiments:
+class DesignOfExperiments(af.StubbornSiirolaSubclass):
     def __init__(
         self,
         experiment=None,

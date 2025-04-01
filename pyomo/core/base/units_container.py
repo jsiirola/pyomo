@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #
 
@@ -942,7 +944,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         return result
 
 
-class PyomoUnitsContainer(object):
+class PyomoUnitsContainer(af.StubbornSiirolaSubclass):
     """Class that is used to create and contain units in Pyomo.
 
     This is the class that is used to create, contain, and interact

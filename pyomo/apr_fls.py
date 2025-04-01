@@ -8,10 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import pyomo.apr_fls as af
-
-RELO_ATTR = 42
 
 
-class ReloClass(af.StubbornSiirolaSubclass):
+class StubbornSiirolaSubclass:
     pass

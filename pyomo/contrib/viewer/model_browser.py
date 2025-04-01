@@ -7,6 +7,8 @@
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the IDAES PSE Framework
 #
@@ -50,11 +52,11 @@ _log = logging.getLogger(__name__)
 
 # This lets the file be imported when the Qt UI is not available (or
 # when building docs), but you won't be able to use it
-class _ModelBrowserUI(object):
+class _ModelBrowserUI(af.StubbornSiirolaSubclass):
     pass
 
 
-class _ModelBrowser(object):
+class _ModelBrowser(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -179,7 +181,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         self.datmodel.update_model()
 
 
-class ComponentDataItem(object):
+class ComponentDataItem(af.StubbornSiirolaSubclass):
     """
     This is a container for a Pyomo component to be displayed in a model tree
     view.
