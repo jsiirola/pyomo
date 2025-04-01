@@ -831,7 +831,7 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: skip # run even if a build job fails, but not if cancelled
+    if: ${{ false }} # turn off for branches
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
