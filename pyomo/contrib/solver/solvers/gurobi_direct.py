@@ -332,12 +332,11 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                     obj=repn.c.todense()[0] if repn.c.shape[0] else 0,
                     vtype=vtype,
                 )
-                # A = gurobi_model.addMConstr(repn.A, x, sense, repn.rhs)
-                logger.info(f"repn.A: {repn.A.toarray()}")
+                logger.info(f"repn.A: {repn.A.toarray()}  {type(repn.A.toarray())}")
                 logger.info(f"sense: {sense}")
                 logger.info(f"rhs: {repn.rhs}")
-                import numpy as np
-                A = gurobi_model.addMQConstr(None, np.array(repn.A.toarray()[0]), sense[0], repn.rhs[0], x, x,x)
+                # A = gurobi_model.addMConstr(repn.A, x, sense, repn.rhs)
+                A = gurobi_model.addMQConstr(None, repn.A.toarray()[0], sense[0], repn.rhs[0], x, x,x)
                 if repn.c.shape[0]:
                     gurobi_model.setAttr('ObjCon', repn.c_offset[0])
                     gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))

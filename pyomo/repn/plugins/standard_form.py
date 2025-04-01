@@ -451,6 +451,11 @@ class _LinearStandardFormCompiler_impl(object):
         con_data = []
         con_index = []
         con_index_ptr = [0]
+
+        con_quadratic_nnz = 0
+        con_quadratic_data = []
+        con_quadratic_index = []
+        con_quadratic_index_ptr = [0]
         last_parent = None
         print()
         for _i, con in enumerate(ordered_active_constraints(model, self.config)):
@@ -488,14 +493,27 @@ class _LinearStandardFormCompiler_impl(object):
                 N = len(repn.linear)
                 # Pull out the constant: we will move it to the bounds
                 offset = repn.constant
+                logger.info(f"var_recorder.var_order: {var_recorder.var_order} ({type(var_recorder.var_order)})")
+                logger.info(f"repn.linear = {repn.linear}")
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
                 logger.info(f"  N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}")
                 if getattr(repn, "quadratic", None):
-                    N2 = len(repn.quadratic)
-                    quadratic_index = map(var_recorder.var_order.__getitem__, repn.quadratic)
+                    N_quadratic = len(repn.quadratic)
+                    con_quadratic_nnz += N_quadratic
+                    logger.info(f"repn.quadratic: {repn.quadratic}")
+                    quadratic_index = map( lambda k :
+                                          (var_recorder.var_order[k[0]],var_recorder.var_order[k[1]]),
+                                          repn.quadratic)
+                    # quadratic_index = map(var_recorder.var_order.__getitem__, repn.quadratic)
+                    # quadratic_index = map( lambda i :
+                    #                       (var_recorder.var_order[i[0]],var_recorder.var_order[i[1]]))
                     quadratic_data = repn.quadratic.values()
-                    logger.info(f"     N2: {N2}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+                    logger.info(f"     N2: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+                    con_quadratic_data.append(quadratic_data)
+                    con_quadratic_index.append(quadratic_index)
+                    con_quadratic_index_ptr.append(con_quadratic_nnz)
+
 
 
             if lb is None and ub is None:
@@ -528,7 +546,7 @@ class _LinearStandardFormCompiler_impl(object):
                         if lb is not None:
                             linear_index = list(linear_index)
                         con_nnz += N
-                        logger.info(f"  rows.append(RowEntry({con}, 1))")
+                        logger.info(f"  rows.append(RowEntry({con}, +1))")
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
                         con_data.append(linear_data)
@@ -536,7 +554,7 @@ class _LinearStandardFormCompiler_impl(object):
                         con_index_ptr.append(con_nnz)
                     if lb is not None:
                         con_nnz += N
-                        logger.info(f"  rows.append(RowEntry({con}, 1))")
+                        logger.info(f"  rows.append(RowEntry({con}, -1))")
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
                         con_data.append(linear_data)
@@ -606,7 +624,8 @@ class _LinearStandardFormCompiler_impl(object):
         c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
         logger.info(f"converting constraint: {con_index}")
         A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
-        logger.info(f" [A]: {A}")
+        # self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
+        self._create_csc_quadratic(con_quadratic_data, con_quadratic_index, con_quadratic_index_ptr, con_quadratic_nnz, n_cols)
 
         if with_debug_timing:
             timer.toc('Formed matrices', level=logging.DEBUG)
@@ -655,7 +674,8 @@ class _LinearStandardFormCompiler_impl(object):
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, n_cols):
-        logger.info(f"{self.__class__.__name__}._create_csc data={data}, index={index}")
+        logger.info(f"data={data}, index={[i for i in index]}, "
+                    f"index_ptr={index_ptr}, nnz={nnz}, n_cols={n_cols}")
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
@@ -669,12 +689,29 @@ class _LinearStandardFormCompiler_impl(object):
 
         data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
         index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
+        logger.info(f"  data={data}")
+        logger.info(f"  index={index}")
         index_ptr = np.array(index_ptr, dtype=np.int32)
+        logger.info(f"  index_ptr={index_ptr}")
         A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, n_cols])
         A = A.tocsc()
         A.sum_duplicates()
         A.eliminate_zeros()
         return A
+
+    def _create_csc_quadratic(self, quadratic_data, quadratic_index, quadratic_index_ptr, quadratic_nnz, n_cols):
+        logger.info(f"index_ptr={quadratic_index_ptr}, nnz={quadratic_nnz}, n_cols={n_cols}")
+        data = self._to_vector(itertools.chain.from_iterable(quadratic_data), np.float64, quadratic_nnz)
+        index = self._to_vector(itertools.chain.from_iterable(quadratic_index), tuple, quadratic_nnz)
+        logger.info(f"  quadratic_data={data}")
+        logger.info(f"  quadratic_index={index}")
+        # for i,qi in enumerate(list(quadratic_index)):
+        #     logger.info(f"    quadratic index {i}: {list(qi)}")
+        Q = self._csr_matrix((data, index), [len(quadratic_index_ptr) - 1, n_cols])
+        logger.info(f"Q:{Q}")
+
+        pass
+
 
     def _csc_to_nonnegative_vars(self, c, A, columns):
         eliminated_vars = []

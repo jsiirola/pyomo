@@ -267,7 +267,7 @@ class StreamBasedExpressionVisitor(object):
         """
         logger.info(f"[WALK] (StreamBasedExpressionVisitor) {self.__class__.__qualname__}.walk_expression({expr})")
         if self.initializeWalker is not None:
-            logger.info("  - initializing walker")
+            logger.debug("  - initializing walker")
             walk, root = self.initializeWalker(expr)
             logger.info(f"  - walker initialized: walk={walk}, root={root}")
             if not walk:
@@ -443,7 +443,7 @@ class StreamBasedExpressionVisitor(object):
                 logger.info(f"  child ['{node}': {child_idx}] {child.__class__.__name__} {child}")
                 # logger.info(f" self.beforeChild: {self.beforeChild}")
                 tmp = self.beforeChild(node, child, child_idx)
-                logger.info(f"      child descend, child_result={tmp}")
+                logger.debug(f"      child descend, child_result={tmp}")
                 if tmp is None:
                     descend = True
                 else:

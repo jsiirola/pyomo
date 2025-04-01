@@ -558,7 +558,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_var(visitor, child):
-        logger.info(f"CHILD: {child}")
+        logger.debug(f"CHILD: {child}")
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
@@ -574,7 +574,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # The following are performance optimizations for common
         # situations (Monomial terms and Linear expressions)
         #
-        logger.info(f"CHILD: {child}")
+        logger.debug(f"CHILD: {child}")
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
@@ -615,7 +615,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_linear(visitor, child):
-        logger.info(f"CHILD: {child}")
+        logger.debug(f"CHILD: {child}")
         var_map = visitor.var_map
         ans = visitor.Result()
         const = 0
@@ -693,7 +693,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_named_expression(visitor, child):
-        logger.info(f"CHILD: {child}")
+        logger.debug(f"CHILD: {child}")
         _id = id(child)
         if _id in visitor.subexpression_cache:
             _type, expr = visitor.subexpression_cache[_id]
@@ -706,7 +706,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_external(visitor, child):
-        logger.info(f"CHILD: {child}")
+        logger.debug(f"CHILD: {child}")
         ans = visitor.Result()
         if all(is_fixed(arg) for arg in child.args):
             try:
@@ -794,15 +794,15 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         return ans
 
     def initializeWalker(self, expr):
-        logger.info(f"{self.__class__.__name__}.initializeWalker({expr})")
+        logger.debug(f"{self.__class__.__name__}.initializeWalker({expr})")
         walk, result = self.beforeChild(None, expr, 0)
-        logger.info(f"  walk, result = {walk, result}")
+        logger.debug(f"  walk, result = {walk, result}")
         if not walk:
             return False, self.finalizeResult(result)
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        logger.info(f"before_child: {child}:{child_idx}  {type(child)}")
+        logger.debug(f"before_child: {child}:{child_idx}  {type(child)}")
         # logger.info(f"self.before_child_dispatcher[{child.__class__}]: {self.before_child_dispatcher[child.__class__]}")
         return self.before_child_dispatcher[child.__class__](self, child)
 
