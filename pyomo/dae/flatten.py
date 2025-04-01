@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 """A module for "flattening" the components in a block-hierarchical model
 with respect to common indexing sets
 
@@ -43,7 +45,7 @@ def get_slice_for_set(s):
         return None
 
 
-class _NotAnIndex(object):
+class _NotAnIndex(af.StubbornSiirolaSubclass):
     """
     `None` is a valid index, so we use a dummy class to
     denote a slot that needs to get filled with indices

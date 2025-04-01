@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import json
 import pyomo.environ as pyo
@@ -15,7 +16,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.alternative_solutions import aos_utils
 
 
-class Solution:
+class Solution(af.StubbornSiirolaSubclass):
     """
     A class to store solutions from a Pyomo model.
 

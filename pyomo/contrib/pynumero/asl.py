@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.fileutils import find_library
 from pyomo.common.dependencies import numpy as np
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 CURRENT_INTERFACE_VERSION = 3
 
 
-class _NotSet:
+class _NotSet(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -239,7 +240,7 @@ def _LoadASLInterface(libname):
     return ASLib, interface_version
 
 
-class AmplInterface(object):
+class AmplInterface(af.StubbornSiirolaSubclass):
     libname = _NotSet
     ASLib = None
     interface_version = None

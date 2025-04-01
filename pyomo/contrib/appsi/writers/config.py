@@ -8,8 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
-class WriterConfig(object):
+class WriterConfig(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.symbolic_solver_labels = False

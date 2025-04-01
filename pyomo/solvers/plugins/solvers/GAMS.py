@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from io import StringIO
 import shlex
@@ -45,7 +46,7 @@ gdxcc, gdxcc_available = attempt_import('gdxcc')
 logger = logging.getLogger('pyomo.solvers')
 
 
-class _GAMSSolver(object):
+class _GAMSSolver(af.StubbornSiirolaSubclass):
     """Aggregate of common methods for GAMS interfaces"""
 
     def __init__(self, **kwds):
@@ -1336,7 +1337,7 @@ class GAMSShell(_GAMSSolver):
         return model_soln, stat_vars
 
 
-class OutputStream:
+class OutputStream(af.StubbornSiirolaSubclass):
     """Output stream object for simultaneously writing to multiple streams.
 
     tee=False:

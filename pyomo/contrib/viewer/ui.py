@@ -7,6 +7,8 @@
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the IDAES PSE Framework
 #
@@ -53,11 +55,11 @@ _log = logging.getLogger(__name__)
 # This lets the file be imported when the Qt UI is not available (or
 # when building docs), but you won't be able to use it.  Allowing this
 # will let some basic tests run (and pass) without PyQt
-class _MainWindowUI(object):
+class _MainWindowUI(af.StubbornSiirolaSubclass):
     pass
 
 
-class _MainWindow(object):
+class _MainWindow(af.StubbornSiirolaSubclass):
     pass
 
 

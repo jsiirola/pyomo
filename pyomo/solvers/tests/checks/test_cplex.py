@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os
 
@@ -35,12 +36,12 @@ from pyomo.solvers.plugins.solvers.CPLEX import (
 )
 
 
-class _mock_cplex_128(object):
+class _mock_cplex_128(af.StubbornSiirolaSubclass):
     def version(self):
         return (12, 8, 0)
 
 
-class _mock_cplex_126(object):
+class _mock_cplex_126(af.StubbornSiirolaSubclass):
     def version(self):
         return (12, 6, 0)
 

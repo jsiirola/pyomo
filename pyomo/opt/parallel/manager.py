@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import enum
 
@@ -44,7 +45,7 @@ class ActionManagerError(Exception):
         Exception.__init__(self, *args, **kargs)  # pragma:nocover
 
 
-class ActionHandle(object):
+class ActionHandle(af.StubbornSiirolaSubclass):
     id_counter = 0
 
     def __init__(self, error=False, explanation=""):
@@ -85,7 +86,7 @@ class ActionHandle(object):
 FailedActionHandle = ActionHandle(error=True)
 
 
-class AsynchronousActionManager(object):
+class AsynchronousActionManager(af.StubbornSiirolaSubclass):
     @staticmethod
     def _flatten(*args):
         ahs = set()

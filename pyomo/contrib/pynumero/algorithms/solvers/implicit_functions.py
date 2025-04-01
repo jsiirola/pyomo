@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.timing import HierarchicalTimer
@@ -38,7 +39,7 @@ from pyomo.contrib.incidence_analysis.scc_solver import (
 )
 
 
-class NlpSolverBase(object):
+class NlpSolverBase(af.StubbornSiirolaSubclass):
     """A base class that solves an NLP object
 
     Subclasses should implement this interface for compatibility with
@@ -118,7 +119,7 @@ class ScipySolverWrapper(NlpSolverBase):
         return res
 
 
-class PyomoImplicitFunctionBase(object):
+class PyomoImplicitFunctionBase(af.StubbornSiirolaSubclass):
     """A base class defining an API for implicit functions defined using
     Pyomo components. In particular, this is the API required by
     ExternalPyomoModel.

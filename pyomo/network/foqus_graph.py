@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 ##############################################################################
 # The methods in this module (file) were derived from the
@@ -81,7 +82,7 @@ from pyomo.common.dependencies import numpy
 logger = logging.getLogger('pyomo.network')
 
 
-class FOQUSGraph(object):
+class FOQUSGraph(af.StubbornSiirolaSubclass):
     def solve_tear_direct(
         self, G, order, function, tears, outEdges, iterLim, tol, tol_type, report_diffs
     ):

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import pyomo.common.unittest as unittest
 from pyomo.core.base import ConcreteModel, Var, Reals
@@ -23,7 +24,7 @@ from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.expression import ExpressionData
 
 
-class _TestComponentListBase(object):
+class _TestComponentListBase(af.StubbornSiirolaSubclass):
     _ctype = None
     _cdatatype = None
 

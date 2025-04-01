@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
@@ -143,7 +144,7 @@ def make_lower_triangular_full(lower_triangular_matrix):
     return coo_matrix((data, (row, col)), shape=lower_triangular_matrix.shape)
 
 
-class CondensedSparseSummation(object):
+class CondensedSparseSummation(af.StubbornSiirolaSubclass):
     def __init__(self, list_of_matrices):
         """
         This class is used to perform a summation of sparse matrices

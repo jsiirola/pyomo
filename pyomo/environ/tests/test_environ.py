@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for pyomo.base.misc
 #
@@ -19,7 +21,7 @@ import subprocess
 import pyomo.common.unittest as unittest
 
 
-class ImportData(object):
+class ImportData(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.tpl = {}
         self.pyomo = {}

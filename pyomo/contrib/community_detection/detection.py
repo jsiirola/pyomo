@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Main module for community detection integration with Pyomo models.
@@ -282,7 +283,7 @@ def detect_communities(
     )
 
 
-class CommunityMap(object):
+class CommunityMap(af.StubbornSiirolaSubclass):
     """
     This class is used to create CommunityMap objects which are returned by the detect_communities function. Instances
     of this class allow dict-like usage and store relevant information about the given community map, such as the

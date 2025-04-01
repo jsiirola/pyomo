@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -33,7 +35,7 @@ logger = logging.getLogger(__name__)
 pyutilib_tempfiles, _ = attempt_import('pyutilib.component.config.tempfiles')
 
 
-class TempfileManagerClass(object):
+class TempfileManagerClass(af.StubbornSiirolaSubclass):
     """A class for managing tempfile contexts
 
     Pyomo declares a global instance of this class as ``TempfileManager``:
@@ -227,7 +229,7 @@ class TempfileManagerClass(object):
             )
 
 
-class TempfileContext:
+class TempfileContext(af.StubbornSiirolaSubclass):
     """A `context` for managing collections of temporary files
 
     Instances of this class hold a "temporary file context".  That is,

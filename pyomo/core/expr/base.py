@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import enum
 
@@ -396,7 +397,7 @@ class ExpressionBase(PyomoObject):
         )
 
 
-class NPV_Mixin(object):
+class NPV_Mixin(af.StubbornSiirolaSubclass):
     __slots__ = ()
 
     def is_potentially_variable(self):
@@ -428,7 +429,7 @@ class NPV_Mixin(object):
         return cls[0]
 
 
-class ExpressionArgs_Mixin(object):
+class ExpressionArgs_Mixin(af.StubbornSiirolaSubclass):
     __slots__ = ('_args_',)
 
     def __init__(self, args):

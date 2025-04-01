@@ -8,12 +8,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.collections import ComponentSet
 from typing import Sequence
 
 
-class ComponentDataSet:
+class ComponentDataSet(af.StubbornSiirolaSubclass):
     """ComponentDataSet(ctype)
     Domain validation class that accepts singleton or iterable arguments and
     compiles them into a ComponentSet, verifying that they are all ComponentDatas

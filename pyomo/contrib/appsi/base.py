@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import abc
 import enum
@@ -379,7 +380,7 @@ class SolutionLoader(SolutionLoaderBase):
         return rc
 
 
-class Results(object):
+class Results(af.StubbornSiirolaSubclass):
     """
     Base class for all APPSI solver results
 
@@ -1512,7 +1513,7 @@ legacy_solution_status_map = {
 }
 
 
-class LegacySolverInterface(object):
+class LegacySolverInterface(af.StubbornSiirolaSubclass):
     def solve(
         self,
         model: BlockData,

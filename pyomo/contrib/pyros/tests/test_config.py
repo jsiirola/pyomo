@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Test objects for construction of PyROS ConfigDict.
@@ -423,7 +424,7 @@ class TestInputDataStandardizer(unittest.TestCase):
 AVAILABLE_SOLVER_TYPE_NAME = "available_pyros_test_solver"
 
 
-class AvailableSolver:
+class AvailableSolver(af.StubbornSiirolaSubclass):
     """
     Perennially available placeholder solver.
     """
@@ -442,7 +443,7 @@ class AvailableSolver:
         return SolverResults()
 
 
-class UnavailableSolver:
+class UnavailableSolver(af.StubbornSiirolaSubclass):
     def available(self, exception_flag=True):
         if exception_flag:
             raise ApplicationError(f"Solver {self.__class__} not available")

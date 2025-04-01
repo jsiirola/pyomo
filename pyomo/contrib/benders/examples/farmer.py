@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os
 import sys
@@ -25,7 +26,7 @@ mpirun -np 3 python farmer.py
 """
 
 
-class Farmer(object):
+class Farmer(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
         self.total_acreage = 500

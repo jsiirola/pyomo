@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import datetime
 import io
@@ -47,7 +48,7 @@ from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
 
-class GurobiConfigMixin:
+class GurobiConfigMixin(af.StubbornSiirolaSubclass):
     """
     Mixin class for Gurobi-specific configurations
     """
@@ -169,7 +170,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         return ComponentMap(iterator)
 
 
-class GurobiSolverMixin:
+class GurobiSolverMixin(af.StubbornSiirolaSubclass):
     """
     gurobi_direct and gurobi_persistent check availability and set versions
     in the same way. This moves the logic to a central location to reduce

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os.path
 
@@ -17,7 +18,7 @@ from pyomo.dataportal.process_data import _process_include
 
 
 @DataManagerFactory.register("dat", "Pyomo data command file interface")
-class PyomoDataCommands(object):
+class PyomoDataCommands(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._info = []
         self.options = Bunch()

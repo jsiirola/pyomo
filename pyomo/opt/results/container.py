@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import copy
 import enum
@@ -39,7 +40,7 @@ default_print_options = Bunch(schema=False, ignore_time=False)
 strict = False
 
 
-class UndefinedData(object):
+class UndefinedData(af.StubbornSiirolaSubclass):
     def __str__(self):
         return "<undefined>"
 
@@ -48,7 +49,7 @@ undefined = UndefinedData()
 ignore = UndefinedData()
 
 
-class ScalarData(object):
+class ScalarData(af.StubbornSiirolaSubclass):
     def __init__(
         self,
         value=undefined,
@@ -158,7 +159,7 @@ class ScalarData(object):
 #
 # This class manages a list of MapContainer objects.
 #
-class ListContainer(object):
+class ListContainer(af.StubbornSiirolaSubclass):
     def __init__(self, cls):
         self._cls = cls
         self._list = []

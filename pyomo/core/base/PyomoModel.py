@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import sys
@@ -88,7 +89,7 @@ class PyomoConfig(Bunch):
             d[item[-1]] = PyomoConfig._option[item]
 
 
-class ModelSolution(object):
+class ModelSolution(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._metadata = {}
         self._metadata['status'] = None
@@ -147,7 +148,7 @@ class ModelSolution(object):
                 tmp[id(obj)] = (obj, entry)
 
 
-class ModelSolutions(object):
+class ModelSolutions(af.StubbornSiirolaSubclass):
     def __init__(self, instance):
         self._instance = weakref_ref(instance)
         self.clear()

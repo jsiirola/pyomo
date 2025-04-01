@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 #
 # AMPL Problem Writer Plugin
@@ -201,7 +202,7 @@ def _get_bound(exp):
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
-class StopWatch(object):
+class StopWatch(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.start = time.time()
 
@@ -212,7 +213,7 @@ class StopWatch(object):
         self.start = time.time()
 
 
-class _Counter(object):
+class _Counter(af.StubbornSiirolaSubclass):
     def __init__(self, start):
         self._id = start
 
@@ -222,7 +223,7 @@ class _Counter(object):
         return tmp
 
 
-class ModelSOS(object):
+class ModelSOS(af.StubbornSiirolaSubclass):
     class AmplSuffix(object):
         def __init__(self, name):
             self.name = name
@@ -310,7 +311,7 @@ class ModelSOS(object):
             self.ref.add(ID, weight)
 
 
-class RepnWrapper(object):
+class RepnWrapper(af.StubbornSiirolaSubclass):
     __slots__ = ('repn', 'linear_vars', 'nonlinear_vars')
 
     def __init__(self, repn, linear, nonlinear):

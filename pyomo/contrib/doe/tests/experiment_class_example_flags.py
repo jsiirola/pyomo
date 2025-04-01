@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 # === Required imports ===
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
@@ -45,7 +47,7 @@ def expand_model_components(m, base_components, index_sets):
                 yield val[j]
 
 
-class BadExperiment(object):
+class BadExperiment(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.model = None
 

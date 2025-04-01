@@ -8,9 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
-class SymbolMap(object):
+class SymbolMap(af.StubbornSiirolaSubclass):
     """
     A class for tracking assigned labels for modeling components.
 

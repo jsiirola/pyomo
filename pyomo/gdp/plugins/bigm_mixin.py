@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.gdp import GDP_Error
 from pyomo.common.collections import ComponentSet
@@ -90,7 +91,7 @@ def _warn_for_unused_bigM_args(bigM, used_args, logger):
             logger.warning(warning_msg)
 
 
-class _BigM_MixIn(object):
+class _BigM_MixIn(af.StubbornSiirolaSubclass):
     def _get_bigM_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
         # check for constraints in the moment, but if that fails, we've

@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Test the canonical expressions
 #
@@ -27,7 +29,7 @@ from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Block, Comp
 thisdir = this_file_dir()
 
 
-class _CPXLPOrdering_Suite(object):
+class _CPXLPOrdering_Suite(af.StubbornSiirolaSubclass):
     @classmethod
     def setUpClass(cls):
         cls.context = TempfileManager.new_context()

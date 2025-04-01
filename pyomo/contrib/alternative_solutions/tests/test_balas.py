@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from collections import Counter
 
@@ -27,7 +28,7 @@ pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 
 @unittest.pytest.mark.default
-class TestBalasUnit:
+class TestBalasUnit(af.StubbornSiirolaSubclass):
 
     def test_bad_solver(self, mip_solver):
         """

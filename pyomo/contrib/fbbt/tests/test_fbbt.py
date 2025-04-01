@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
@@ -33,7 +34,7 @@ class DummyExpr(ProductExpression):
     pass
 
 
-class FbbtTestBase(object):
+class FbbtTestBase(af.StubbornSiirolaSubclass):
     """
     These tests are set up weird, but it is for a good reason.
     The FBBT code is duplicated in pyomo.contrib.appsi for

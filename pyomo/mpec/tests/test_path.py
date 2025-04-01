@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 #
 # Test the path solver
@@ -32,7 +33,7 @@ exdir = os.path.join(PYOMO_ROOT_DIR, 'examples', 'mpec')
 solvers = pyomo.opt.check_available_solvers('path')
 
 
-class CommonTests:
+class CommonTests(af.StubbornSiirolaSubclass):
     solve = True
     solver = 'path'
 

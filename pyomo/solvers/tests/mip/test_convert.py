@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for pyomo.opt.base.convert
 #
@@ -37,7 +39,7 @@ currdir = this_file_dir()
 deleteFiles = True
 
 
-class MockArg(object):
+class MockArg(af.StubbornSiirolaSubclass):
     def __init__(self):
         pass
 

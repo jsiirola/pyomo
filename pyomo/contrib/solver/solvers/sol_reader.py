@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 from typing import Tuple, Dict, Any, List, Sequence, Optional, Mapping, NoReturn
@@ -29,7 +30,7 @@ from pyomo.contrib.solver.common.results import (
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 
-class SolFileData:
+class SolFileData(af.StubbornSiirolaSubclass):
     """
     Defines the data types found within a .sol file
     """

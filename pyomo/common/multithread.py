@@ -8,12 +8,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from collections import defaultdict
 from threading import get_ident, main_thread
 
 
-class MultiThreadWrapper:
+class MultiThreadWrapper(af.StubbornSiirolaSubclass):
     """A python object proxy that wraps different instances for each thread.
 
     This is useful for handling thread-safe access to singleton objects without

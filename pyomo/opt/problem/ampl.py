@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Utilities to support the definition of optimization applications that
@@ -19,7 +20,7 @@ import os
 from pyomo.opt.base import ProblemFormat, convert_problem, guess_format
 
 
-class AmplModel(object):
+class AmplModel(af.StubbornSiirolaSubclass):
     """
     A class that provides a wrapper for AMPL models.
     """

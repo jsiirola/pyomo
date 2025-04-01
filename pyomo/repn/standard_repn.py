@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 import sys
@@ -51,7 +52,7 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
-class StandardRepn(object):
+class StandardRepn(af.StubbornSiirolaSubclass):
     """
     This class defines a standard/common representation for Pyomo expressions
     that provides an efficient interface for writing all models.
@@ -421,7 +422,7 @@ def generate_standard_repn(
 ##-----------------------------------------------------------------------
 
 
-class ResultsWithQuadratics(object):
+class ResultsWithQuadratics(af.StubbornSiirolaSubclass):
     __slot__ = ('const', 'nonl', 'linear', 'quadratic')
 
     def __init__(self, constant=0, nonl=0, linear=None, quadratic=None):
@@ -447,7 +448,7 @@ class ResultsWithQuadratics(object):
         )
 
 
-class ResultsWithoutQuadratics(object):
+class ResultsWithoutQuadratics(af.StubbornSiirolaSubclass):
     __slot__ = ('const', 'nonl', 'linear')
 
     def __init__(self, constant=0, nonl=0, linear=None):

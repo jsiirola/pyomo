@@ -7,6 +7,8 @@
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the IDAES PSE Framework
 #
@@ -33,7 +35,7 @@ import pyomo.environ as pyo
 _log = logging.getLogger(__name__)
 
 
-class UIDataNoUi(object):
+class UIDataNoUi(af.StubbornSiirolaSubclass):
     """
     This is the UIData object minus the signals.  This is the base class for
     UIData.  The class is split this way for testing when PyQt is not available.

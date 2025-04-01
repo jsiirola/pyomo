@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
@@ -47,7 +48,7 @@ Block.register_private_data_initializer(_LPDualData)
 @TransformationFactory.register(
     'core.lp_dual', 'Generate the linear programming dual of the given model'
 )
-class LinearProgrammingDual(object):
+class LinearProgrammingDual(af.StubbornSiirolaSubclass):
     CONFIG = ConfigDict("core.lp_dual")
     CONFIG.declare(
         'parameterize_wrt',

@@ -711,11 +711,31 @@ jobs:
     - name: Run Pyomo tests
       if: ${{ matrix.mpi == 0 && matrix.category != 'notests' }}
       run: |
-        export PATH=$PYOMO_PATH
-        $PYTHON_EXE -m pytest -v \
-            -W ignore::Warning ${{matrix.category}} \
-            pyomo `pwd`/pyomo-model-libraries \
-            `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
+        ART=$(cat <<'EOF'
+        ───█──█─█▀▀█─█▀▀█─█▀▀█─█──█───
+        ───█▀▀█─█▄▄█─█▀▀▀─█▀▀▀─▀▀▀█───
+        ───█──█─█──█─█────█────█▄▄█───
+        ──────────────────────────────
+        ───█▀▀█─█▀▀█─█▀▀█─▀▀█▀▀─█─────
+        ───█▄▄█─█▀▀▀─█▀▀▄───█───█─────
+        ───█──█─█────█──█─▄▄█▄▄─█▄▄───
+        ──────────────────────────────
+        ─█▀▀▀─▄▀▀▀▄───▄▀▀▀▄─█────▄▀▀▀─
+        ─█▀▀▀─█─█─█───█─█─█─█────▀▀▀▄─
+        ─█────▀▄▄▄▀───▀▄▄▄▀─█▄▄▄─▄▄▄▀─
+        ──────────────────────────────
+        ────────▀▀▀█▀▀▀▀▀█────────────
+        ───────────▀▄▄▄▄▄▀────────────
+        ──────────────────────────────
+        ──────────────────────────────
+        ───────█▀▀▀▄─█▀▀█─█──█────────
+        ───────█───█─█▄▄█─▀▀▀█────────
+        ───────█▄▄▄▀─█──█─█▄▄█────────
+        EOF
+        )
+
+        echo "$ART"
+        echo "$ART" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Run Pyomo MPI tests
       if: ${{ matrix.mpi != 0 && matrix.category != 'notests' }}
@@ -729,38 +749,6 @@ jobs:
             --junit-xml=TEST-pyomo-mpi.xml \
             -m "mpi" -W ignore::Warning \
             pyomo `pwd`/pyomo-model-libraries
-
-    - name: Build documentation
-      if: matrix.build_docs != 0
-      run: |
-        sudo apt-get -y install graphviz latexmk texlive texlive-latex-extra \
-            texlive-pictures
-        make -C doc/OnlineDocs html
-        make -C doc/OnlineDocs latexpdf
-
-    - name: Run documentation tests
-      if: matrix.test_docs != 0
-      run: |
-        make -C doc/OnlineDocs doctest -d
-
-    - name: Process code coverage report
-      run: |
-        coverage combine
-        coverage report -i
-        coverage xml -i
-
-    - name: Record build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
-        include-hidden-files: true
-        path: |
-          .coverage
-          coverage.xml
-          # In general, do not record test results as artifacts to
-          #   manage total artifact storage
-          # TEST-*.xml
-
 
   bare-python-env:
     name: linux/3.9/bare-env

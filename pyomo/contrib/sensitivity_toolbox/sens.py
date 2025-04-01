@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.environ import (
     Param,
@@ -133,7 +134,7 @@ def _add_sensitivity_suffixes(block):
             block.add_component(name, Suffix(direction=direction))
 
 
-class _NotAnIndex(object):
+class _NotAnIndex(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -504,7 +505,7 @@ def line_num(file_name, target):
     raise Exception(file_name + " does not include " + target)
 
 
-class SensitivityInterface(object):
+class SensitivityInterface(af.StubbornSiirolaSubclass):
     def __init__(self, instance, clone_model=True):
         """Constructor clones model if necessary and attaches
         to this object.

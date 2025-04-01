@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Test transformations for linear duality
 #
@@ -29,7 +31,7 @@ import pyomo.scripting.pyomo_main as main
 solver = None
 
 
-class CommonTests(object):
+class CommonTests(af.StubbornSiirolaSubclass):
     solve = True
 
     def run_bilevel(self, *_args, **kwds):

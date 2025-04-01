@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.config import ConfigValue, document_kwargs_from_configdict
 from pyomo.common.dependencies import numpy as np
@@ -95,7 +96,7 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
             return _ParameterizedLinearStandardFormCompiler_impl(config).write(model)
 
 
-class _SparseMatrixBase(object):
+class _SparseMatrixBase(af.StubbornSiirolaSubclass):
     def __init__(self, matrix_data, shape):
         (data, indices, indptr) = matrix_data
         (nrows, ncols) = shape

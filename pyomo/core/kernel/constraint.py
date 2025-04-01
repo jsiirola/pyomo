@@ -25,6 +25,7 @@ from pyomo.core.expr.relational_expr import (
 )
 from pyomo.core.kernel.base import ICategorizedObject, _abstract_readonly_property
 from pyomo.core.kernel.container_utils import define_simple_containers
+import pyomo.apr_fls as af
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
@@ -174,7 +175,7 @@ class IConstraint(ICategorizedObject):
         return self.lower, self.body, self.upper
 
 
-class _MutableBoundsConstraintMixin(object):
+class _MutableBoundsConstraintMixin(af.StubbornSiirolaSubclass):
     """
     Use as a base class for IConstraint implementations
     that allow adjusting the lb, ub, rhs, and equality
@@ -380,7 +381,6 @@ class constraint(_MutableBoundsConstraintMixin, IConstraint):
         "_lb",
         "_ub",
         "_equality",
-        "__weakref__",
     )
 
     def __init__(self, expr=None, body=None, lb=None, ub=None, rhs=None):
@@ -726,7 +726,6 @@ class linear_constraint(_MutableBoundsConstraintMixin, IConstraint):
         "_lb",
         "_ub",
         "_equality",
-        "__weakref__",
     )
 
     def __init__(

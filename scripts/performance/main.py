@@ -9,6 +9,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import argparse
 import importlib
@@ -75,7 +76,7 @@ class TimingHandler(logging.Handler):
             cat_data[name] = val
 
 
-class DataRecorder(object):
+class DataRecorder(af.StubbornSiirolaSubclass):
     """pytest plugin to add a 'testdata' attribute to all tests
 
     This plugin adds an OrderedDict `testdata` attribute to all tests,

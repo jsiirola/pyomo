@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from typing import Sequence, Dict, Optional, Mapping, List, Tuple
 import os
@@ -62,7 +63,7 @@ class Availability(IntEnum):
         return self.name
 
 
-class SolverBase:
+class SolverBase(af.StubbornSiirolaSubclass):
     """
     This base class defines the methods required for all solvers:
         - available: Determines whether the solver is able to be run,
@@ -378,7 +379,7 @@ class PersistentSolverBase(SolverBase):
         )
 
 
-class LegacySolverWrapper:
+class LegacySolverWrapper(af.StubbornSiirolaSubclass):
     """
     Class to map the new solver interface features into the legacy solver
     interface. Necessary for backwards compatibility.

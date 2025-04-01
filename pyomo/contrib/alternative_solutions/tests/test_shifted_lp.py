@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
@@ -33,7 +34,7 @@ pytestmark = unittest.pytest.mark.parametrize("lp_solver", solvers)
 
 
 @unittest.pytest.mark.default
-class TestShiftedIP:
+class TestShiftedIP(af.StubbornSiirolaSubclass):
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_mip_abs_objective(self, lp_solver):

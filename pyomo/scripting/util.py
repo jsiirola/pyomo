@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import argparse
 import gc
@@ -912,7 +913,7 @@ def configure_loggers(options=None, shutdown=False):
 configure_loggers.fileLogger = None
 
 
-class PyomoCommandLogContext(object):
+class PyomoCommandLogContext(af.StubbornSiirolaSubclass):
     """Context manager to setup/restore logging for the Pyomo command"""
 
     def __init__(self, options):

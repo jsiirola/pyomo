@@ -8,9 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
-class _StaleFlagManager(object):
+class _StaleFlagManager(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._current = 0
         self.mark_all_as_stale()

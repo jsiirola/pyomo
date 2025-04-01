@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import math
 from collections.abc import Sequence
@@ -681,7 +682,7 @@ class NumericRange(AutoSlots.Mixin):
         return ans
 
 
-class NonNumericRange(object):
+class NonNumericRange(af.StubbornSiirolaSubclass):
     """A range-like object for representing a single non-numeric value
 
     The class name is a bit of a misnomer, as this object does not
@@ -758,7 +759,7 @@ class NonNumericRange(object):
         return []
 
 
-class AnyRange(object):
+class AnyRange(af.StubbornSiirolaSubclass):
     """A range object for representing Any sets"""
 
     __slots__ = ()
@@ -803,7 +804,7 @@ class AnyRange(object):
         return list(other_ranges)
 
 
-class RangeProduct(object):
+class RangeProduct(af.StubbornSiirolaSubclass):
     """A range-like object for representing the cross product of ranges"""
 
     __slots__ = ('range_lists',)

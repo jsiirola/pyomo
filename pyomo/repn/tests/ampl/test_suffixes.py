@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Test that EXPORT type Suffix components work with the NL writer
 #
@@ -34,7 +36,7 @@ from ..nl_diff import load_and_compare_nl_baseline
 currdir = this_file_dir()
 
 
-class SuffixTester(object):
+class SuffixTester(af.StubbornSiirolaSubclass):
     @classmethod
     def setUpClass(cls):
         cls.context = TempfileManager.new_context()

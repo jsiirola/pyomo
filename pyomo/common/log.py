@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -217,7 +219,7 @@ class StdoutHandler(logging.StreamHandler):
         super(StdoutHandler, self).emit(record)
 
 
-class Preformatted(object):
+class Preformatted(af.StubbornSiirolaSubclass):
     __slots__ = ('msg',)
 
     def __init__(self, msg):
@@ -230,7 +232,7 @@ class Preformatted(object):
         return f'Preformatted({self.msg!r})'
 
 
-class _GlobalLogFilter(object):
+class _GlobalLogFilter(af.StubbornSiirolaSubclass):
     def __init__(self):
         self.logger = logging.getLogger()
 
@@ -272,7 +274,7 @@ class LogHandler(logging.StreamHandler):
         self.setFormatter(LegacyPyomoFormatter(base=base, verbosity=verbosity))
 
 
-class LoggingIntercept(object):
+class LoggingIntercept(af.StubbornSiirolaSubclass):
     r"""Context manager for intercepting messages sent to a log stream
 
     This class is designed to enable easy testing of log messages.
@@ -441,7 +443,7 @@ class LogStream(io.TextIOBase):
                 yield _LastResortRedirector(redirects[fd].original_fd)
 
 
-class _StreamRedirector(object):
+class _StreamRedirector(af.StubbornSiirolaSubclass):
     def __init__(self, handler, fd):
         self.handler = handler
         self.fd = fd
@@ -460,7 +462,7 @@ class _StreamRedirector(object):
             self.handler.stream = self.orig_stream
 
 
-class _LastResortRedirector(object):
+class _LastResortRedirector(af.StubbornSiirolaSubclass):
     def __init__(self, fd):
         self.fd = fd
         self.orig_stream = None

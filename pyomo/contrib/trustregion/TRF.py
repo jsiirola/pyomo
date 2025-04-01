@@ -14,6 +14,7 @@
 #
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 import logging
@@ -428,7 +429,7 @@ def _trf_config():
     'trustregion',
     doc='Trust region algorithm "solver" for black box/glass box optimization',
 )
-class TrustRegionSolver(object):
+class TrustRegionSolver(af.StubbornSiirolaSubclass):
     """
     The Trust Region Solver is a 'solver' based on the 2016/2018/2020 AiChE
     papers by Eason (2016/2018), Yoshio (2020), and Biegler.

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 #
 # Test the mpec_nlp solver
@@ -29,7 +30,7 @@ from pyomo.scripting.util import cleanup
 solvers = pyomo.opt.check_available_solvers('ipopt')
 
 
-class CommonTests:
+class CommonTests(af.StubbornSiirolaSubclass):
     solve = True
     solver = 'mpec_nlp'
 

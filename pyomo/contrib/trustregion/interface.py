@@ -14,6 +14,7 @@
 #
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 import logging
@@ -95,7 +96,7 @@ class EFReplacement(ExpressionReplacementVisitor):
         return _output
 
 
-class TRFInterface(object):
+class TRFInterface(af.StubbornSiirolaSubclass):
     """
     Pyomo interface for Trust Region algorithm.
     """

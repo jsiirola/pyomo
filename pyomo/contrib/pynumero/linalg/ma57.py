@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.fileutils import find_library
 from pyomo.contrib.pynumero.linalg.utils import validate_index, validate_value, _NotSet
@@ -17,7 +18,7 @@ import ctypes
 import os
 
 
-class MA57Interface(object):
+class MA57Interface(af.StubbornSiirolaSubclass):
     libname = _NotSet
 
     @classmethod

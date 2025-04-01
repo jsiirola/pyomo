@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import abc
 import logging
@@ -89,7 +90,7 @@ Note:
 """
 
 
-class ExternalGreyBoxModel(object):
+class ExternalGreyBoxModel(af.StubbornSiirolaSubclass):
     """
     This is the base class for building external input output models
     for use with Pyomo and CyIpopt. See the module documentation above,

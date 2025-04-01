@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 import sys
@@ -16,7 +17,7 @@ from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
 
-class ExtensionBuilder(object):
+class ExtensionBuilder(af.StubbornSiirolaSubclass):
     def create_parser(self, parser):
         return parser
 

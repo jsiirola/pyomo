@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 import glob
@@ -17,7 +18,7 @@ from os.path import join, basename, dirname, isfile
 from pyomo.opt.base.solvers import _extract_version
 
 
-class MockMIP(object):
+class MockMIP(af.StubbornSiirolaSubclass):
     """Methods used to create a mock MIP solver used for testing"""
 
     def __init__(self, mockdir):

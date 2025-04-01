@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
@@ -44,7 +45,7 @@ DeclareGlobalSet(
 )
 
 
-class _fill_in_known_wildcards(object):
+class _fill_in_known_wildcards(af.StubbornSiirolaSubclass):
     """Variant of "six.advance_iterator" that substitutes wildcard values
 
     This object is initialized with a tuple of index values.  Calling

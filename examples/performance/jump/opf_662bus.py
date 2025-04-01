@@ -8,15 +8,16 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.environ import *
 
 
-class Bus:
+class Bus(af.StubbornSiirolaSubclass):
     pass
 
 
-class Branch:
+class Branch(af.StubbornSiirolaSubclass):
     pass
 
 

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import copy
 import weakref
@@ -28,7 +29,7 @@ def _abstract_readonly_property(**kwds):
     return p
 
 
-class _no_ctype(object):
+class _no_ctype(af.StubbornSiirolaSubclass):
     """The default argument for methods that accept a ctype."""
 
     pass

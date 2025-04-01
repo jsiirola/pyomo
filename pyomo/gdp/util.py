@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import DisjunctData, Disjunct
@@ -43,15 +44,15 @@ _infeasible_termination_conditions = set(
 )
 
 
-class NORMAL(object):
+class NORMAL(af.StubbornSiirolaSubclass):
     pass
 
 
-class INFEASIBLE(object):
+class INFEASIBLE(af.StubbornSiirolaSubclass):
     pass
 
 
-class NONOPTIMAL(object):
+class NONOPTIMAL(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -111,7 +112,7 @@ def _raise_disjunct_in_multiple_disjunctions_error(disjunct, disjunction):
     )
 
 
-class GDPTree:
+class GDPTree(af.StubbornSiirolaSubclass):
     """
     Stores a forest representing the hierarchy between GDP components on a
     model: for single-level GDPs, each tree is rooted at a Disjunction and

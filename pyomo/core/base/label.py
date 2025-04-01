@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import re
 
@@ -23,7 +24,7 @@ from pyomo.core.base.componentuid import ComponentUID
 # they should be handled in the corresponding solver plugin.
 
 
-class _CharMapper(object):
+class _CharMapper(af.StubbornSiirolaSubclass):
     def __init__(self, preserve, translate, other):
         """
         Arguments::
@@ -89,12 +90,12 @@ def alphanum_label_from_name(name):
     return str.translate(name, _alphanum_translation_table)
 
 
-class CuidLabeler(object):
+class CuidLabeler(af.StubbornSiirolaSubclass):
     def __call__(self, obj=None):
         return ComponentUID(obj)
 
 
-class CounterLabeler(object):
+class CounterLabeler(af.StubbornSiirolaSubclass):
     def __init__(self, start=0):
         self._id = start
 
@@ -103,7 +104,7 @@ class CounterLabeler(object):
         return self._id
 
 
-class NumericLabeler(object):
+class NumericLabeler(af.StubbornSiirolaSubclass):
     def __init__(self, prefix, start=0):
         self.id = start
         self.prefix = prefix
@@ -132,12 +133,12 @@ class NumericLabeler(object):
 # (particularly PySP), and I don't know how much depends on the labels
 # actually being LP-compliant.
 #
-class CNameLabeler(object):
+class CNameLabeler(af.StubbornSiirolaSubclass):
     def __call__(self, obj):
         return obj.getname(True)
 
 
-class LPFileLabeler(object):
+class LPFileLabeler(af.StubbornSiirolaSubclass):
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True))
 
@@ -154,17 +155,17 @@ class LPFileLabeler(object):
 TextLabeler = LPFileLabeler
 
 
-class AlphaNumericTextLabeler(object):
+class AlphaNumericTextLabeler(af.StubbornSiirolaSubclass):
     def __call__(self, obj):
         return alphanum_label_from_name(obj.getname(True))
 
 
-class NameLabeler(object):
+class NameLabeler(af.StubbornSiirolaSubclass):
     def __call__(self, obj):
         return obj.getname(True)
 
 
-class ShortNameLabeler(object):
+class ShortNameLabeler(af.StubbornSiirolaSubclass):
     def __init__(
         self,
         limit,

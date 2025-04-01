@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Tests for the PyROS solver.
@@ -112,7 +113,7 @@ ipopt_available = _ipopt.available(exception_flag=False)
 
 
 # @SolverFactory.register("time_delay_solver")
-class TimeDelaySolver(object):
+class TimeDelaySolver(af.StubbornSiirolaSubclass):
     """
     Solver which puts program to sleep for a specified
     duration after having been invoked a specified number
@@ -3051,7 +3052,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         )
 
 
-class UnavailableSolver:
+class UnavailableSolver(af.StubbornSiirolaSubclass):
     def available(self, exception_flag=True):
         if exception_flag:
             raise ApplicationError(f"Solver {self.__class__} not available")
@@ -3225,7 +3226,7 @@ class TestPyROSResolveKwargs(unittest.TestCase):
         )
 
 
-class SimpleTestSolver:
+class SimpleTestSolver(af.StubbornSiirolaSubclass):
     """
     Simple test solver class with no actual solve()
     functionality. Written to test unrelated aspects
@@ -3791,7 +3792,7 @@ class TestResolveAndValidatePyROSInputs(unittest.TestCase):
 
 
 # @SolverFactory.register("subsolver_error__solver")
-class SubsolverErrorSolver(object):
+class SubsolverErrorSolver(af.StubbornSiirolaSubclass):
     """
     Solver that returns a bad termination condition
     to purposefully create an SP subsolver error.

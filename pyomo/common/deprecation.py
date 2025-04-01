@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """This module provides utilities for deprecating functionality.
 
@@ -580,7 +581,7 @@ class RenamedClass(type):
             return super().__subclasscheck__(subclass)
 
 
-class MovedModuleLoader:
+class MovedModuleLoader(af.StubbornSiirolaSubclass):
     """Custom module loader that supports loading modules through alternate names
 
     This class implements the :class:`importlib.abc.Loader` interface
@@ -613,7 +614,7 @@ class MovedModuleLoader:
         pass
 
 
-class MovedModuleFinder:
+class MovedModuleFinder(af.StubbornSiirolaSubclass):
     """Custom finder that supports loading a module through an alternative name.
 
     This class implements the :class:`importlib.abc.Finder` interface

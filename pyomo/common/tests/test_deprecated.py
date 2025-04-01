@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 """Testing for deprecated function."""
 import logging
@@ -348,7 +350,7 @@ class TestDeprecated(unittest.TestCase):
         )
 
 
-class Bar(object):
+class Bar(af.StubbornSiirolaSubclass):
     data = 21
 
 

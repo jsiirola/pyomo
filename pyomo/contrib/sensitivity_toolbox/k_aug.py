@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # ______________________________________________________________________________
 #
@@ -42,7 +43,7 @@ known_files = [
 ]
 
 
-class InTempDir(object):
+class InTempDir(af.StubbornSiirolaSubclass):
     def __init__(self, suffix=None, prefix=None, dir=None):
         self._suffix = suffix
         self._prefix = prefix
@@ -63,7 +64,7 @@ class InTempDir(object):
         TempfileManager.pop()
 
 
-class K_augInterface(object):
+class K_augInterface(af.StubbornSiirolaSubclass):
     """
     k_aug and dot_sens store information in the user's filesystem,
     some of which is mandatory for subsequent calls.

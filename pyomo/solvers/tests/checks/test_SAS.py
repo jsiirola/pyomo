@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os
 import pyomo.common.unittest as unittest
@@ -44,7 +45,7 @@ except:
     sas94_available = False
 
 
-class SASTestAbc:
+class SASTestAbc(af.StubbornSiirolaSubclass):
     solver_io = "_sas94"
     session_options = {}
     cfgfile = CFGFILE

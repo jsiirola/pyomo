@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 
 import pyomo.common.unittest as unittest
@@ -51,7 +53,7 @@ import pyomo.environ as pyo
 nan = float('nan')
 
 
-class INFO(object):
+class INFO(af.StubbornSiirolaSubclass):
     def __init__(self, symbolic=False):
         self.subexpression_cache = {}
         self.external_functions = {}

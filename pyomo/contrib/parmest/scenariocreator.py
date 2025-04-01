@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # ScenariosCreator.py - Class to create and deliver scenarios using parmest
 # DLW March 2020
@@ -19,7 +20,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ScenarioSet(object):
+class ScenarioSet(af.StubbornSiirolaSubclass):
     """
     Class to hold scenario sets
 
@@ -94,7 +95,7 @@ class ScenarioSet(object):
                 f.write('\n')
 
 
-class ParmestScen(object):
+class ParmestScen(af.StubbornSiirolaSubclass):
     """A little container for scenarios; the Args are the attributes.
 
     Args:
@@ -113,7 +114,7 @@ class ParmestScen(object):
 ############################################################
 
 
-class ScenarioCreator(object):
+class ScenarioCreator(af.StubbornSiirolaSubclass):
     """Create scenarios from parmest.
 
     Args:

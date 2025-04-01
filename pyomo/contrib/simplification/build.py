@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import glob
 import logging
@@ -176,7 +177,7 @@ def build_ginac_interface(parallel=None, args=None):
     dist.run_command('build_ext')
 
 
-class GiNaCInterfaceBuilder(object):
+class GiNaCInterfaceBuilder(af.StubbornSiirolaSubclass):
     def __call__(self, parallel):
         return build_ginac_interface(parallel)
 

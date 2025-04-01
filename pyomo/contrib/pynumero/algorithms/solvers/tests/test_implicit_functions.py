@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import itertools
 import pyomo.common.unittest as unittest
@@ -42,7 +43,7 @@ if not AmplInterface.available():
     )
 
 
-class ImplicitFunction1(object):
+class ImplicitFunction1(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._model = self._make_model()
 
@@ -137,7 +138,7 @@ class ImplicitFunctionWithExtraVariables(ImplicitFunction1):
         return m
 
 
-class ImplicitFunctionInputsDontAppear(object):
+class ImplicitFunctionInputsDontAppear(af.StubbornSiirolaSubclass):
     """This is an implicit function designed to test the edge case
     where inputs do not appear in the system defining the implicit
     function (i.e. the function is constant).

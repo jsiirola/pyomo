@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 import os
@@ -132,7 +133,7 @@ class CPLEX(OptSolver):
         return opt
 
 
-class ORDFileSchema(object):
+class ORDFileSchema(af.StubbornSiirolaSubclass):
     HEADER = "* ENCODING=ISO-8859-1\nNAME             Priority Order\n"
     FOOTER = "ENDATA\n"
 

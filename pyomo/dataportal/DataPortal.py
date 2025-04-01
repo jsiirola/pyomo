@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import logging
 from pyomo.common.log import is_debug_set
@@ -16,7 +17,7 @@ from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 logger = logging.getLogger('pyomo.core')
 
 
-class DataPortal(object):
+class DataPortal(af.StubbornSiirolaSubclass):
     """
     An object that manages loading and storing data from external
     data sources.  This object interfaces to plugins that manipulate

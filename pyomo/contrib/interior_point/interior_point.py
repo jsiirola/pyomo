@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.contrib.pynumero.interfaces.utils import (
     build_bounds_mask,
@@ -39,7 +40,7 @@ class InteriorPointStatus(enum.Enum):
     error = 1
 
 
-class LinearSolveContext(object):
+class LinearSolveContext(af.StubbornSiirolaSubclass):
     def __init__(
         self,
         interior_point_logger,
@@ -76,7 +77,7 @@ class LinearSolveContext(object):
 #
 #       Define a method for logging IP_reg_info to the linear solver log
 #       Method can be called within linear_solve_context
-class FactorizationContext(object):
+class FactorizationContext(af.StubbornSiirolaSubclass):
     def __init__(self, logger):
         # Any reason to pass in a logging level here?
         # ^ So the "regularization log" can have its own outlvl
@@ -126,7 +127,7 @@ class FactorizationContext(object):
         )
 
 
-class InteriorPointSolver(object):
+class InteriorPointSolver(af.StubbornSiirolaSubclass):
     """
     Class for creating interior point solvers with different options
     """

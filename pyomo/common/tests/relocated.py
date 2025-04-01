@@ -8,12 +8,14 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 
 from pyomo.common.deprecation import relocated_module_attribute
 
 
-class Bar(object):
+class Bar(af.StubbornSiirolaSubclass):
     data = 42
 
 

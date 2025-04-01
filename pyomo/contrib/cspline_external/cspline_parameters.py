@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common.dependencies import numpy as np
 import pyomo.environ as pyo
@@ -82,7 +83,7 @@ def _fxx_cubic(x, alpha, s=None):
     return 2 * alpha[s, 3] + 6 * alpha[s, 4] * x
 
 
-class CsplineParameters:
+class CsplineParameters(af.StubbornSiirolaSubclass):
     def __init__(self, model=None, fptr=None):
         """Cubic spline parameters class.  This can be used to read and
         write parameters or calculate cubic spline function values and

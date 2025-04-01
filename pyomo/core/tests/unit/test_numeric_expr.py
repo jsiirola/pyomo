@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for expression generation
 #
@@ -118,7 +120,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
 
 
-class decompose_linear_term_wrapper(object):
+class decompose_linear_term_wrapper(af.StubbornSiirolaSubclass):
     def __init__(self, pairs):
         self.pairs = pairs
 

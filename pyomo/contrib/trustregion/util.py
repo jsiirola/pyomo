@@ -14,6 +14,7 @@
 #
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Common utilities for Trust Region Framework
@@ -50,7 +51,7 @@ def maxIgnoreNone(a, b):
     return a
 
 
-class IterationRecord:
+class IterationRecord(af.StubbornSiirolaSubclass):
     """
     Record relevant information at each individual iteration
     """
@@ -108,7 +109,7 @@ class IterationRecord:
         print(25 * '*')
 
 
-class IterationLogger:
+class IterationLogger(af.StubbornSiirolaSubclass):
     """
     Log (and print) information for all iterations
     """

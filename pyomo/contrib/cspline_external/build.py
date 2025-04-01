@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import sys
 from pyomo.common.cmake_builder import build_cmake_project
@@ -23,7 +24,7 @@ def build_cspline_external(user_args=[], parallel=None):
     )
 
 
-class ASLCsplineExternalBuilder(object):
+class ASLCsplineExternalBuilder(af.StubbornSiirolaSubclass):
     def __call__(self, parallel):
         return build_cspline_external(parallel=parallel)
 

@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.core.base.block import Block
 from pyomo.core.base.reference import Reference
@@ -164,7 +165,7 @@ def generate_subsystem_blocks(subsystems, include_fixed=False):
         yield block, list(block.input_vars.values())
 
 
-class TemporarySubsystemManager(object):
+class TemporarySubsystemManager(af.StubbornSiirolaSubclass):
     """This class is a context manager for cases when we want to
     temporarily fix or deactivate certain variables or constraints
     in order to perform some solve or calculation with the resulting

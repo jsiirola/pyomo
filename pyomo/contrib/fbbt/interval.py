@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import math
 import logging
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 inf = float('inf')
 
 
-class _bool_flag(object):
+class _bool_flag(af.StubbornSiirolaSubclass):
     def __init__(self, val):
         self._val = val
 

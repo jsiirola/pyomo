@@ -8,8 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
-class MIPSolverWrapper(object):
+class MIPSolverWrapper(af.StubbornSiirolaSubclass):
     def add(self, constraint):  # pragma:nocover
         pass

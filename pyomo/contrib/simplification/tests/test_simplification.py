@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from pyomo.common import unittest
 from pyomo.common.fileutils import this_file_dir
@@ -20,7 +21,7 @@ from pyomo.core.expr.sympy_tools import sympy_available
 import pyomo.environ as pyo
 
 
-class SimplificationMixin:
+class SimplificationMixin(af.StubbornSiirolaSubclass):
     def compare_against_possible_results(self, got, expected_list):
         success = False
         for exp in expected_list:

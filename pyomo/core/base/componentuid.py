@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import codecs
 import re
@@ -27,7 +28,7 @@ from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import Reference
 
 
-class _NotSpecified(object):
+class _NotSpecified(af.StubbornSiirolaSubclass):
     pass
 
 
@@ -49,7 +50,7 @@ def _context_err(_type):
     )
 
 
-class ComponentUID(object):
+class ComponentUID(af.StubbornSiirolaSubclass):
     """
     A Component unique identifier
 

@@ -1,3 +1,5 @@
+import pyomo.apr_fls as af
+
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -500,7 +502,7 @@ class PersistentSolverUtils(abc.ABC):
         timer.stop('vars')
 
 
-class PersistentSolverMixin:
+class PersistentSolverMixin(af.StubbornSiirolaSubclass):
     """
     The `solve` method in Gurobi and Highs is exactly the same, so this Mixin
     minimizes the duplicate code

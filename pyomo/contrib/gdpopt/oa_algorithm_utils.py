@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from math import fabs
 from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
@@ -16,7 +17,7 @@ from pyomo.core import value
 from pyomo.opt import TerminationCondition as tc
 
 
-class _OAAlgorithmMixIn(object):
+class _OAAlgorithmMixIn(af.StubbornSiirolaSubclass):
     def _fix_discrete_soln_solve_subproblem_and_add_cuts(
         self, discrete_prob_util_block, subprob_util_block, config
     ):

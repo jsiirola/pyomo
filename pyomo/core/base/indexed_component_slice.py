@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import copy
 import itertools
@@ -19,7 +20,7 @@ from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_index
 
 
-class IndexedComponent_slice(object):
+class IndexedComponent_slice(af.StubbornSiirolaSubclass):
     """Special class for slicing through hierarchical component trees
 
     The basic concept is to interrupt the normal slice generation
@@ -382,7 +383,7 @@ def _freeze(info):
         return info
 
 
-class _slice_generator(object):
+class _slice_generator(af.StubbornSiirolaSubclass):
     """Utility (iterator) for generating the elements of one slice
 
     Iterate through the component index and yield the component data
@@ -521,11 +522,11 @@ _advance_iter.check_complete = _advance_iter_check_complete
 
 
 # A dummy class that we can use as a named entity below
-class _NotIterable(object):
+class _NotIterable(af.StubbornSiirolaSubclass):
     pass
 
 
-class _IndexedComponent_slice_iter(object):
+class _IndexedComponent_slice_iter(af.StubbornSiirolaSubclass):
     def __init__(
         self,
         component_slice,

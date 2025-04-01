@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Functions for construction and solution of the PyROS master problem.
@@ -903,7 +904,7 @@ def solve_master(master_data):
     return master_soln
 
 
-class MasterProblemData:
+class MasterProblemData(af.StubbornSiirolaSubclass):
     """
     Container for objects pertaining to the PyROS master problem.
 

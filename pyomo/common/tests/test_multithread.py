@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import threading
 import pyomo.common.unittest as unittest
@@ -16,7 +17,7 @@ from threading import Thread
 from pyomo.opt.base.solvers import check_available_solvers
 
 
-class Dummy:
+class Dummy(af.StubbornSiirolaSubclass):
     """asdfg"""
 
     def __init__(self):

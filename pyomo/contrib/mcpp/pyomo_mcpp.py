@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 # Note: the self.mcpp.* functions are all C-style functions implemented
 # in the compiled MC++ wrapper library
 # Note: argument to pow must be an integer
@@ -384,7 +386,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         return node_result
 
 
-class McCormick(object):
+class McCormick(af.StubbornSiirolaSubclass):
     """
     This class takes the constructed expression from MCPP_Visitor and
     allows for MC methods to be performed on pyomo expressions.

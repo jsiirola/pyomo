@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from io import StringIO
 
@@ -36,7 +37,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.util.model_size import build_model_size_report
 
 
-class _GDPoptAlgorithm:
+class _GDPoptAlgorithm(af.StubbornSiirolaSubclass):
     CONFIG = ConfigBlock("GDPopt")
     _add_common_configs(CONFIG)
 

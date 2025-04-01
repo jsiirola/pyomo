@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 """
 The cyipopt_solver module includes two solvers that call CyIpopt. One,
 CyIpoptSolver, is a solver that operates on a CyIpoptProblemInterface
@@ -180,7 +182,7 @@ _ipopt_term_cond = {
 }
 
 
-class CyIpoptSolver(object):
+class CyIpoptSolver(af.StubbornSiirolaSubclass):
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
         provide a problem_interface that corresponds to
@@ -243,7 +245,7 @@ def _numpy_vector(val):
     return ans
 
 
-class PyomoCyIpoptSolver(object):
+class PyomoCyIpoptSolver(af.StubbornSiirolaSubclass):
     CONFIG = ConfigBlock("cyipopt")
     CONFIG.declare(
         "tee",

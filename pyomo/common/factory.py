@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -17,7 +19,7 @@
 #  ___________________________________________________________________________
 
 
-class Factory(object):
+class Factory(af.StubbornSiirolaSubclass):
     """
     A class that is used to define a factory for objects.
 

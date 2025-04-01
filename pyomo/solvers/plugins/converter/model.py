@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
 import os
@@ -20,7 +21,7 @@ from pyomo.core.kernel.block import IBlock
 
 
 @ProblemConverterFactory.register('pyomo')
-class PyomoMIPConverter(object):
+class PyomoMIPConverter(af.StubbornSiirolaSubclass):
     pico_converter = PicoMIPConverter()
 
     def can_convert(self, from_type, to_type):

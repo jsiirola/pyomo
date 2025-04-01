@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -204,7 +206,7 @@ def NonNegativeFloat(val):
     return ans
 
 
-class In(object):
+class In(af.StubbornSiirolaSubclass):
     """In(domain, cast=None)
     Domain validation class admitting a Container of possible values
 
@@ -268,7 +270,7 @@ class In(object):
             return f'In{_dn}'
 
 
-class InEnum(object):
+class InEnum(af.StubbornSiirolaSubclass):
     """Domain validation class admitting an enum value/name.
 
     This will admit any value that is in the specified Enum, including
@@ -301,7 +303,7 @@ class InEnum(object):
         return f'InEnum[{_domain_name(self._domain)}]'
 
 
-class IsInstance(object):
+class IsInstance(af.StubbornSiirolaSubclass):
     """
     Domain validator for type checking.
 
@@ -365,7 +367,7 @@ class IsInstance(object):
         return f"IsInstance[{', '.join(class_names)}]"
 
 
-class ListOf(object):
+class ListOf(af.StubbornSiirolaSubclass):
     """Domain validator for lists of a specified type
 
     Parameters
@@ -411,7 +413,7 @@ class ListOf(object):
         return f'ListOf[{_dn}]'
 
 
-class Module(object):
+class Module(af.StubbornSiirolaSubclass):
     """Domain validator for modules.
 
     Modules can be specified as module objects, by module name,
@@ -485,7 +487,7 @@ class Module(object):
         return import_file(path)
 
 
-class Path(object):
+class Path(af.StubbornSiirolaSubclass):
     """
     Domain validator for a
     :py:term:`path-like object <path-like object>`.
@@ -594,7 +596,7 @@ class PathList(Path):
             return [super(PathList, self).__call__(data)]
 
 
-class DynamicImplicitDomain(object):
+class DynamicImplicitDomain(af.StubbornSiirolaSubclass):
     """Implicit domain that can return a custom domain based on the key.
 
     This provides a mechanism for managing plugin-like systems, where
@@ -1211,7 +1213,7 @@ def _value2yaml(prefix, value, obj):
     return _str.rstrip()
 
 
-class _UnpickleableDomain(object):
+class _UnpickleableDomain(af.StubbornSiirolaSubclass):
     def __init__(self, obj):
         self._type = type(obj).__name__
         self._name = obj.name(True)
@@ -1410,7 +1412,7 @@ def _formatter_str_to_item_callback(pattern, formatter):
     return types.MethodType(_item_body_cb, formatter)
 
 
-class ConfigFormatter(object):
+class ConfigFormatter(af.StubbornSiirolaSubclass):
     def _initialize(self, indent_spacing, width, visibility):
         self.out = io.StringIO()
         self.indent_spacing = indent_spacing
@@ -1565,7 +1567,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
     )
 
 
-class document_kwargs_from_configdict(object):
+class document_kwargs_from_configdict(af.StubbornSiirolaSubclass):
     """Decorator to append the documentation of a ConfigDict to the docstring
 
     This adds the documentation of the specified :py:class:`ConfigDict`
@@ -1676,7 +1678,7 @@ class document_kwargs_from_configdict(object):
         return fcn
 
 
-class UninitializedMixin(object):
+class UninitializedMixin(af.StubbornSiirolaSubclass):
     """Mixin class to support delayed data initialization.
 
     This mixin can be used to create a derived Config class that hides
@@ -1743,7 +1745,7 @@ class UninitializedMixin(object):
         self._data = value
 
 
-class ConfigBase(object):
+class ConfigBase(af.StubbornSiirolaSubclass):
     # Note: __getstate__ relies on this field ordering.  Do not change.
     __slots__ = (
         '_parent',
@@ -2293,7 +2295,7 @@ class ImmutableConfigValue(ConfigValue):
             self._data = _data
 
 
-class MarkImmutable(object):
+class MarkImmutable(af.StubbornSiirolaSubclass):
     """
     Mark instances of ConfigValue as immutable.
 

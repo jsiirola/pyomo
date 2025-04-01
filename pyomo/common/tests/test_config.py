@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -86,7 +88,7 @@ def _display(obj, *args):
     return test.getvalue()
 
 
-class GlobalClass(object):
+class GlobalClass(af.StubbornSiirolaSubclass):
     "test class for test_known_types"
 
     pass

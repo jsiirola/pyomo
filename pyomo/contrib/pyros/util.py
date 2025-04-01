@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 '''
 Utility functions for the PyROS solver
@@ -77,7 +78,7 @@ DEFAULT_LOGGER_NAME = "pyomo.contrib.pyros"
 DEFAULT_SEPARATION_PRIORITY = 0
 
 
-class TimingData:
+class TimingData(af.StubbornSiirolaSubclass):
     """
     PyROS solver timing data object.
 
@@ -1058,7 +1059,7 @@ def validate_pyros_inputs(model, config):
     return user_var_partitioning
 
 
-class ModelData:
+class ModelData(af.StubbornSiirolaSubclass):
     """
     Container for modeling objects from which the PyROS
     subproblems are constructed.
@@ -1124,7 +1125,7 @@ def setup_quadratic_expression_visitor(
     return visitor
 
 
-class BoundType:
+class BoundType(af.StubbornSiirolaSubclass):
     """
     Indicator for whether a bound on a variable/constraint
     is a lower bound, "equality" bound, or upper bound.
@@ -3012,7 +3013,7 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
     return results
 
 
-class IterationLogRecord:
+class IterationLogRecord(af.StubbornSiirolaSubclass):
     """
     PyROS solver iteration log record.
 

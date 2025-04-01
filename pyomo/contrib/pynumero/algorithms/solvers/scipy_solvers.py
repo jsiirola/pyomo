@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 from collections import namedtuple
 from pyomo.core.base.objective import Objective
@@ -255,7 +256,7 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
         return results
 
 
-class PyomoScipySolver(object):
+class PyomoScipySolver(af.StubbornSiirolaSubclass):
     def __init__(self, options=None):
         if options is None:
             options = {}

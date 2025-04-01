@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import pickle
 import math
@@ -40,7 +41,7 @@ from pyomo.core.kernel.conic import (
 )
 
 
-class _conic_tester_base(object):
+class _conic_tester_base(af.StubbornSiirolaSubclass):
     _object_factory = None
 
     def setUp(self):

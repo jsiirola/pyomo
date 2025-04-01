@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 # This software is distributed under the 3-clause BSD License.
 # Copied with minor modifications from mpisppy/scenario_tree.py
@@ -57,7 +58,7 @@ def build_vardatalist(self, model, varlist=None):
     return vardatalist
 
 
-class ScenarioNode:
+class ScenarioNode(af.StubbornSiirolaSubclass):
     """Store a node in the scenario tree.
 
     Note:

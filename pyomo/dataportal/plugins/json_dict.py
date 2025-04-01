@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 import os.path
 import json
@@ -90,7 +91,7 @@ def tuplize(d):
 
 
 @DataManagerFactory.register("json", "JSON file interface")
-class JSONDictionary(object):
+class JSONDictionary(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._info = {}
         self.options = Bunch()
@@ -179,7 +180,7 @@ class JSONDictionary(object):
 
 
 @DataManagerFactory.register("yaml", "YAML file interface")
-class YamlDictionary(object):
+class YamlDictionary(af.StubbornSiirolaSubclass):
     def __init__(self):
         self._info = {}
         self.options = Bunch()

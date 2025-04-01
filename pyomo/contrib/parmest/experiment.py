@@ -8,9 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 
-class Experiment:
+class Experiment(af.StubbornSiirolaSubclass):
     """
     The experiment class is a template for making experiment lists
     to pass to parmest.

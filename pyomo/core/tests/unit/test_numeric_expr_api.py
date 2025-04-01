@@ -8,6 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
+
 #
 # Unit Tests for expression generation
 #
@@ -58,7 +60,7 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.environ import ConcreteModel, Param, Var, ExternalFunction
 
 
-class MockExternalFunction(object):
+class MockExternalFunction(af.StubbornSiirolaSubclass):
     def evaluate(self, args):
         (x,) = args
         return (math.log(x) / math.log(2)) ** 2

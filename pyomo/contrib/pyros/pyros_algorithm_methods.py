@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import pyomo.apr_fls as af
 
 """
 Methods for execution of the main PyROS cutting set algorithm.
@@ -31,7 +32,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-class GRCSResults:
+class GRCSResults(af.StubbornSiirolaSubclass):
     """
     Cutting set RO algorithm solve results.
 
