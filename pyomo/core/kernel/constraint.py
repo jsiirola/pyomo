@@ -724,7 +724,6 @@ class linear_constraint(_MutableBoundsConstraintMixin, IConstraint):
         "_lb",
         "_ub",
         "_equality",
-        "__weakref__",
     )
 
     def __init__(
