@@ -8,7 +8,6 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import pyomo.apr_fls as af
 
 from __future__ import annotations
 import inspect
@@ -22,6 +21,7 @@ from collections.abc import Iterator
 from functools import partial
 from typing import Union, Type, Any as typingAny
 
+import pyomo.apr_fls as af
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentSet
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
