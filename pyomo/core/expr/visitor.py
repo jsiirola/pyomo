@@ -265,22 +265,22 @@ class StreamBasedExpressionVisitor(object):
         if the recursion stack gets too deep.
 
         """
-        logger.info(f"[WALK] (StreamBasedExpressionVisitor) {self.__class__.__qualname__}.walk_expression({expr})")
+        # logger.info(f"[WALK] (StreamBasedExpressionVisitor) {self.__class__.__qualname__}.walk_expression({expr})")
         if self.initializeWalker is not None:
             logger.debug("  - initializing walker")
             walk, root = self.initializeWalker(expr)
-            logger.info(f"  - walker initialized: walk={walk}, root={root}")
+            # logger.info(f"  - walker initialized: walk={walk}, root={root}")
             if not walk:
-                logger.info(f" * RETURNING root: {type(root)}, {root}")
+                # logger.info(f" * RETURNING root: {type(root)}, {root}")
                 return root
             elif root is None:
                 root = expr
         else:
-            logger.info("  - NOT initializing walker")
+            # logger.info("  - NOT initializing walker")
             root = expr
 
         try:
-            logger.info(f"  - process_node -> {self._process_node.__name__}")
+            # logger.info(f"  - process_node -> {self._process_node.__name__}")
             result = self._process_node(root, RECURSION_LIMIT)
             _nonrecursive = None
         except RevertToNonrecursive:
@@ -303,12 +303,12 @@ class StreamBasedExpressionVisitor(object):
             return _nonrecursive[0](_nonrecursive[1])
 
         if self.finalizeResult is not None:
-            logger.info(f"  self.finalizeResult = {self.finalizeResult}")
+            # logger.info(f"  self.finalizeResult = {self.finalizeResult}")
             sr = self.finalizeResult(result)
-            logger.info(f"   * RETURNING: self.finalizeResult = {sr}")
+            # logger.info(f"   * RETURNING: self.finalizeResult = {sr}")
             return sr
         else:
-            logger.info(f"   * RETURNING result: {type(result)}, {result}")
+            # logger.info(f"   * RETURNING result: {type(result)}, {result}")
             return result
 
     def _compute_actual_recursion_limit(self):
@@ -404,15 +404,15 @@ class StreamBasedExpressionVisitor(object):
         also the definition of the client_methods dict).
 
         """
-        logger.info(" ")
-        logger.info(f"{self.__class__.__name__}._process_node_bex({node}, recursion_limit={recursion_limit})")
+        # logger.info(" ")
+        # logger.info(f"{self.__class__.__name__}._process_node_bex({node}, recursion_limit={recursion_limit})")
         if not recursion_limit:
             recursion_limit = self._compute_actual_recursion_limit()
         else:
             recursion_limit -= 1
 
         tmp = self.enterNode(node)
-        logger.info(f" args,data={tmp}")
+        # logger.info(f" args,data={tmp}")
         if tmp is None:
             args = data = None
         else:
@@ -440,7 +440,7 @@ class StreamBasedExpressionVisitor(object):
             arg_iter = iter(args)
             for child in arg_iter:
                 child_idx += 1
-                logger.info(f"  child ['{node}': {child_idx}] {child.__class__.__name__} {child}")
+                # logger.info(f"  child ['{node}': {child_idx}] {child.__class__.__name__} {child}")
                 # logger.info(f" self.beforeChild: {self.beforeChild}")
                 tmp = self.beforeChild(node, child, child_idx)
                 logger.debug(f"      child descend, child_result={tmp}")

@@ -621,10 +621,10 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         const = 0
         linear = ans.linear
         for i, arg in enumerate(child.args):
-            logger.info(f"  child {i} arg: {arg} ({type(arg)})")
+            # logger.info(f"  child {i} arg: {arg} ({type(arg)})")
             if arg.__class__ is MonomialTermExpression:
                 arg1, arg2 = arg._args_
-                logger.info(f"   arg1, arg2 = {arg1}, {arg2}")
+                # logger.info(f"   arg1, arg2 = {arg1}, {arg2}")
                 if arg1.__class__ not in native_types:
                     try:
                         arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
@@ -652,16 +652,16 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
                     visitor.var_recorder.add(arg2)
-                    logger.info(f" setting linear[{_id}] = {arg1}")
+                    # logger.info(f" setting linear[{_id}] = {arg1}")
                     linear[_id] = arg1
                 elif _id in linear:
                     logger.info(f" setting linear[{_id}] += {arg1}")
                     linear[_id] += arg1
                 else:
-                    logger.info(f" setting linear[{_id}] = {arg1}")
+                    # logger.info(f" setting linear[{_id}] = {arg1}")
                     linear[_id] = arg1
             elif arg.__class__ in native_numeric_types:
-                logger.info(f"   native_numeric_types")
+                # logger.info(f"   native_numeric_types")
                 const += arg
             elif arg.is_variable_type():
                 logger.info(f"   variable type")
@@ -816,20 +816,20 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         if data.__class__ is self.Result:
-            logger.info(f"returning data.walker_exitNode {data.walker_exitNode}")
+            # logger.info(f"returning data.walker_exitNode {data.walker_exitNode}")
             return data.walker_exitNode()
         #
         # General expressions...
         #
-        logger.info(f"exit lookup: {node.__class__.__name__, *map(itemgetter(0), data)}")
+        # logger.info(f"exit lookup: {node.__class__.__name__, *map(itemgetter(0), data)}")
         _fnc = self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))]
-        logger.info(f"EXITING return  {_fnc} ({node}, {data})")
+        # logger.info(f"EXITING return  {_fnc} ({node}, {data})")
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
 
     def finalizeResult(self, result):
-        logger.info(f"finalizeResult {result}")
+        # logger.info(f"finalizeResult {result}")
         ans = result[1]
         if ans.__class__ is self.Result:
             mult = ans.multiplier

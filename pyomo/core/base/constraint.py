@@ -211,8 +211,8 @@ class ConstraintData(ActiveComponentData):
         """
         logger.info(f"(ConstraintData) {self.__class__}.to_bounded_expression(evaluate_bounds={evaluate_bounds})")
         expr = self._expr
-        logger.info(f"  expr.__class__: {expr.__class__}")
-        logger.info(f"  expr.args: {expr.args}")
+        logger.debug(f"  expr.__class__: {expr.__class__}")
+        logger.debug(f"  expr.args: {expr.args}")
         if expr.__class__ is RangedExpression:
             lb, body, ub = ans = expr.args
             if (
@@ -243,17 +243,17 @@ class ConstraintData(ActiveComponentData):
                   lhs.is_potentially_variable())
             _rhs_potentially_variable = (hasattr(rhs, "is_potentially_variable") and
                   rhs.is_potentially_variable())
-            logger.info(
-                "  is_potentially_variable():"
-                f" lhs: {_lhs_potentially_variable}"
-                f" rhs: {_rhs_potentially_variable}")
+            # logger.info(
+            #     "  is_potentially_variable():"
+            #     f" lhs: {_lhs_potentially_variable}"
+            #     f" rhs: {_rhs_potentially_variable}")
 
-            logger.info(
-                f"  lhs.__class__ in native_types: {lhs.__class__ in native_types}"
-            )
-            logger.info(
-                f"  rhs.__class__ in native_types: {rhs.__class__ in native_types}"
-            )
+            # logger.info(
+            #     f"  lhs.__class__ in native_types: {lhs.__class__ in native_types}"
+            # )
+            # logger.info(
+            #     f"  rhs.__class__ in native_types: {rhs.__class__ in native_types}"
+            # )
 
             if rhs.__class__ in native_types or not rhs.is_potentially_variable():
                 ans = rhs if expr.__class__ is EqualityExpression else None, lhs, rhs

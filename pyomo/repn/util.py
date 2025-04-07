@@ -350,14 +350,14 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_general_expression(visitor, child):
-        logger.info(f"CHILD: {child}")
-        for i, arg in enumerate(child.args):
-            logger.info(f"  child {i} arg: {arg} ({type(arg)})")
+        # logger.info(f"CHILD: {child}")
+        # for i, arg in enumerate(child.args):
+        #     logger.info(f"  child {i} arg: {arg} ({type(arg)})")
         return True, None
 
     @staticmethod
     def _before_native_numeric(visitor, child):
-        logger.info(f"CHILD: {child}")
+        # logger.info(f"CHILD: {child}")
         return False, (_CONSTANT, child)
 
     @staticmethod

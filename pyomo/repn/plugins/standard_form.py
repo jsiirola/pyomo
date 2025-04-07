@@ -443,6 +443,12 @@ class _LinearStandardFormCompiler_impl(object):
         #
         slack_form = self.config.slack_form
         mixed_form = self.config.mixed_form
+
+        _config_obj = { a : getattr(self.config, a)
+                       for a in dir(self.config) if not a.startswith("_")}
+        import pprint
+        if not slack_form and not mixed_form:
+            logger.info(f"self.config: {pprint.pformat(_config_obj)}")
         if slack_form and mixed_form:
             raise ValueError("cannot specify both slack_form and mixed_form")
         rows = []
@@ -457,9 +463,10 @@ class _LinearStandardFormCompiler_impl(object):
         con_quadratic_index = []
         con_quadratic_index_ptr = [0]
         last_parent = None
-        print()
+        # print()
         for _i, con in enumerate(ordered_active_constraints(model, self.config)):
-            logger.info(f"constraint: ({_i}:{con})")
+            logger.info("")
+            logger.info(f"CONSTRAINT: ({_i}:{con})")
             if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
                     timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
@@ -513,6 +520,10 @@ class _LinearStandardFormCompiler_impl(object):
                     con_quadratic_data.append(quadratic_data)
                     con_quadratic_index.append(quadratic_index)
                     con_quadratic_index_ptr.append(con_quadratic_nnz)
+                else:
+                    con_quadratic_data.append([])
+                    # con_quadratic_index.append()
+                    N_quadratic = 0
 
 
 
@@ -520,9 +531,10 @@ class _LinearStandardFormCompiler_impl(object):
                 # Note: you *cannot* output trivial (unbounded)
                 # constraints in matrix format.  I suppose we could add a
                 # slack variable, but that seems rather silly.
+                logger.info(f"** lb is None and ub is None")
                 continue
 
-            if not N:
+            if not N and not N_quadratic:
                 # This is a constant constraint
                 # TODO: add a (configurable) feasibility tolerance
                 if (lb is None or lb <= offset) and (ub is None or ub >= offset):
@@ -532,10 +544,10 @@ class _LinearStandardFormCompiler_impl(object):
                 )
 
             if mixed_form:
-                logger.info("  - mixed_form -")
+                logger.info("  ** mixed_form **")
                 if lb == ub:
                     con_nnz += N
-                    logger.info(f"  rows.append(RowEntry({con}, 0))")
+                    logger.info(f"  rows.append(RowEntry({con}, 0))\n")
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
                     con_data.append(linear_data)
@@ -546,7 +558,7 @@ class _LinearStandardFormCompiler_impl(object):
                         if lb is not None:
                             linear_index = list(linear_index)
                         con_nnz += N
-                        logger.info(f"  rows.append(RowEntry({con}, +1))")
+                        logger.info(f"  rows.append(RowEntry({con}, +1))\n")
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
                         con_data.append(linear_data)
@@ -554,14 +566,14 @@ class _LinearStandardFormCompiler_impl(object):
                         con_index_ptr.append(con_nnz)
                     if lb is not None:
                         con_nnz += N
-                        logger.info(f"  rows.append(RowEntry({con}, -1))")
+                        logger.info(f"  rows.append(RowEntry({con}, -1))\n")
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
             elif slack_form:
-                logger.info("  - slack_form -")
+                logger.info("  ** slack_form **")
                 if lb == ub:  # TODO: add tolerance?
                     rhs.append(ub - offset)
                 else:
@@ -625,7 +637,16 @@ class _LinearStandardFormCompiler_impl(object):
         logger.info(f"converting constraint: {con_index}")
         A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
         # self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
-        self._create_csc_quadratic(con_quadratic_data, con_quadratic_index, con_quadratic_index_ptr, con_quadratic_nnz, n_cols)
+        logger.info(f"con_linear_data: {con_data}")
+        logger.info(f"con_linear_index: {con_index}")
+        logger.info(f"con_lindex_index_ptr: {con_index_ptr}")
+        logger.info(f"con_quadratic_data: {con_quadratic_data}")
+        # logger.info(f"con_quadratic_index: {[list(l) for l in con_quadratic_index]}")
+        # logger.info(f"con_quadratic_index_ptr: {con_quadratic_index_ptr}")
+        Q_gen = self._create_csc_quadratic_generator(con_quadratic_data, con_quadratic_index, con_quadratic_index_ptr, con_quadratic_nnz, n_cols)
+        logger.info("generated Q matrices:")
+        for i,q in enumerate(Q_gen):
+            logger.info(f"  {i}: {q}")
 
         if with_debug_timing:
             timer.toc('Formed matrices', level=logging.DEBUG)
@@ -699,18 +720,35 @@ class _LinearStandardFormCompiler_impl(object):
         A.eliminate_zeros()
         return A
 
-    def _create_csc_quadratic(self, quadratic_data, quadratic_index, quadratic_index_ptr, quadratic_nnz, n_cols):
+    def _create_csc_quadratic_generator(self, quadratic_data, quadratic_index, quadratic_index_ptr, quadratic_nnz, n_cols):
         logger.info(f"index_ptr={quadratic_index_ptr}, nnz={quadratic_nnz}, n_cols={n_cols}")
-        data = self._to_vector(itertools.chain.from_iterable(quadratic_data), np.float64, quadratic_nnz)
-        index = self._to_vector(itertools.chain.from_iterable(quadratic_index), tuple, quadratic_nnz)
-        logger.info(f"  quadratic_data={data}")
-        logger.info(f"  quadratic_index={index}")
-        # for i,qi in enumerate(list(quadratic_index)):
-        #     logger.info(f"    quadratic index {i}: {list(qi)}")
-        Q = self._csr_matrix((data, index), [len(quadratic_index_ptr) - 1, n_cols])
-        logger.info(f"Q:{Q}")
+        # data = self._to_vector(itertools.chain.from_iterable(quadratic_data), np.float64, quadratic_nnz)
+        # index = self._to_vector(itertools.chain.from_iterable(quadratic_index), tuple)#, quadratic_nnz)
+        # logger.info(f"  quadratic_data={data}")
+        # logger.info(f"  quadratic_index={index}")
+        # # for i,qi in enumerate(list(quadratic_index)):
+        # #     logger.info(f"    quadratic index {i}: {list(qi)}")
+        # # Q = self._csr_matrix((data, index), [len(quadratic_index_ptr) - 1, n_cols])
+        # # logger.info(f"Q:{Q}")
+        qi = iter(quadratic_index)
+        for i, coefficients in enumerate(quadratic_data):
+            # logger.info(f" coefficients: {i}:{coefficients}")
+            if coefficients:
+                index = list(next(qi))
+                row_ind, col_ind = zip(*index)
+                # logger.info(f"     index: {index}, row_ind:{row_ind}, col_ind:{col_ind}")
+                Q = self._csr_matrix((np.array(list(coefficients)), (row_ind,col_ind)), shape=[2,2])
+                # print(Q)
+            else:
+                Q = self._csr_matrix((2,2))
+            #     # pass
+            Q = Q.tocsc()
+            Q.sum_duplicates()
+            Q.eliminate_zeros()
+            yield Q
+            # print(Q)
 
-        pass
+        # pass
 
 
     def _csc_to_nonnegative_vars(self, c, A, columns):
