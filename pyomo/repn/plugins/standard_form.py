@@ -649,6 +649,8 @@ class _LinearStandardFormCompiler_impl(object):
         c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
         logger.info(f"converting constraints: {con_index}")
         is_quadratic = any([qd for qd in con_quadratic_data])
+
+        # if quadratic, create A (linear) and quadratic Q matrices
         if is_quadratic:
             A, Q_list = self._create_csc_quadratic(
                 con_data, con_index, con_index_ptr, con_nnz, n_cols,
@@ -660,20 +662,13 @@ class _LinearStandardFormCompiler_impl(object):
                 Q_list=Q_list
             )
 
-        else:
+        else: # linear: single A matrix
             A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
-            # self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
+
             logger.info(f"con_linear_data: {con_data}")
             logger.info(f"con_linear_index: {con_index}")
             logger.info(f"con_lindex_index_ptr: {con_index_ptr}")
             logger.info(f"con_quadratic_data: {con_quadratic_data}")
-            # logger.info(f"con_quadratic_index: {[list(l) for l in con_quadratic_index]}")
-            # logger.info(f"con_quadratic_index_ptr: {con_quadratic_index_ptr}")
-            # logger.info(f"is_quadratic: {is_quadratic}")
-            # Q_gen = self._create_csc_quadratic_generator(con_quadratic_data, con_quadratic_index, con_quadratic_index_ptr, con_quadratic_nnz, n_cols)
-            # logger.info("generated Q matrices:")
-            # for i,q in enumerate(Q_gen):
-            #     logger.info(f"  {i}: {q}")
 
             if with_debug_timing:
                 timer.toc('Formed matrices', level=logging.DEBUG)
