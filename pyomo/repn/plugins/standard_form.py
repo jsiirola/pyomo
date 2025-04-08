@@ -772,7 +772,7 @@ class _LinearStandardFormCompiler_impl(object):
                 index = list(next(qi))
                 row_ind, col_ind = zip(*index)
                 # logger.info(f"     index: {index}, row_ind:{row_ind}, col_ind:{col_ind}")
-                Q = self._csr_matrix((np.array(list(coefficients)), (row_ind,col_ind)), shape=[2,2])
+                Q = self._csr_matrix((np.array(list(coefficients)), (row_ind,col_ind)), shape=[n_cols,n_cols])
                 Q = Q.tocsc()
                 # print(Q)
             else:
