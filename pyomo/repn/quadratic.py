@@ -338,7 +338,15 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     expand_nonlinear_products = True
 
 class QuadraticTemplateRepn(QuadraticRepn):
-    pass
+    __slots__ = ("linear_sum",)
+    _build_evaluator = linear_template.LinearTemplateRepn._build_evaluator
+    compile = linear_template.LinearTemplateRepn.compile
+
+    def __init__(self):
+        super().__init__()
+        self.linear_sum=[]
+
 
 class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
-    pass
+    Result = QuadraticTemplateRepn
+    # pass
