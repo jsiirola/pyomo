@@ -40,7 +40,7 @@ from pyomo.core.base import (
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.linear_template import LinearTemplateRepnVisitor
-from pyomo.repn.quadratic import QuadraticRepnVisitor
+from pyomo.repn.quadratic import QuadraticRepnVisitor, QuadraticTemplateRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
@@ -367,8 +367,8 @@ class _LinearStandardFormCompiler_impl(object):
         visitor = self._get_visitor({}, var_recorder=var_recorder)
         logger.info(f" visitor = {type(visitor)}")
         # logger.warning("not creating visitor")
-        template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
-        # template_visitor = QuadraticTemplateRepnVisitor({}, var_recorder=var_recorder)
+        # template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
+        template_visitor = QuadraticTemplateRepnVisitor({}, var_recorder=var_recorder)
         logger.info(f" template_visitor = {type(template_visitor)}")
 
         timer.toc('Initialized column order', level=logging.DEBUG)

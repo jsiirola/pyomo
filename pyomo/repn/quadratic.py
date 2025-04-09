@@ -30,6 +30,7 @@ from pyomo.core.expr.relational_expr import (
 )
 from pyomo.core.base.expression import Expression
 from . import linear
+from . import linear_template
 from . import util
 from .linear import _merge_dict, to_expression
 
@@ -335,3 +336,9 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     )
     max_exponential_expansion = 2
     expand_nonlinear_products = True
+
+class QuadraticTemplateRepn(QuadraticRepn):
+    pass
+
+class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
+    pass
