@@ -19,6 +19,7 @@ from pyomo.contrib.mpc.data.scalar_data import ScalarData
 
 TimeSeriesTuple = namedtuple("TimeSeriesTuple", ["data", "time"])
 
+TIMEPOINT_TOLERANCE = 0
 
 class TimeSeriesData(_DynamicDataBase):
     """An object to store time series data associated with time-indexed
@@ -112,7 +113,7 @@ class TimeSeriesData(_DynamicDataBase):
                 {cuid: values[indices] for cuid, values in self._data.items()}
             )
 
-    def get_data_at_time(self, time=None, tolerance=0.0):
+    def get_data_at_time(self, time=None, tolerance=TIMEPOINT_TOLERANCE):
         """
         Returns the data associated with the provided time point or points.
         This function attempts to map time points to indices, then uses
@@ -172,7 +173,7 @@ class TimeSeriesData(_DynamicDataBase):
         }
         return TimeSeriesTuple(data, time)
 
-    def concatenate(self, other, tolerance=0.0):
+    def concatenate(self, other, tolerance=TIMEPOINT_TOLERANCE):
         """
         Extend time list and variable data lists with the time points
         and variable values in the provided TimeSeriesData.
