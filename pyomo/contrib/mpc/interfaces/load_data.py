@@ -14,11 +14,14 @@ from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
     find_nearest_interval_index,
 )
-
+from pyomo.core import Var
 
 def _raise_invalid_cuid(cuid, model):
     raise RuntimeError("Cannot find a component %s on block %s" % (cuid, model))
 
+def _raise_not_var_type(var):
+    raise RuntimeError("Cannot load data into a %s component '%s', which is not a Var"
+                       % (var.ctype.__name__, var.name))
 
 def load_data_from_scalar(data, model, time):
     """A function to load ScalarData into a model
@@ -36,6 +39,8 @@ def load_data_from_scalar(data, model, time):
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
+        if var.ctype is not Var:
+            _raise_not_var_type(var)
         # TODO: Time points should probably use find_nearest_index
         # This will have to happen in the calling function, as data
         # doesn't have a list of time points to check.
@@ -74,6 +79,8 @@ def load_data_from_series(data, model, time, tolerance=0.0):
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
+        if var.ctype is not Var:
+            _raise_not_var_type(var)
         for idx, val in zip(time_indices, vals):
             t = time_list[idx]
             var[t].set_value(val)
@@ -171,6 +178,8 @@ def load_data_from_interval(
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
+        if var.ctype is not Var:
+            _raise_not_var_type(var)
         for i, t in zip(idx_list, time):
             if i is None:
                 # t could not be found in an interval. This is fine.
