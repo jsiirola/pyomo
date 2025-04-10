@@ -21,21 +21,23 @@ TimeSeriesTuple = namedtuple("TimeSeriesTuple", ["data", "time"])
 
 
 class TimeSeriesData(_DynamicDataBase):
-    """
-    An object to store time series data associated with time-indexed
+    """An object to store time series data associated with time-indexed
     variables.
 
     Parameters
     ----------
-    data : dict or ComponentMap
+    data : dict or ComponentMap or DataFrame
         Maps variables, names, or CUIDs to lists of values
 
     time : list
         Contains the time points corresponding to variable data points.
+        This is required unless data is a DataFrame (where we will pull
+        the `time` list from the `DaraFrame.index`
 
     time_set : ContinuousSetData
 
     context : BlockData
+
     """
 
     def __init__(self, data, time=None, time_set=None, context=None):

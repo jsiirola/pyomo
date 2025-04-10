@@ -54,7 +54,7 @@ by time and ``m.comp`` and (b) arbitrarily select a time index ``t0`` to
 generate a unique key for each time series.
 This gets more difficult when blocks and time-indexed blocks are used as well.
 The first difficulty can be alleviated using
-``flatten_dae_components`` from ``pyomo.dae.flatten``:
+:py:func:`.flatten_dae_components` from :py:mod:`pyomo.dae.flatten`:
 
 .. doctest::
 
@@ -78,9 +78,9 @@ The key should uniquely correspond to a component, or "sub-component"
 that is indexed only by time. A slice, e.g. ``m.var[:, "A"]`` seems
 natural. However, Pyomo provides a better data structure that can
 be constructed from a component, slice, or string, called
-``ComponentUID``. Being constructable from a string is important as
+:py:class:`.ComponentUID`. Being constructable from a string is important as
 we may want to store or serialize this data in a form that is agnostic
-of any particular ``ConcreteModel`` object.
+of any particular :py:class:`.ConcreteModel` object.
 We can now generate our data structure as:
 
 .. doctest::
@@ -92,7 +92,7 @@ We can now generate our data structure as:
    >>> data
    {var[*,A]: [1.0, 1.0, 1.0], var[*,B]: [1.0, 1.0, 1.0]}
 
-This is the structure of the underlying dictionary in the ``TimeSeriesData``
+This is the structure of the underlying dictionary in the :py:class:`.TimeSeriesData`
 class provided by this package. We can generate this data using this package
 as:
 
@@ -117,9 +117,9 @@ as:
    >>> data
    {var[*,A]: [1.0, 1.0, 1.0], var[*,B]: [1.0, 1.0, 1.0]}
 
-The first value proposition of this package is that ``DynamicModelInterface``
-and ``TimeSeriesData`` provide wrappers to ease loading and extraction of data
-via ``flatten_dae_components`` and ``ComponentUID``.
+The first value proposition of this package is that :py:class:`.DynamicModelInterface`
+and :py:class:`.TimeSeriesData` provide wrappers to ease loading and extraction of data
+via :py:func:`.flatten_dae_components` and :py:class:`.ComponentUID`.
 
 The second difficulty addressed by this package is that of extracting and
 loading data between (potentially) different models.
