@@ -35,7 +35,7 @@ class TimeSeriesData(_DynamicDataBase):
         This is required unless data is a DataFrame (where we will pull
         the `time` list from the `DaraFrame.index`
 
-    time_set : ContinuousSetData
+    time_set : ContinuousSet
 
     context : BlockData
 
