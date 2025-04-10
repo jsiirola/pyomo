@@ -64,11 +64,11 @@ class TimeSeriesData(_DynamicDataBase):
         # First make sure provided lists of variable data have the
         # same lengths as the provided time list.
         for key in data:
-            if len(data_list) != len(time):
+            if len(data[key]) != len(time):
                 raise ValueError(
                     "Data lists must have same length as time. "
                     "Length of time is %s while length of data for "
-                    "key %s is %s." % (len(time), key, len(data_list))
+                    "key %s is %s." % (len(time), key, len(data[key]))
                 )
         super().__init__(data, time_set=time_set, context=context)
 

@@ -54,7 +54,7 @@ class _DynamicDataBase(object):
         self._orig_time_set = time_set
 
         self._data = {
-            get_indexed_cuid(key, (self._orig_time_set,), context=context): list(data[key])
+            get_indexed_cuid(key, (self._orig_time_set,), context=context): data[key]
             for key in data
         }
 
