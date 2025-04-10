@@ -38,8 +38,14 @@ class TimeSeriesData(_DynamicDataBase):
     context : BlockData
     """
 
-    def __init__(self, data, time, time_set=None, context=None):
-        """ """
+    def __init__(self, data, time=None, time_set=None, context=None):
+        if any(c.__name__ == 'DataFrame' for c in data.__class__.__mro__):
+            if time is None:
+                time = list(data.index)
+            elif isinstance(time, str):
+                data = data.set_index(time)
+                time = list(data.index)
+
         _time = list(time)
         if _time != list(sorted(time)):
             raise ValueError("Time points are not sorted in increasing order")
@@ -57,7 +63,7 @@ class TimeSeriesData(_DynamicDataBase):
 
         # First make sure provided lists of variable data have the
         # same lengths as the provided time list.
-        for key, data_list in data.items():
+        for key in data:
             if len(data_list) != len(time):
                 raise ValueError(
                     "Data lists must have same length as time. "
