@@ -33,6 +33,11 @@ from . import linear
 from . import linear_template
 from . import util
 from .linear import _merge_dict, to_expression
+import pyomo.core.expr as expr
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 _CONSTANT = linear.ExprType.CONSTANT
 _LINEAR = linear.ExprType.LINEAR
@@ -71,6 +76,7 @@ class QuadraticRepn(object):
             return _CONSTANT, self.multiplier * self.constant
 
     def duplicate(self):
+        logger.info(f"DUPLICATE: {self}")
         ans = self.__class__.__new__(self.__class__)
         ans.multiplier = self.multiplier
         ans.constant = self.constant
@@ -84,6 +90,9 @@ class QuadraticRepn(object):
 
     def to_expression(self, visitor):
         var_map = visitor.var_map
+        logger.info(f"var_map: {var_map}")
+        logger.info(f"self: linear={self.linear}, quadratic={self.quadratic}, nonlinear={self.nonlinear}")
+        logger.info(f"constant: {self.constant}, multiplier: {self.multiplier}")
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
             # assignment) in case the term is a non-numeric node (like a
@@ -160,10 +169,15 @@ class QuadraticRepn(object):
 
 
 def _mul_linear_linear(visitor, linear1, linear2):
+    logger.info(f"linear1: {linear1}, linear2: {linear2}")
     quadratic = {}
     vo = visitor.var_recorder.var_order
+    logger.info(f"var_order: {vo}")
+    logger.info(f"var_map: {visitor.var_recorder.var_map}")
     for vid1, coef1 in linear1.items():
+        logger.info(f"vid1: {vid1}, coef1: {coef1}")
         for vid2, coef2 in linear2.items():
+            logger.info(f"  vid2: {vid2}, coef2: {coef2}")
             if vo[vid1] < vo[vid2]:
                 key = vid1, vid2
             else:
@@ -176,6 +190,7 @@ def _mul_linear_linear(visitor, linear1, linear2):
 
 
 def _handle_product_linear_linear(visitor, node, arg1, arg2):
+    logger.info(f"{node}, {arg1}, {arg2}")
     _, arg1 = arg1
     _, arg2 = arg2
     # Quadratic first, because we will update linear in a minute
@@ -326,6 +341,10 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     # RELATIONAL handlers
     #
     # (no changes needed)
+
+    _exit_node_handlers[expr.GetItemExpression] = {None: linear_template._handle_getitem}
+    _exit_node_handlers[expr.TemplateSumExpression] = {None: linear_template._handle_templatesum}
+
     return _exit_node_handlers
 
 
@@ -335,7 +354,28 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2
-    expand_nonlinear_products = True
+    # expand_nonlinear_products = True
+
+    ## handle quadratics, then let LinearRepnVisitor handle the rest
+    def finalizeResult(self, result):
+        ans = result[1]
+        if (ans.__class__ is self.Result
+            and ans.multiplier
+            and ans.multiplier!=1
+            and ans.quadratic):
+            mult = ans.multiplier
+            quadratic = ans.quadratic
+            zeros=[]
+            for vid, coef in quadratic.items():
+                if coef:
+                    quadratic[vid] = coef * mult
+                else:
+                    zeros.append(vid)
+            for vid in zeros:
+                del quadratic[vid]
+
+        return super().finalizeResult(result)
+
 
 class QuadraticTemplateRepn(QuadraticRepn):
     __slots__ = ("linear_sum",)
@@ -349,4 +389,9 @@ class QuadraticTemplateRepn(QuadraticRepn):
 
 class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
     Result = QuadraticTemplateRepn
+    max_exponential_expansion = 2
+    exit_node_dispatcher = linear.ExitNodeDispatcher(
+        util.initialize_exit_node_dispatcher(define_exit_node_handlers())
+    )
+    # expand_nonlinear_products = True
     # pass
