@@ -280,7 +280,7 @@ class StreamBasedExpressionVisitor(object):
             root = expr
 
         try:
-            # logger.info(f"  - process_node -> {self._process_node.__name__}")
+            logger.info(f"  - process_node -> {self._process_node.__name__}")
             result = self._process_node(root, RECURSION_LIMIT)
             _nonrecursive = None
         except RevertToNonrecursive:
@@ -404,15 +404,16 @@ class StreamBasedExpressionVisitor(object):
         also the definition of the client_methods dict).
 
         """
-        # logger.info(" ")
-        # logger.info(f"{self.__class__.__name__}._process_node_bex({node}, recursion_limit={recursion_limit})")
+        logger.info(" ")
+        logger.info(f"{self.__class__.__name__}._process_node_bex({node}, level={RECURSION_LIMIT-recursion_limit})")
         if not recursion_limit:
             recursion_limit = self._compute_actual_recursion_limit()
         else:
             recursion_limit -= 1
 
+        logger.info(f"self.enterNode = {self.enterNode}")
         tmp = self.enterNode(node)
-        # logger.info(f" args,data={tmp}")
+        logger.info(f" args,data={tmp}")
         if tmp is None:
             args = data = None
         else:
@@ -440,10 +441,10 @@ class StreamBasedExpressionVisitor(object):
             arg_iter = iter(args)
             for child in arg_iter:
                 child_idx += 1
-                # logger.info(f"  child ['{node}': {child_idx}] {child.__class__.__name__} {child}")
+                logger.info(f"  child [{child_idx}: {node}] {child.__class__.__name__} {child}")
                 # logger.info(f" self.beforeChild: {self.beforeChild}")
                 tmp = self.beforeChild(node, child, child_idx)
-                logger.debug(f"      child descend, child_result={tmp}")
+                logger.info(f"      child descend, child_result={tmp}")
                 if tmp is None:
                     descend = True
                 else:
@@ -464,7 +465,7 @@ class StreamBasedExpressionVisitor(object):
 
         # We are done with this node.  Call exitNode to compute
         # any result
-        # logger.info(f"self.exitNode={self.exitNode}")
+        logger.info(f"self.exitNode={self.exitNode}")
         return self.exitNode(node, data)
 
     def _process_node_bx(self, node, recursion_limit):

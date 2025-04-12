@@ -422,7 +422,7 @@ class _LinearStandardFormCompiler_impl(object):
                 logger.info(f"+ ({_i}) objective: template_expression")
                 offset, linear_index, linear_data, _, _ = (
                     template_visitor.expand_expression(obj, obj.template_expr())
-                )
+                )[:5]
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
@@ -479,7 +479,7 @@ class _LinearStandardFormCompiler_impl(object):
         # print()
         for _i, con in enumerate(ordered_active_constraints(model, self.config)):
             logger.info("")
-            logger.info(f"CONSTRAINT: ({_i}:{con})")
+            logger.info(f"CONSTRAINT: {_i}:{con} ({type(con)})")
             if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
                     timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
@@ -487,12 +487,21 @@ class _LinearStandardFormCompiler_impl(object):
 
             if hasattr(con, 'template_expr'):
                 logger.info(f"+ ({_i}) constraint: template_expression")
-                offset, linear_index, linear_data, lb, ub = (
+                # offset, linear_index, linear_data, lb, ub = (
+                expanded_expression_values = (
                     template_visitor.expand_expression(con, con.template_expr())
                 )
+                offset, linear_index, linear_data, lb, ub = expanded_expression_values[:5]
                 N = len(linear_data)
                 logger.info(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
                       f"lb: {lb}, ub: {ub}")
+                if len(expanded_expression_values)>5:
+                    quadratic_index, quadratic_data = expanded_expression_values[5:]
+                else:
+                    quadratic_index, quadratic_data = [], []
+                N_quadratic = len(quadratic_data)
+                logger.info(f"     N2: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+
             else:
                 logger.info(f"- ({_i}) constraint: non_template_expression")
                 # Note: lb and ub could be a number, expression, or None
@@ -720,6 +729,8 @@ class _LinearStandardFormCompiler_impl(object):
     def _create_csc(self, data, index, index_ptr, nnz, n_cols, *, sum_duplicates=True, eliminate_zeros=True):
         logger.info(f"data={data}, index={[i for i in index]}, "
                     f"index_ptr={index_ptr}, nnz={nnz}, n_cols={n_cols}")
+        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
+        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
@@ -731,8 +742,6 @@ class _LinearStandardFormCompiler_impl(object):
                 (data, index, index_ptr), [len(index_ptr) - 1, n_cols]
             ).tocsc()
 
-        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
-        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
         logger.info(f"  data={data}")
         logger.info(f"  index={index}")
         index_ptr = np.array(index_ptr, dtype=np.int32)
@@ -767,7 +776,7 @@ class _LinearStandardFormCompiler_impl(object):
         qi = iter(quadratic_index)
         Q_list = []
         for i, coefficients in enumerate(quadratic_data):
-            # logger.info(f" coefficients: {i}:{coefficients}")
+            logger.info(f" coefficients: {i}:{coefficients}")
             if coefficients:
                 index = list(next(qi))
                 row_ind, col_ind = zip(*index)

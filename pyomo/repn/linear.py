@@ -219,6 +219,7 @@ def _handle_negation_ANY(visitor, node, arg):
 
 
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
+    logger.info(f"{arg1}, {arg2}")
     ans = arg1[1] * arg2[1]
     if ans != ans:
         if not arg1[1] or not arg2[1]:
@@ -236,16 +237,23 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
 
 
 def _handle_product_constant_ANY(visitor, node, arg1, arg2):
+    # logger.info(f"\n   {arg1}  X  {arg2}")
+    msg = f"\n  {arg1}\n  X\n  {arg2}\n"
     arg2[1].multiplier *= arg1[1]
+    msg += f" = {arg2}"
+    logger.info(msg)
     return arg2
 
 
 def _handle_product_ANY_constant(visitor, node, arg1, arg2):
+    msg = f"\n  {arg1}\n  X\n  {arg2}\n"
     arg1[1].multiplier *= arg2[1]
+    msg += f" = {arg1}"
     return arg1
 
 
 def _handle_product_nonlinear(visitor, node, arg1, arg2):
+    logger.info(f"!! {node}, {arg1}, {arg2}")
     ans = visitor.Result()
     if not visitor.expand_nonlinear_products:
         ans.nonlinear = to_expression(visitor, arg1) * to_expression(visitor, arg2)
@@ -316,8 +324,10 @@ def _handle_pow_constant_constant(visitor, node, arg1, arg2):
 
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
-    logger.info(f"handling powers: {node}, {arg1}, {arg2}")
+    logger.info("")
+    logger.info(f"handling powers: {node}, {arg1}, {arg2}\n")
     _, exp = arg2
+    logger.info(f"exp={exp}")
     if exp == 1:
         logger.info(f"returning {arg1}")
         return arg1
@@ -325,6 +335,9 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
         _type, _arg = arg1
         ans = _type, _arg.duplicate()
         for i in range(1, int(exp)):
+            logger.info(f"lookup: exit_node_dispatcher[(ProductExpression, {ans[0].name}, {_type.name})]")
+            _end =visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)]
+            logger.info(f"{i}:{_end}")
             ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
                 visitor, None, ans, (_type, _arg.duplicate())
             )
@@ -558,13 +571,14 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_var(visitor, child):
-        logger.debug(f"CHILD: {child}")
+        logger.info(f"CHILD: {child}")
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
                 return False, (_CONSTANT, visitor.check_constant(child.value, child))
             visitor.var_recorder.add(child)
         ans = visitor.Result()
+        logger.info(f"INITIALIZING linear[{child}] linear[{_id}] = 1")
         ans.linear[_id] = 1
         return False, (_LINEAR, ans)
 
@@ -574,7 +588,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # The following are performance optimizations for common
         # situations (Monomial terms and Linear expressions)
         #
-        logger.debug(f"CHILD: {child}")
+        logger.info(f"CHILD: {child}")
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
@@ -610,12 +624,13 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
             return False, (_CONSTANT, arg1)
 
         ans = visitor.Result()
+        logger.info(f"SETTING linear[{_id}] = {arg1}")
         ans.linear[_id] = arg1
         return False, (_LINEAR, ans)
 
     @staticmethod
     def _before_linear(visitor, child):
-        logger.debug(f"CHILD: {child}")
+        logger.info(f"CHILD: {child}")
         var_map = visitor.var_map
         ans = visitor.Result()
         const = 0
@@ -652,13 +667,13 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
                     visitor.var_recorder.add(arg2)
-                    # logger.info(f" setting linear[{_id}] = {arg1}")
+                    logger.info(f" SETTING linear[{_id}] = {arg1}")
                     linear[_id] = arg1
                 elif _id in linear:
-                    logger.info(f" setting linear[{_id}] += {arg1}")
+                    logger.info(f" SETTING linear[{_id}] += {arg1}")
                     linear[_id] += arg1
                 else:
-                    # logger.info(f" setting linear[{_id}] = {arg1}")
+                    logger.info(f" SETTING linear[{_id}] = {arg1}")
                     linear[_id] = arg1
             elif arg.__class__ in native_numeric_types:
                 # logger.info(f"   native_numeric_types")
@@ -693,7 +708,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_named_expression(visitor, child):
-        logger.debug(f"CHILD: {child}")
+        logger.info(f"CHILD: {child}")
         _id = id(child)
         if _id in visitor.subexpression_cache:
             _type, expr = visitor.subexpression_cache[_id]
@@ -706,7 +721,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_external(visitor, child):
-        logger.debug(f"CHILD: {child}")
+        logger.info(f"CHILD: {child}")
         ans = visitor.Result()
         if all(is_fixed(arg) for arg in child.args):
             try:
@@ -809,21 +824,29 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
+        logger.info(f"{node} ({node.__class__.__name__})")
         if node.__class__ in sum_like_expression_types:
+            logger.info(f"  returning: {node.args}, {self.Result}")
             return node.args, self.Result()
         else:
+            logger.info(f"  returning: {node.args}, []")
             return node.args, []
 
     def exitNode(self, node, data):
+        # import inspect
+        # curframe = inspect.currentframe()
+        # calframe = inspect.getouterframes(curframe,2)
+        # logger.info(f"caller: {calframe[1]}")
+        # raise RuntimeError("stop")
         if data.__class__ is self.Result:
             # logger.info(f"returning data.walker_exitNode {data.walker_exitNode}")
             return data.walker_exitNode()
         #
         # General expressions...
         #
-        # logger.info(f"exit lookup: {node.__class__.__name__, *map(itemgetter(0), data)}")
+        logger.info(f"exit lookup: {node.__class__.__name__}, {[i.name for i in map(itemgetter(0), data)]}")
         _fnc = self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))]
-        # logger.info(f"EXITING return  {_fnc} ({node}, {data})")
+        logger.info(f"EXITING return  {_fnc} ({node}, {data})")
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )

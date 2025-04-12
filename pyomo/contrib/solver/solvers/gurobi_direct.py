@@ -237,7 +237,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
     _tc_map = None
 
     def __init__(self, **kwds):
-        logger.info(f"(GurobiDirect (Legacy)): {self.__class__} __init__: {kwds} ")
+        logger.debug(f"(GurobiDirect (Legacy)): {self.__class__} __init__: {kwds} ")
         super().__init__(**kwds)
         GurobiDirect._num_instances += 1
 
@@ -338,10 +338,14 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 logger.info(f"rhs: {repn.rhs}")
                 if repn.is_quadratic:
                     # quadratic: add each constraint individually
-                    A = [
-                        gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
-                        for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
-                    ]
+                    A = []
+                    for i, (a, q) in enumerate(zip(repn.A, repn.Q_list)):
+                        logger.info(f"adding MConstr:\n Q={q}\n A={a.toarray()}\n sense='{sense[i]}', rhs={repn.rhs[i]}")
+                    A.append(gurobi_model.addMQConstr(q, a.toarray(), sense[i],  repn.rhs[i], x, x, x))
+                    # A = [
+                    #     gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
+                    #     for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
+                    # ]
 
                 else:
                     # linear: all constraints in single matrix

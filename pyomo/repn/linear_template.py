@@ -93,6 +93,10 @@ class LinearTemplateRepn(LinearRepn):
         remove_fixed_vars,
         check_duplicates,
     ):
+        logger.info(
+            f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
+            f"remove_fixed_vars:{remove_fixed_vars}, check_duplicates:{check_duplicates}"
+        )
         ans = []
         multiplier *= self.multiplier
         constant = self.constant
@@ -140,7 +144,8 @@ class LinearTemplateRepn(LinearRepn):
             else:
                 ans.append(indent + f'linear_indices.append({k})')
                 ans.append(indent + f'linear_data.append({coef})')
-        for subrepn, subindices, subsets in self.linear_sum:
+
+        for subrepn, subindices, subsets in getattr(self, "linear_sum", []):
             ans.extend(
                 '    ' * i
                 + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
@@ -180,12 +185,12 @@ class LinearTemplateRepn(LinearRepn):
         remove_fixed_vars=False,
         check_duplicates=False,
     ):
-        logger.info(f"> (LinearTemplateRepn) {self.__class__}.compile(...)")
+        logger.info(f"> {self.__class__.__name__}.compile(...)")
         ans, constant = self._build_evaluator(
             smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates
         )
         if not ans:
-            logger.info("* compile RETURNING: constant={constant}")
+            logger.info(f"* compile RETURNING: constant={constant}")
             return constant
         indent = '\n    '
         if not constant and ans and ans[0].startswith('const +='):
@@ -211,7 +216,7 @@ class LinearTemplateRepn(LinearRepn):
             )
         ans = indent.join(ans)
         import textwrap
-        logger.info(f"EXECUTING:\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
+        logger.info(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
         # logger.info(f"EXECUTING:\n{ans}\n\n* compile RETURNING: build_expr\n")
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
@@ -223,12 +228,14 @@ class LinearTemplateRepn(LinearRepn):
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
 
     def _before_indexed_var(self, visitor, child):
+        logger.info(f"CHILD: {child}")
         if child not in visitor.indexed_vars:
             visitor.var_recorder.add(child)
             visitor.indexed_vars.add(child)
         return False, (_VARIABLE, child)
 
     def _before_indexed_param(self, visitor, child):
+        logger.info(f"CHILD: {child}")
         if child not in visitor.indexed_params:
             visitor.indexed_params.add(child)
             name = visitor.symbolmap.getSymbol(child)
@@ -236,16 +243,20 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         return False, (_CONSTANT, child)
 
     def _before_indexed_component(self, visitor, child):
+        logger.info(f"CHILD: {child}")
         visitor.env[visitor.symbolmap.getSymbol(child)] = child
         return False, (_CONSTANT, child)
 
     def _before_index_template(self, visitor, child):
+        logger.info(f"CHILD: {child}")
         symb = visitor.symbolmap.getSymbol(child)
         visitor.env[symb] = 0
+        logger.info(f"SETTING visitor.expr_cache[{id(expr)}] = {child}")
         visitor.expr_cache[id(child)] = child
         return False, (_CONSTANT, child)
 
     def _before_component(self, visitor, child):
+        logger.info(f"CHILD: {child}")
         visitor.env[visitor.symbolmap.getSymbol(child)] = child
         return False, (_CONSTANT, child)
 
@@ -254,6 +265,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
 
 
 def _handle_getitem(visitor, node, comp, *args):
+    logger.info(f"{node}, {comp}, {args}")
     expr = comp[1][tuple(arg[1] for arg in args)]
     if comp[0] is _CONSTANT:
         return (_CONSTANT, expr)
@@ -261,8 +273,10 @@ def _handle_getitem(visitor, node, comp, *args):
         # Because we are passing up an id() and not the expression
         # itself, we need to cache the expression that we just created
         # to preserve a reference to it and prevent deallocation / GC
+        logger.info(f"SETTING visitor.expr_cache[{id(expr)}] = {expr}")
         visitor.expr_cache[id(expr)] = expr
         ans = visitor.Result()
+        logger.info(f"INITIALIZING linear[{expr}] linear[{id(expr)}]=1")
         ans.linear[id(expr)] = 1
         return (_LINEAR, ans)
 
@@ -309,20 +323,20 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        logger.info(f"node = {type(node)} {node}")
+        logger.info(f"node = {type(node).__name__} {node}")
         if node.__class__ is expr.TemplateSumExpression:
-            logger.info("   node.__class__ is expr.TemplateSumExpression")
+            logger.info(f"   is expr.TemplateSumExpression -> {node.template_args()}, []")
             return node.template_args(), []
         if node.__class__ in linear.sum_like_expression_types:
-            logger.info("   node.__class__ in linear.sum_like_expression_types")
+            logger.info(f"   in linear.sum_like_expression_types -> {node.args}, {self.Result}")
             return node.args, self.Result()
         else:
-            logger.info(f"   else: {node.args, []}")
+            logger.info(f"   else: not TemplateSumExpression or sum_like_expression_types: {node.args, []}")
             return node.args, []
 
     def expand_expression(self, obj, template_info):
         env = self.env
-        logger.info(f"(LinearTemplateRepnVisitor) {self.__class__.__name__}.expand_expression(..)")
+        logger.info(f"{self.__class__.__name__}.expand_expression(..)")
         logger.info(f"  obj={type(obj)}")
         logger.info(f"  template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
         logger.info(f"  id(template_info)={id(template_info)}")
@@ -335,15 +349,15 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             # create a new expanded template
             logger.info(f"NEW: create new expanded template")
             smap = self.symbolmap
-            logger.info(f"  smap: {smap}")
+            logger.info(f"  smap: {smap.bySymbol}, {smap.aliases}")
             expr, indices = template_info
             logger.info(f"  expr: {expr}")
             logger.info(f"  indices: {indices}")
             args = [smap.getSymbol(i) for i in indices]
-            logger.info(f"  args: {args}")
+            logger.info(f"  args: {[(a,type(a)) for a in args]}")
             if expr.is_expression_type(ExpressionType.RELATIONAL):
                 logger.info("* expression_type = RELATIONAL")
-                logger.info(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
+                # logger.info(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
                 lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
                     logger.info(" (*) self.walk_expression(BODY)")
@@ -385,7 +399,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
                 logger.info(" * expr else")
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            logger.info(f"SET: self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
+            logger.info(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []

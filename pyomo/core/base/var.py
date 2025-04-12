@@ -609,6 +609,9 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     _ComponentDataClass = VarData
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.values()}>"
+
     @overload
     def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
 

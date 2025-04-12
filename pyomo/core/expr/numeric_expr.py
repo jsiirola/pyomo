@@ -728,6 +728,9 @@ class NumericExpression(ExpressionBase, NumericValue):
         # by default, Pyomo numeric operators are binary operators
         return 2
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self._args_}>"
+
     @property
     def args(self):
         """
@@ -1179,6 +1182,9 @@ class SumExpression(NumericExpression):
 
     def nargs(self):
         return self._nargs
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self._args_}>"
 
     @property
     def args(self):

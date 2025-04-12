@@ -209,10 +209,10 @@ class ConstraintData(ActiveComponentData):
             variable lower or upper bounds.
 
         """
-        logger.info(f"(ConstraintData) {self.__class__}.to_bounded_expression(evaluate_bounds={evaluate_bounds})")
+        logger.info(f"{self.__class__.__name__}.to_bounded_expression(evaluate_bounds={evaluate_bounds})")
         expr = self._expr
-        logger.debug(f"  expr.__class__: {expr.__class__}")
-        logger.debug(f"  expr.args: {expr.args}")
+        logger.info(f"  expr.__class__: {expr.__class__.__name__}")
+        # logger.info(f"  expr.args: {expr.args}")
         if expr.__class__ is RangedExpression:
             lb, body, ub = ans = expr.args
             if (
@@ -575,8 +575,8 @@ class TemplateConstraintData(ConstraintData):
         self._index = index
         self._expr = template_info
         logger.info(
-            f"{self.__class__.__qualname__} __init__:"
-            f" component={component}, index={index},"
+            f"{self.__class__.__qualname__} __init__:\n"
+            f" component={component},\n index={index},\n"
             f" template_info={template_info} ({type(template_info)})"
                     )
 
@@ -595,7 +595,7 @@ class TemplateConstraintData(ConstraintData):
         return self.set_value(expr)
 
     def to_bounded_expression(self):
-        logger.info(f"(TemplateConstraintData) {self.__class__}.to_bounded_expression()")
+        logger.info(f"{self.__class__.__name__}.to_bounded_expression()")
         tmp, self._expr = self._expr, self._expr[0]
         try:
             return super().to_bounded_expression()
