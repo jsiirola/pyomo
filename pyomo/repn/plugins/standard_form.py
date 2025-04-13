@@ -501,6 +501,12 @@ class _LinearStandardFormCompiler_impl(object):
                     quadratic_index, quadratic_data = [], []
                 N_quadratic = len(quadratic_data)
                 logger.info(f"     N2: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+                con_quadratic_nnz += N_quadratic
+                con_quadratic_data.append(quadratic_data)
+                if N_quadratic>0:
+                    con_quadratic_index.append(quadratic_index)
+                    con_quadratic_index_ptr.append(con_quadratic_nnz)
+
 
             else:
                 logger.info(f"- ({_i}) constraint: non_template_expression")
