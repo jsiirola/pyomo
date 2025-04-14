@@ -124,13 +124,13 @@ class LinearStandardFormInfo(object):
         self.columns = columns
         self.objectives = objectives
         self.eliminated_vars = eliminated_vars
-        logger.info(f" c: {c}")
+        logger.info(f" c: {c.toarray()}")
         logger.info(f" c_offset: {c_offset}")
-        logger.info(f" A: {A}")
+        logger.info(f" A: {A.toarray()}")
         logger.info(f" rhs: {rhs}")
-        logger.info(f" rows: {rows}")
-        logger.info(f" columns: {columns}")
-        logger.info(f" objectives: {objectives}")
+        logger.debug(f" rows: {rows}")
+        logger.debug(f" columns: {columns}")
+        logger.debug(f" objectives: {objectives}")
         logger.info(f" eliminated_vars: {eliminated_vars}")
 
     @property
@@ -152,6 +152,8 @@ class QuadraticStandardFormInfo(LinearStandardFormInfo):
     def __init__(self, *args, Q_list: list = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.Q_list = Q_list
+        for i,q in enumerate(Q_list):
+            logger.info(f"  Q[{i}]: {q.toarray()}")
         if isinstance(Q_list, list) and any([q is not None and q is not [] for q in Q_list]):
             self.is_quadratic = True
 
@@ -653,6 +655,8 @@ class _LinearStandardFormCompiler_impl(object):
         if with_debug_timing:
             # report the last constraint
             timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
+
+        logger.info("** COMPLETED CONSTRAINTS **\n")
 
         # Get the variable list
         columns = list(var_map.values())

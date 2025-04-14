@@ -611,7 +611,7 @@ class LegacySolverWrapper:
             Legacy results object
 
         """
-        LOGGER.info(f"LegacySolverWrapper.solve() {self.__class__}")
+        LOGGER.debug(f"LegacySolverWrapper.solve() {self.__class__}")
 
         original_config = self.config
 
@@ -634,7 +634,7 @@ class LegacySolverWrapper:
         loc = locals()
         filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
         self._map_config(**filtered_args)
-        LOGGER.info(f"filtered_args: {filtered_args}")
+        LOGGER.debug(f"filtered_args: {filtered_args}")
 
         LOGGER.info(f"{self.__class__.__name__} calling: super().solve(model)")
         results: Results = super().solve(model)

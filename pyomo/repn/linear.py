@@ -327,7 +327,7 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     logger.info("")
     logger.info(f"handling powers: {node}, {arg1}, {arg2}\n")
     _, exp = arg2
-    logger.info(f"exp={exp}")
+    logger.debug(f"exp={exp}")
     if exp == 1:
         logger.info(f"returning {arg1}")
         return arg1
@@ -335,9 +335,9 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
         _type, _arg = arg1
         ans = _type, _arg.duplicate()
         for i in range(1, int(exp)):
-            logger.info(f"lookup: exit_node_dispatcher[(ProductExpression, {ans[0].name}, {_type.name})]")
+            logger.debug(f"lookup: exit_node_dispatcher[(ProductExpression, {ans[0].name}, {_type.name})]")
             _end =visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)]
-            logger.info(f"{i}:{_end}")
+            logger.debug(f"{i}:{_end}")
             ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
                 visitor, None, ans, (_type, _arg.duplicate())
             )
@@ -571,7 +571,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_var(visitor, child):
-        logger.info(f"CHILD: {child}")
+        logger.debug(f"CHILD: {child}")
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
@@ -588,7 +588,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # The following are performance optimizations for common
         # situations (Monomial terms and Linear expressions)
         #
-        logger.info(f"CHILD: {child}")
+        logger.debug(f"CHILD: {child}")
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
@@ -844,7 +844,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        logger.info(f"exit lookup: {node.__class__.__name__}, {[i.name for i in map(itemgetter(0), data)]}")
+        logger.debug(f"exit lookup: {node.__class__.__name__}, {[i.name for i in map(itemgetter(0), data)]}")
         _fnc = self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))]
         logger.info(f"EXITING return  {_fnc} ({node}, {data})")
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](

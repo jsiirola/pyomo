@@ -325,6 +325,8 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 gurobi_model = gurobipy.Model()
 
                 timer.start('transfer_model')
+                _obj=repn.c.todense()[0] if repn.c.shape[0] else 0
+                logger.info(f"_obj:{_obj}")
                 x = gurobi_model.addMVar(
                     len(repn.columns),
                     lb=lb,
@@ -338,14 +340,10 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 logger.info(f"rhs: {repn.rhs}")
                 if repn.is_quadratic:
                     # quadratic: add each constraint individually
-                    A = []
-                    for i, (a, q) in enumerate(zip(repn.A, repn.Q_list)):
-                        logger.info(f"adding MConstr:\n Q={q}\n A={a.toarray()}\n sense='{sense[i]}', rhs={repn.rhs[i]}")
-                    A.append(gurobi_model.addMQConstr(q, a.toarray(), sense[i],  repn.rhs[i], x, x, x))
-                    # A = [
-                    #     gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
-                    #     for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
-                    # ]
+                    A = [
+                        gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
+                        for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
+                    ]
 
                 else:
                     # linear: all constraints in single matrix
