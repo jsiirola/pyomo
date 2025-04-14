@@ -380,6 +380,8 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 timer.start('optimize')
                 gurobi_model.optimize()
                 timer.stop('optimize')
+                logger.info("writing: model_debug.lp")
+                gurobi_model.write("model_debug.lp")
         finally:
             os.chdir(orig_cwd)
 

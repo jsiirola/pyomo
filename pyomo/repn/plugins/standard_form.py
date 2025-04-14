@@ -153,7 +153,7 @@ class QuadraticStandardFormInfo(LinearStandardFormInfo):
         super().__init__(*args, **kwargs)
         self.Q_list = Q_list
         for i,q in enumerate(Q_list):
-            logger.info(f"  Q[{i}]: {q.toarray()}")
+            logger.info(f"  Q[{i}]: {None if q is None else q.toarray()}")
         if isinstance(Q_list, list) and any([q is not None and q is not [] for q in Q_list]):
             self.is_quadratic = True
 
