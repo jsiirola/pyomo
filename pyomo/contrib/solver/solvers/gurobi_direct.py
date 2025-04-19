@@ -346,7 +346,8 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                     ]
                     logger.info(f"Q_obj: {[q.toarray() for q in repn.Q_obj]}, {repn.c.toarray()}, {repn.objectives[0].sense}, {repn.c_offset[0]}")
                     gurobi_model.setMObjective(
-                        repn.Q_obj[0], repn.c.todense()[0], repn.c_offset[0], x, x, x, repn.objectives[0].sense
+                        None if len(repn.Q_obj)<1 else repn.Q_obj[0],
+                        repn.c.todense()[0], repn.c_offset[0], x, x, x, repn.objectives[0].sense
                     )
 
                 else:
