@@ -326,7 +326,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
                 timer.start('transfer_model')
                 _obj=repn.c.todense()[0] if repn.c.shape[0] else 0
-                logger.info(f"_obj:{_obj}")
+                # logger.info(f"_obj:{_obj}")
                 x = gurobi_model.addMVar(
                     len(repn.columns),
                     lb=lb,
@@ -344,14 +344,18 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                         gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
                         for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
                     ]
+                    logger.info(f"Q_obj: {[q.toarray() for q in repn.Q_obj]}, {repn.c.toarray()}, {repn.objectives[0].sense}, {repn.c_offset[0]}")
+                    gurobi_model.setMObjective(
+                        repn.Q_obj[0], repn.c.todense()[0], repn.c_offset[0], x, x, x, repn.objectives[0].sense
+                    )
 
                 else:
                     # linear: all constraints in single matrix
                     A = gurobi_model.addMConstr(repn.A, x, sense, repn.rhs)
 
-                if repn.c.shape[0]:
-                    gurobi_model.setAttr('ObjCon', repn.c_offset[0])
-                    gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))
+                    if repn.c.shape[0]:
+                        gurobi_model.setAttr('ObjCon', repn.c_offset[0])
+                        gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))
 
                 # Note: calling gurobi_model.update() here is not
                 # necessary (it will happen as part of optimize()):

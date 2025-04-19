@@ -251,7 +251,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         logger.info(f"CHILD: {child}")
         symb = visitor.symbolmap.getSymbol(child)
         visitor.env[symb] = 0
-        logger.info(f"SETTING visitor.expr_cache[{id(expr)}] = {child}")
+        logger.info(f"EXPR_CACHE visitor.expr_cache[{id(expr)}] = {child}")
         visitor.expr_cache[id(child)] = child
         return False, (_CONSTANT, child)
 
@@ -300,6 +300,23 @@ def define_exit_node_handlers(_exit_node_handlers=None):
 
     return _exit_node_handlers
 
+class _ExprCacheDict(dict):
+
+    def get(self, keyname, value=None):
+        logger.info(f"[**EXPR_CACHE**]: attempting to get '{keyname} (default:{value})'")
+        return super().get(keyname, value)
+
+    def __getitem__(self, key):
+        logger.info(f"[**EXPR_CACHE**]: getting '{key}'")
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        logger.info(f"[**EXPR_CACHE**]: setting '{key}': {value}")
+        return super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        logger.info(f"[**EXPR_CACHE**]: deleting '{key}'")
+        return super().__delitem__(key)
 
 class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     Result = LinearTemplateRepn
@@ -314,7 +331,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         super().__init__(subexpression_cache, var_recorder=var_recorder)
         self.indexed_vars = set()
         self.indexed_params = set()
-        self.expr_cache = {}
+        self.expr_cache = _ExprCacheDict()
         self.env = var_recorder.env
         self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}

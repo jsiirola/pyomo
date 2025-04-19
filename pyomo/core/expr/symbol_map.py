@@ -10,6 +10,33 @@
 #  ___________________________________________________________________________
 
 
+import logging
+logger = logging.getLogger(__name__)
+
+class _TrackingDict(dict):
+
+    def __init__(self, name):
+        self._name = name
+        super().__init__()
+
+    def get(self, keyname, value=None):
+        logger.info(f"[**{self._name}**]: attempting to get '{keyname} (default:{value})'")
+        return super().get(keyname, value)
+
+    def __getitem__(self, key):
+        val = super().__getitem__(key)
+        logger.info(f"[**{self._name}**]: getting '{key}' -> {val}")
+        return val
+
+    def __setitem__(self, key, value):
+        logger.info(f"[**{self._name}**]: setting '{key}'={value} ({value.__class__.__name__})")
+        return super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        logger.info(f"[**{self._name}**]: deleting '{key}'")
+        return super().__delitem__(key)
+
+
 class SymbolMap(object):
     """
     A class for tracking assigned labels for modeling components.
@@ -38,9 +65,9 @@ class SymbolMap(object):
     """
 
     def __init__(self, labeler=None):
-        self.byObject = {}
-        self.bySymbol = {}
-        self.aliases = {}
+        self.byObject = _TrackingDict("SymbolMap.byObject")
+        self.bySymbol = _TrackingDict("SymbolMap.bySymbol")
+        self.aliases = _TrackingDict("SymbolMap.aliases")
         self.default_labeler = labeler
 
     class UnknownSymbol:
@@ -139,7 +166,9 @@ class SymbolMap(object):
         in the symbol map, then create it.
         """
         obj_id = id(obj)
+        # logger.info(f"LOOKING UP SYMBOL for object {obj} ({obj.__class__.__name__}), id {obj_id}")
         if obj_id in self.byObject:
+            # logger.info(f"  returning {self.byObject[obj_id]} ({self.byObject[obj_id].__class__.__name__})")
             return self.byObject[obj_id]
         #
         # Create a new symbol, performing an error check if it is a duplicate
@@ -149,12 +178,14 @@ class SymbolMap(object):
             # The labeler can have side-effects, including registering
             # this symbol in the symbol map
             if obj is self.bySymbol[symbol]:
+                logger.info(f"  returning: {symbol} ({symbol.__class__.__name__})")
                 return symbol
             raise RuntimeError(
                 "Duplicate symbol '%s' already associated with "
                 "component '%s' (conflicting component: '%s')"
                 % (symbol, self.bySymbol[symbol].name, obj.name)
             )
+        # logger.info(f"CREATING SYMBOL {symbol} ({symbol.__class__.__name__}), id {obj_id}")
         self.bySymbol[symbol] = obj
         self.byObject[obj_id] = symbol
         return symbol

@@ -396,20 +396,30 @@ class QuadraticTemplateRepn(QuadraticRepn):
         logger.info(f"self.linear_sum={self.linear_sum}")
 
     @classmethod
-    def _resolve_symbols(cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates):
+    def _resolve_symbols(cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map):
 
         if isinstance(k, tuple):
             return "("+",".join([
-                cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates) for _k in k
+                cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map) for _k in k
             ])+")"
-            # return tuple([
-            #     cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates) for _k in k])
 
-        if k in expr_cache:
-            k = expr_cache[k]
+        logger.info(f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, var_map: {var_map}")
 
-            # logger.info(f"    k.__class__ in native_types: {k.__class__ in native_types}")
-            # logger.info(f"    k.is_expression_type(): {k.is_expression_type()}")
+        # if k in expr_cache or (k in var_map and str(var_map[k]) in smap.bySymbol):
+        if k in expr_cache or k in var_map:
+            if k in expr_cache:
+                k = expr_cache[k]
+            else:
+                k = var_map[k]
+                # k = str(var_map[k])
+                # k = smap.bySymbol[k]
+            # else:
+            #     k = smap.byObject[k]
+
+            logger.info(f" k={k} ({type(k)})")
+
+            logger.info(f"    k.__class__ in native_types: {k.__class__ in native_types}")
+            logger.info(f"    k.is_expression_type(): {k.is_expression_type()}")
 
 
             if k.__class__ not in native_types and k.is_expression_type():
@@ -439,10 +449,12 @@ class QuadraticTemplateRepn(QuadraticRepn):
         args,
         remove_fixed_vars=False,
         check_duplicates=False,
+        *,
+        var_map={}
     ):
         logger.info(f"> {self.__class__.__name__}.compile(...)")
         ans, constant = self._build_evaluator(
-            smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates
+            smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates, var_map=var_map
         )
         if not ans:
             logger.info(f"* compile RETURNING: constant={constant}")
@@ -489,6 +501,8 @@ class QuadraticTemplateRepn(QuadraticRepn):
         repetitions,
         remove_fixed_vars,
         check_duplicates,
+        *,
+        var_map=None
     ):
         logger.info(
             f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
@@ -521,7 +535,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 indent = ''
 
                 k = self.__class__._resolve_symbols(
-                    k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates
+                    k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map
                 )
 
 
@@ -631,7 +645,7 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
 
                     # body = self.walk_expression(body).compile(
                     body = _body.compile(
-                        env, smap, self.expr_cache, args, False
+                        env, smap, self.expr_cache, args, False, var_map=self.var_map
                     )
                     logger.info(f"   ... body: {type(body)}, {body}\n")
                 if lb is not None:
@@ -640,7 +654,7 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
                     logger.info(f"   ... _lb: {type(_lb)}, {_lb}")
                     lb = _lb.compile(
                     # lb = self.walk_expression(lb).compile(
-                        env, smap, self.expr_cache, args, True
+                        env, smap, self.expr_cache, args, True, var_map=self.var_map
                     )
                     logger.info(f"   ... lb: {type(lb)}, {lb}\n")
                 if ub is not None:
@@ -649,16 +663,16 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
                     logger.info(f"   ... _ub: {type(_ub)}, {_ub}")
                     ub = _ub.compile(
                     # ub = self.walk_expression(ub).compile(
-                        env, smap, self.expr_cache, args, True
+                        env, smap, self.expr_cache, args, True, var_map=self.var_map
                     )
                     logger.info(f"   ... ub: {type(ub)}, {ub}\n")
 
             elif expr is not None:
-                logger.info(f" * expr is not None")
+                logger.info(f" * expr is not None: {expr}")
                 lb = ub = None
                 logger.info(" (X) self.walk_expression(expr)")
                 body = self.walk_expression(expr).compile(
-                    env, smap, self.expr_cache, args, False
+                    env, smap, self.expr_cache, args, False, var_map=self.var_map
                 )
             else:
                 logger.info(" * expr else")

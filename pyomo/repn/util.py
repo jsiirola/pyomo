@@ -849,7 +849,7 @@ class TemplateVarRecorder(object):
         if name in self.env:
             return
 
-        logger.info(f"**ADD** {var}")
+        logger.info(f"{self.__class__.__name__}: **ADD** {var}")
 
         # We always add all indices to the var_map at once so that
         # we can honor deterministic ordering of unordered sets
@@ -869,14 +869,14 @@ class TemplateVarRecorder(object):
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vm[id(v)] = v
                 ve[idx] = i
-                logger.info(f"{i}: var_map[{id(v)}] = {v}, ve[{idx}] = {i}")
+                logger.info(f"{i}: var_map[{id(v)}] = {v} ({type(v)}), ve[{idx}] = {i}")
         else:
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vid = id(v)
                 vm[vid] = v
                 ve[idx] = i
                 vo[vid] = i
-                logger.info(f"{i}: var_map[{vid}] = {v}, ve[{idx}] = {i}, vo[{idx}] = {i}")
+                logger.info(f"{i}: var_map[{vid}] = {v} ({type(v)}), ve[{idx}] = {i}, vo[{idx}] = {i}")
 
 
 # Copied from cpxlp.py:

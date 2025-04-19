@@ -149,13 +149,17 @@ class QuadraticStandardFormInfo(LinearStandardFormInfo):
     Extension of LinearStandardFormInfo with list of Q (quadratic) matrices
     """
 
-    def __init__(self, *args, Q_list: list = None, **kwargs):
+    def __init__(self, *args, Q_list: list = None, Q_obj: list = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.Q_list = Q_list
+        self.Q_obj = Q_obj
+        for i,q in enumerate(Q_obj):
+            logger.info(f"  Q objective[{i}]: {None if q is None else q.toarray()}")
         for i,q in enumerate(Q_list):
-            logger.info(f"  Q[{i}]: {None if q is None else q.toarray()}")
-        if isinstance(Q_list, list) and any([q is not None and q is not [] for q in Q_list]):
-            self.is_quadratic = True
+            logger.info(f"  Q constraint[{i}]: {None if q is None else q.toarray()}")
+        for Q in [Q_list, Q_obj]:
+            if isinstance(Q, list) and any([q is not None and q is not [] for q in Q]):
+                self.is_quadratic = True
 
 
 
@@ -419,16 +423,39 @@ class _LinearStandardFormCompiler_impl(object):
         obj_index = []
         obj_index_ptr = [0]
 
+        obj_quadratic_nnz = 0
+        obj_quadratic_data = []
+        obj_quadratic_index = []
+        obj_quadratic_index_ptr = [0]
+
         for _i, obj in enumerate(objectives):
+            logger.info("\n")
+            logger.info(f"OBJECTIVE: {_i}:{obj} {obj.sense} ({type(obj)})")
             if hasattr(obj, 'template_expr'):
                 logger.info(f"+ ({_i}) objective: template_expression")
-                offset, linear_index, linear_data, _, _ = (
-                    template_visitor.expand_expression(obj, obj.template_expr())
-                )[:5]
+                expanded_expression_values = template_visitor.expand_expression(obj, obj.template_expr())
+                offset, linear_index, linear_data, _, _ = expanded_expression_values[:5]
+                # offset, linear_index, linear_data, _, _ = (
+                #     template_visitor.expand_expression(obj, obj.template_expr())
+                # )[:5]
+                logger.info(f"+ ({_i}) objective: **expand_expression COMPLETE**\n")
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
+
+                if len(expanded_expression_values)>5:
+                    quadratic_index, quadratic_data = expanded_expression_values[5:]
+                else:
+                    quadratic_index, quadratic_data = [], []
+                N_quadratic = len(quadratic_data)
+                logger.info(f"     N2: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+                obj_quadratic_nnz += N_quadratic
+                obj_quadratic_data.append(quadratic_data)
+                if N_quadratic>0:
+                    obj_quadratic_index.append(quadratic_index)
+                    obj_quadratic_index_ptr.append(obj_quadratic_nnz)
+
             else:
                 logger.info(f"- ({_i}) objective ({type(obj)}): non_template_expression")
                 repn = visitor.walk_expression(obj.expr)
@@ -451,8 +478,9 @@ class _LinearStandardFormCompiler_impl(object):
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
 
-        logger.info("processed objective\n")
-        # logger.warning("processed objectives, stopping.\n")
+        logger.info(f"obj_index: {obj_index}")
+        logger.info(f"obj_data: {obj_data}")
+        logger.info("processed objectives\n")
         # return None
 
         #
@@ -480,7 +508,7 @@ class _LinearStandardFormCompiler_impl(object):
         last_parent = None
         # print()
         for _i, con in enumerate(ordered_active_constraints(model, self.config)):
-            logger.info("")
+            logger.info("\n")
             logger.info(f"CONSTRAINT: {_i}:{con} ({type(con)})")
             if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
@@ -494,6 +522,7 @@ class _LinearStandardFormCompiler_impl(object):
                     template_visitor.expand_expression(con, con.template_expr())
                 )
                 offset, linear_index, linear_data, lb, ub = expanded_expression_values[:5]
+                logger.info(f"+ ({_i}) constraint: **expand_expression COMPLETE**\n")
                 N = len(linear_data)
                 logger.info(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
                       f"lb: {lb}, ub: {ub}")
@@ -664,10 +693,23 @@ class _LinearStandardFormCompiler_impl(object):
 
         # Convert the compiled data to scipy sparse matrices
         logger.info(f"converting objective: {obj_index}")
-        logger.warning("FIX: handle template objective -- appears to break here") # FIX: template objective
-        c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
+        logger.warning("FIX: handle template objective when not using decorator -- appears to break here") # FIX: template objective
+        is_quadratic = any([qd for qd in obj_quadratic_data])
+        logger.info(f"objective.is_quadratic: {is_quadratic}")
+        # c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
+        c, Q_obj = self._create_csc_quadratic(
+            obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols,
+            obj_quadratic_data, obj_quadratic_index
+        )
+
+        logger.info(f"Objective:\n  c: {c.toarray()}\n  "
+                    f"Q: {[q.toarray() for q in Q_obj]}\n  "
+                    f"offset: {obj_offset}")
+
         logger.info(f"converting constraints: {con_index}")
-        is_quadratic = any([qd for qd in con_quadratic_data])
+        is_quadratic = any([qd for qd in con_quadratic_data]) or any(
+            [qd for qd in obj_quadratic_data]
+        )
 
         # if quadratic, create A (linear) and quadratic Q matrices
         if is_quadratic:
@@ -678,7 +720,7 @@ class _LinearStandardFormCompiler_impl(object):
                 timer.toc('Formed matrices', level=logging.DEBUG)
             info = QuadraticStandardFormInfo(
                 c, np.array(obj_offset), A, rhs, rows, columns, objectives, [],
-                Q_list=Q_list
+                Q_list=Q_list, Q_obj=Q_obj
             )
 
         else: # linear: single A matrix
