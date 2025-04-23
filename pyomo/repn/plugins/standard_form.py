@@ -323,7 +323,6 @@ class _LinearStandardFormCompiler_impl(object):
             timing_logger.isEnabledFor(logging.DEBUG) and timing_logger.hasHandlers()
         )
 
-        # logger.info(f"config.file_determinism: {self.config.file_determinism}")
         sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
             model,
@@ -345,7 +344,6 @@ class _LinearStandardFormCompiler_impl(object):
             targets={Suffix, Objective},
         )
         if unknown:
-            logger.error(f"unknown: {unknown}")
             raise ValueError(
                 "The model ('%s') contains the following active components "
                 "that the Linear Standard Form compiler does not know how to "
@@ -428,9 +426,7 @@ class _LinearStandardFormCompiler_impl(object):
             if hasattr(obj, 'template_expr'):
                 expanded_expression_values = template_visitor.expand_expression(obj, obj.template_expr())
                 offset, linear_index, linear_data, _, _ = expanded_expression_values[:5]
-                # offset, linear_index, linear_data, _, _ = (
-                #     template_visitor.expand_expression(obj, obj.template_expr())
-                # )[:5]
+
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
@@ -469,16 +465,12 @@ class _LinearStandardFormCompiler_impl(object):
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
 
         logger.debug("processed objectives\n")
-        # return None
 
         #
         # Tabulate constraints
         #
         slack_form = self.config.slack_form
         mixed_form = self.config.mixed_form
-
-        _config_obj = { a : getattr(self.config, a)
-                       for a in dir(self.config) if not a.startswith("_")}
 
         if slack_form and mixed_form:
             raise ValueError("cannot specify both slack_form and mixed_form")
@@ -494,7 +486,6 @@ class _LinearStandardFormCompiler_impl(object):
         con_quadratic_index = []
         con_quadratic_index_ptr = [0]
         last_parent = None
-        # print()
         for _i, con in enumerate(ordered_active_constraints(model, self.config)):
             logger.debug(f"CONSTRAINT: {_i}:{con} ({type(con)})")
             if with_debug_timing and con._component is not last_parent:
@@ -611,7 +602,7 @@ class _LinearStandardFormCompiler_impl(object):
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
             elif slack_form:
-                logger.info("  ** slack_form **")
+                logger.debug("slack_form")
                 if lb == ub:  # TODO: add tolerance?
                     rhs.append(ub - offset)
                 else:
@@ -642,7 +633,7 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
             else:
-                logger.info("  - not mixed or slack form -")
+                logger.info("not mixed or slack form")
                 if ub is not None:
                     if lb is not None:
                         linear_index = list(linear_index)
@@ -672,8 +663,7 @@ class _LinearStandardFormCompiler_impl(object):
 
         # Convert the compiled data to scipy sparse matrices
         logger.debug(f"converting objective: {obj_index}")
-        is_quadratic = any([qd for qd in obj_quadratic_data])
-        logger.debug(f"objective.is_quadratic: {is_quadratic}")
+        logger.debug(f"objective.is_quadratic: {any([qd for qd in obj_quadratic_data])}")
 
         c, Q_obj = self._create_csc_quadratic(
             obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols,

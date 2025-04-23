@@ -31,7 +31,6 @@ code_type = deepcopy.__class__
 
 
 import logging
-
 logger = logging.getLogger(__name__)
 
 class LinearTemplateRepn(LinearRepn):
@@ -93,7 +92,7 @@ class LinearTemplateRepn(LinearRepn):
         remove_fixed_vars,
         check_duplicates,
     ):
-        logger.info(
+        logger.debug(
             f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
             f"remove_fixed_vars:{remove_fixed_vars}, check_duplicates:{check_duplicates}"
         )
@@ -185,12 +184,10 @@ class LinearTemplateRepn(LinearRepn):
         remove_fixed_vars=False,
         check_duplicates=False,
     ):
-        logger.info(f"> {self.__class__.__name__}.compile(...)")
         ans, constant = self._build_evaluator(
             smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates
         )
         if not ans:
-            logger.info(f"* compile RETURNING: constant={constant}")
             return constant
         indent = '\n    '
         if not constant and ans and ans[0].startswith('const +='):
@@ -215,7 +212,7 @@ class LinearTemplateRepn(LinearRepn):
                 0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
             )
         ans = indent.join(ans)
-        
+
         import textwrap
         logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
 
@@ -300,7 +297,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     exit_node_dispatcher = linear.ExitNodeDispatcher(
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
-    expand_nonlinear_products = True
+    # expand_nonlinear_products = True
 
     def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
         super().__init__(subexpression_cache, var_recorder=var_recorder)

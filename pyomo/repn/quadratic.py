@@ -348,7 +348,6 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2
-    # expand_nonlinear_products = True
 
     ## handle quadratics, then let LinearRepnVisitor handle the rest
     def finalizeResult(self, result):
@@ -455,7 +454,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
         ans = indent.join(ans)
         import textwrap
         logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
-        # logger.info(f"EXECUTING:\n{ans}\n\n* compile RETURNING: build_expr\n")
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
@@ -558,9 +556,6 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
     exit_node_dispatcher = linear.ExitNodeDispatcher(
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
-    # finalizeResult = QuadraticRepnVisitor.finalizeResult
-    # expand_nonlinear_products = True
-    # pass
 
     ## handle quadratics, then let LinearRepnVisitor handle the rest.
     ## duplicate of QuadraticRepnVisitor, but not directly inheritable because of ambiguous
@@ -600,7 +595,7 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
             args = [smap.getSymbol(i) for i in indices]
             if expr.is_expression_type(ExpressionType.RELATIONAL):
                 logger.debug("expression_type = RELATIONAL")
-                # logger.info(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
+
                 lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
                     body = self.walk_expression(body).compile(

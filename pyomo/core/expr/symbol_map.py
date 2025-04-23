@@ -10,10 +10,6 @@
 #  ___________________________________________________________________________
 
 
-import logging
-logger = logging.getLogger(__name__)
-
-
 class SymbolMap(object):
     """
     A class for tracking assigned labels for modeling components.
@@ -143,9 +139,7 @@ class SymbolMap(object):
         in the symbol map, then create it.
         """
         obj_id = id(obj)
-        # logger.info(f"LOOKING UP SYMBOL for object {obj} ({obj.__class__.__name__}), id {obj_id}")
         if obj_id in self.byObject:
-            # logger.info(f"  returning {self.byObject[obj_id]} ({self.byObject[obj_id].__class__.__name__})")
             return self.byObject[obj_id]
         #
         # Create a new symbol, performing an error check if it is a duplicate
@@ -155,14 +149,13 @@ class SymbolMap(object):
             # The labeler can have side-effects, including registering
             # this symbol in the symbol map
             if obj is self.bySymbol[symbol]:
-                logger.info(f"  returning: {symbol} ({symbol.__class__.__name__})")
                 return symbol
             raise RuntimeError(
                 "Duplicate symbol '%s' already associated with "
                 "component '%s' (conflicting component: '%s')"
                 % (symbol, self.bySymbol[symbol].name, obj.name)
             )
-        # logger.info(f"CREATING SYMBOL {symbol} ({symbol.__class__.__name__}), id {obj_id}")
+
         self.bySymbol[symbol] = obj
         self.byObject[obj_id] = symbol
         return symbol

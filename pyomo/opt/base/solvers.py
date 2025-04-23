@@ -132,10 +132,6 @@ The original solver was created with the following parameters:
 
 class SolverFactoryClass(Factory):
 
-    def __init__(self, *args, **kwargs):
-        logging.debug(f"(solvers.SolverFactoryClass) instantiated {self.__class__}: {args}, kwargs:{kwargs}")
-        super().__init__(*args, **kwargs)
-
     def __call__(self, _name=None, **kwds):
         logging.debug(f"{self.__class__} (solvers.SolverFactoryClass) __call__: _name='{_name}', kwds={kwds}")
         if _name is None:

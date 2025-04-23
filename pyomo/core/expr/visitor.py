@@ -250,7 +250,6 @@ class StreamBasedExpressionVisitor(object):
                 for f in self.client_methods.items()
             )
         )
-        # print("StreamBasedExpressionVisitor.__init__: recursive_node_handler=", recursive_node_handler)
         self._process_node = getattr(
             self, recursive_node_handler, self._process_node_general
         )
@@ -264,7 +263,6 @@ class StreamBasedExpressionVisitor(object):
         if the recursion stack gets too deep.
 
         """
-        # logger.info(f"[WALK] (StreamBasedExpressionVisitor) {self.__class__.__qualname__}.walk_expression({expr})")
         if self.initializeWalker is not None:
             walk, root = self.initializeWalker(expr)
             if not walk:
@@ -395,7 +393,6 @@ class StreamBasedExpressionVisitor(object):
         also the definition of the client_methods dict).
 
         """
-        logger.debug(" ")
         logger.debug(f"{self.__class__.__name__}._process_node_bex({node}, level={RECURSION_LIMIT-recursion_limit})")
         if not recursion_limit:
             recursion_limit = self._compute_actual_recursion_limit()
@@ -414,14 +411,13 @@ class StreamBasedExpressionVisitor(object):
                 args = ()
             else:
                 args = node.args
-            logger.info(f" args={args}\n")
+            logger.debug(f" args={args}\n")
 
 
         # Because we do not require the args to be a context manager, we
         # will mock up the "with args" using a try-finally.
         context_manager = hasattr(args, '__enter__')
         if context_manager:
-            logger.info(f"context_manager={context_manager}")
             args.__enter__()
 
         try:
@@ -433,7 +429,6 @@ class StreamBasedExpressionVisitor(object):
             for child in arg_iter:
                 child_idx += 1
                 logger.debug(f"  child [{child_idx}: {node}] {child.__class__.__name__} {child}")
-                # logger.info(f" self.beforeChild: {self.beforeChild}")
                 tmp = self.beforeChild(node, child, child_idx)
                 logger.debug(f"      child descend, child_result={tmp}")
                 if tmp is None:
@@ -446,7 +441,6 @@ class StreamBasedExpressionVisitor(object):
                 else:
                     data.append(child_result)
         except RevertToNonrecursive:
-            logger.warning("RevertToNonrecursive")
             self._recursive_frame_to_nonrecursive_stack(locals())
             context_manager = False
             raise
@@ -545,7 +539,6 @@ class StreamBasedExpressionVisitor(object):
         # parent pointer.
         #
         if self.initializeWalker is not None:
-            logger.info("walk_expression_NONRECURSIVE: initializeWalker")
             walk, result = self.initializeWalker(expr)
             if not walk:
                 return result
@@ -1050,7 +1043,6 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
         super().__init__(**kwds)
 
     def initializeWalker(self, expr):
-        logger.info(f"(ExpressionReplacementVisitor) {self.__class__}.initializeWalker({expr})")
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
             return False, result
@@ -1376,13 +1368,11 @@ class _ComponentVisitor(StreamBasedExpressionVisitor):
         self._types = types
 
     def initializeWalker(self, expr):
-        logger.info(f"(ComponentVisitor) {self.__class__}.initializeWalker({expr})")
         self._objs = []
         self._seen = set()
         return True, None
 
     def finalizeResult(self, result):
-        logger.info(f"finalizeResult {result}")
         return self._objs
 
     def exitNode(self, node, data):
@@ -1443,7 +1433,6 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         # self._exprs: list of (e, e.expr) for any (nested) named expressions
 
     def initializeWalker(self, expr):
-        logger.info(f"(IndentifyVariableVisitor) {self.__class__}.initializeWalker({expr})")
         assert not self._expr_stack
         self._seen = {}
         self._exprs = None
@@ -1477,7 +1466,6 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
             self._merge_obj_lists(_seen, _exprs)
 
     def finalizeResult(self, result):
-        logger.info(f"finalizeResult: {result}")
         assert not self._expr_stack
         return self._seen.values()
 

@@ -44,7 +44,6 @@ from pyomo.contrib.solver.common.results import (
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 import logging
-
 logger = logging.getLogger(__name__)
 
 

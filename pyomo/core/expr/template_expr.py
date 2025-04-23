@@ -580,10 +580,6 @@ class IndexTemplate(NumericValue):
         self._group = _group
         self._lock = None
 
-    def __repr__(self):
-        val = "NotSpecified" if self._value==_NotSpecified else self._value
-        return f"<{self.__class__.__name__}: {self._index}, {self._id}, {val}>"
-
     def __deepcopy__(self, memo):
         # Because we leverage deepcopy for expression/component cloning,
         # we need to see if this is a Component.clone() operation and
@@ -710,7 +706,6 @@ class _TemplateResolver(StreamBasedExpressionVisitor):
             return node.create_node_with_local_data(args)
 
     def initializeWalker(self, expr):
-        logger.info(f"(IndexTemplate) {self.__class__}.initializeWalker({expr})")
         return self.beforeChild(None, expr, None)
 
 
@@ -807,7 +802,6 @@ def _reduce_template_to_component(expr):
                 from pyomo.core.base.set import RangeSet
 
                 if child.domain.isdiscrete():
-                    logger.info("domain.isdiscrete")
                     domain = child.domain
                     bounds = child.bounds
                     if bounds != (None, None):

@@ -15,7 +15,7 @@ from pyomo.common.factory import Factory
 from pyomo.contrib.solver.common.base import LegacySolverWrapper
 
 import logging
-LOGGER=logging.getLogger(__name__)
+logger=logging.getLogger(__name__)
 
 
 class SolverFactoryClass(Factory):
@@ -23,17 +23,13 @@ class SolverFactoryClass(Factory):
     Registers new interfaces in the legacy SolverFactory
     """
 
-    def __init__(self, *args, **kwargs):
-        LOGGER.debug(f"(factory.SolverFactoryClass (Legacy)) instantiating {self.__class__}, {args}, kwargs:{kwargs}")
-        super().__init__(*args, **kwargs)
-
     def register(self, name, legacy_name=None, doc=None):
-        LOGGER.debug(f"(factory.SolverFactoryClass (Legacy)) register '{name}', legacy_name='{legacy_name}'")
+        logger.debug(f"(factory.SolverFactoryClass (Legacy)) register '{name}', legacy_name='{legacy_name}'")
         if legacy_name is None:
             legacy_name = name
 
         def decorator(cls):
-            LOGGER.debug(f"(factory.SolverFactoryClass (Legacy)) decorator class: {name} -> {cls}")
+            logger.debug(f"(factory.SolverFactoryClass (Legacy)) decorator class: {name} -> {cls}")
             self._cls[name] = cls
             self._doc[name] = doc
 
