@@ -703,7 +703,7 @@ class _LinearStandardFormCompiler_impl(object):
         )
 
         logger.info(f"Objective:\n  c: {c.toarray()}\n  "
-                    f"Q: {[q.toarray() for q in Q_obj]}\n  "
+                    f"Q: {[q if not hasattr(q, 'toarray') else q.toarray() for q in Q_obj]}\n  "
                     f"offset: {obj_offset}")
 
         logger.info(f"converting constraints: {con_index}")
