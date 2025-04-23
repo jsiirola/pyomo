@@ -403,27 +403,35 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map) for _k in k
             ])+")"
 
-        logger.info(f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, var_map: {var_map}")
+        logger.info(f" (1) k={k} ({type(k)})")
+        logger.info(f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, "
+                    f"var_map: {[(k,v._index,v._value,v._component()) for k, v in var_map.items()]}")
 
         # if k in expr_cache or (k in var_map and str(var_map[k]) in smap.bySymbol):
         if k in expr_cache or k in var_map:
             if k in expr_cache:
                 k = expr_cache[k]
             else:
-                k = var_map[k]
+                symbol_obj_id = id(var_map[k]._component())
+                logger.info(f"symbol_obj_id = {symbol_obj_id}")
+                k=f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
+                # k = var_map[k]._component()
+                # k = var_map[k]._component()[var_map[k]._index]
+                # logger.info(f"({k._index, k._component, k._value})")
                 # k = str(var_map[k])
                 # k = smap.bySymbol[k]
             # else:
             #     k = smap.byObject[k]
 
-            logger.info(f" k={k} ({type(k)})")
+            logger.info(f" (2) k={k} ({type(k)})")
 
             logger.info(f"    k.__class__ in native_types: {k.__class__ in native_types}")
-            logger.info(f"    k.is_expression_type(): {k.is_expression_type()}")
+            logger.info(f"    k.is_expression_type(): {hasattr(k,'is_expression_type') and k.is_expression_type()}")
 
 
             if k.__class__ not in native_types and k.is_expression_type():
                 logger.info("k.__class__ not in native_types and k.is_expression_type()")
+                logger.info(f"k.to_string(smap=smap) = {k.to_string(smap=smap)}")
                 ans.append('v = ' + k.to_string(smap=smap))
                 k = 'v'
                 if remove_fixed_vars:
@@ -506,7 +514,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
     ):
         logger.info(
             f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
-            f"remove_fixed_vars:{remove_fixed_vars}, check_duplicates:{check_duplicates}"
+            f"remove_fixed_vars:{remove_fixed_vars}, check_duplicates:{check_duplicates}\n\n"
         )
         ans = []
         multiplier *= self.multiplier
