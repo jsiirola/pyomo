@@ -270,15 +270,22 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
         StaleFlagManager.mark_all_as_stale()
 
         timer.start('compile_model')
-        logger.info("prior to LinearStandardFormCompiler()")
-        _lsfc = LinearStandardFormCompiler()
-        logger.info(f"created: {_lsfc}")
-        # repn = LinearStandardFormCompiler().write(
-        repn = _lsfc.write(
+        repn = LinearStandardFormCompiler().write(
             model, mixed_form=True, set_sense=None
         )
         logger.info(f"repn: {repn}")
+        logger.info(f"repn.rhs: {repn.rhs}")
         timer.stop('compile_model')
+        # return Results()
+
+        logger.info(f" columns: {repn.columns}")
+
+        for c in repn.columns:
+            logger.info(f"    {c}")
+
+        logger.info(f"    rows: {repn.rows}")
+        for r in repn.rows:
+            logger.info(f"    {r}")
 
         if len(repn.objectives) > 1:
             raise IncompatibleModelError(
@@ -325,7 +332,12 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                     obj=repn.c.todense()[0] if repn.c.shape[0] else 0,
                     vtype=vtype,
                 )
-                A = gurobi_model.addMConstr(repn.A, x, sense, repn.rhs)
+                # A = gurobi_model.addMConstr(repn.A, x, sense, repn.rhs)
+                logger.info(f"repn.A: {repn.A.toarray()}")
+                logger.info(f"sense: {sense}")
+                logger.info(f"rhs: {repn.rhs}")
+                import numpy as np
+                A = gurobi_model.addMQConstr(None, np.array(repn.A.toarray()[0]), sense[0], repn.rhs[0], x, x,x)
                 if repn.c.shape[0]:
                     gurobi_model.setAttr('ObjCon', repn.c_offset[0])
                     gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))

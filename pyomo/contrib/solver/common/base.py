@@ -634,8 +634,13 @@ class LegacySolverWrapper:
         loc = locals()
         filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
         self._map_config(**filtered_args)
+        LOGGER.info(f"filtered_args: {filtered_args}")
 
+        LOGGER.info(f"{self.__class__.__name__} calling: super().solve(model)")
         results: Results = super().solve(model)
+        LOGGER.info(f"{self.__class__.__name__} complete: super().solve(model)")
+        # LOGGER.warning("stopping, returning None")
+        # return None
         legacy_results, legacy_soln = self._map_results(model, results)
         legacy_results = self._solution_handler(
             load_solutions, model, results, legacy_results, legacy_soln

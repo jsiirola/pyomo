@@ -350,14 +350,19 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_general_expression(visitor, child):
+        logger.info(f"CHILD: {child}")
+        for i, arg in enumerate(child.args):
+            logger.info(f"  child {i} arg: {arg} ({type(arg)})")
         return True, None
 
     @staticmethod
     def _before_native_numeric(visitor, child):
+        logger.info(f"CHILD: {child}")
         return False, (_CONSTANT, child)
 
     @staticmethod
     def _before_native_logical(visitor, child):
+        logger.info(f"CHILD: {child}")
         return False, (
             _CONSTANT,
             InvalidNumber(
@@ -367,10 +372,12 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_complex(visitor, child):
+        logger.info(f"CHILD: {child}")
         return False, (_CONSTANT, complex_number_error(child, visitor, child))
 
     @staticmethod
     def _before_invalid(visitor, child):
+        logger.info(f"CHILD: {child}")
         return False, (
             _CONSTANT,
             InvalidNumber(
@@ -380,6 +387,7 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_string(visitor, child):
+        logger.info(f"CHILD: {child}")
         return False, (
             _CONSTANT,
             InvalidNumber(
@@ -389,6 +397,7 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_npv(visitor, child):
+        logger.info(f"CHILD: {child}")
         try:
             return False, (
                 _CONSTANT,
@@ -399,10 +408,12 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_param(visitor, child):
+        logger.info(f"CHILD: {child}")
         return False, (_CONSTANT, visitor.check_constant(child.value, child))
 
     @staticmethod
     def _before_index_template(visitor, child):
+        logger.info(f"CHILD: {child}")
         raise NotImplementedError(
             f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
@@ -410,6 +421,7 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_indexed_expr(visitor, child):
+        logger.info(f"CHILD: {child}")
         raise NotImplementedError(
             f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
@@ -417,6 +429,7 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_indexed_param(visitor, child):
+        logger.info(f"CHILD: {child}")
         raise NotImplementedError(
             f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
@@ -424,6 +437,7 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_indexed_var(visitor, child):
+        logger.info(f"CHILD: {child}")
         raise NotImplementedError(
             f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
@@ -431,6 +445,7 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_component(visitor, child):
+        logger.info(f"CHILD: {child}")
         raise NotImplementedError(
             f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"

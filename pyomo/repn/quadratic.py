@@ -46,7 +46,7 @@ class QuadraticRepn(object):
         self.multiplier = 1
         self.constant = 0
         self.linear = {}
-        self.quadratic = None
+        self.quadratic = {}
         self.nonlinear = None
 
     def __str__(self):
@@ -334,3 +334,4 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2
+    expand_nonlinear_products = True

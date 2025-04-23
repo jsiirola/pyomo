@@ -89,11 +89,12 @@ class LinearRepn(object):
     __slots__ = ("multiplier", "constant", "linear", "nonlinear")
 
     def __init__(self):
+        logger.debug(f"(LinearRepn) {self.__class__.__qualname__}: __init__")
         self.multiplier = 1
         self.constant = 0
         self.linear = {}
         self.nonlinear = None
-        print("(LinearRepn) Instantiated:", self.__class__)
+
 
     def __str__(self):
         return (
@@ -105,6 +106,7 @@ class LinearRepn(object):
         return str(self)
 
     def walker_exitNode(self):
+        logger.info("walker_exitNode")
         if self.nonlinear is not None:
             return _GENERAL, self
         elif self.linear:
@@ -132,8 +134,12 @@ class LinearRepn(object):
             var_map = visitor.var_map
             with mutable_expression() as e:
                 for vid, coef in self.linear.items():
-                    if coef:
-                        e += coef * var_map[vid]
+                    try:
+                        if coef:
+                            e += coef * var_map[vid]
+                    except Exception:
+                        logger.exception(f"vid={vid}, coef={coef}, var_map={var_map}")
+                        raise
             if e.nargs() > 1:
                 ans += e
             elif e.nargs() == 1:
@@ -310,8 +316,10 @@ def _handle_pow_constant_constant(visitor, node, arg1, arg2):
 
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
+    logger.info(f"handling powers: {node}, {arg1}, {arg2}")
     _, exp = arg2
     if exp == 1:
+        logger.info(f"returning {arg1}")
         return arg1
     elif exp > 1 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
         _type, _arg = arg1
@@ -320,16 +328,20 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
             ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
                 visitor, None, ans, (_type, _arg.duplicate())
             )
+        logger.info(f"returning {ans}")
         return ans
     elif exp == 0:
+        logger.info(f"returning (_CONSTANT, 1)")
         return _CONSTANT, 1
     else:
         return _handle_pow_nonlinear(visitor, node, arg1, arg2)
 
 
 def _handle_pow_nonlinear(visitor, node, arg1, arg2):
+    logger.info(f"handling non_linear: {node}, {arg1}, {arg2}")
     ans = visitor.Result()
     ans.nonlinear = to_expression(visitor, arg1) ** to_expression(visitor, arg2)
+    logger.info(f"returning (_GENERAL, {ans})")
     return _GENERAL, ans
 
 
@@ -546,6 +558,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_var(visitor, child):
+        logger.info(f"CHILD: {child}")
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
@@ -561,6 +574,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # The following are performance optimizations for common
         # situations (Monomial terms and Linear expressions)
         #
+        logger.info(f"CHILD: {child}")
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
@@ -601,17 +615,21 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_linear(visitor, child):
+        logger.info(f"CHILD: {child}")
         var_map = visitor.var_map
         ans = visitor.Result()
         const = 0
         linear = ans.linear
-        for arg in child.args:
+        for i, arg in enumerate(child.args):
+            logger.info(f"  child {i} arg: {arg} ({type(arg)})")
             if arg.__class__ is MonomialTermExpression:
                 arg1, arg2 = arg._args_
+                logger.info(f"   arg1, arg2 = {arg1}, {arg2}")
                 if arg1.__class__ not in native_types:
                     try:
                         arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
                     except (ValueError, ArithmeticError):
+                        logger.error("ValueError, ArithmeticError")
                         return True, None
 
                 # Trap multiplication by 0 and nan.
@@ -634,14 +652,19 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
                     visitor.var_recorder.add(arg2)
+                    logger.info(f" setting linear[{_id}] = {arg1}")
                     linear[_id] = arg1
                 elif _id in linear:
+                    logger.info(f" setting linear[{_id}] += {arg1}")
                     linear[_id] += arg1
                 else:
+                    logger.info(f" setting linear[{_id}] = {arg1}")
                     linear[_id] = arg1
             elif arg.__class__ in native_numeric_types:
+                logger.info(f"   native_numeric_types")
                 const += arg
             elif arg.is_variable_type():
+                logger.info(f"   variable type")
                 _id = id(arg)
                 if _id not in var_map:
                     if arg.fixed:
@@ -654,18 +677,23 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 else:
                     linear[_id] = 1
             else:
+                logger.info("   *else*")
                 try:
                     const += visitor.check_constant(visitor.evaluate(arg), arg)
                 except (ValueError, ArithmeticError):
+                    logger.info("ValueError, ArithmeticError")
                     return True, None
         if linear:
             ans.constant = const
+            logger.info(f"linear: {ans}")
             return False, (_LINEAR, ans)
         else:
+            logger.info(f"NOT linear: {ans}")
             return False, (_CONSTANT, const)
 
     @staticmethod
     def _before_named_expression(visitor, child):
+        logger.info(f"CHILD: {child}")
         _id = id(child)
         if _id in visitor.subexpression_cache:
             _type, expr = visitor.subexpression_cache[_id]
@@ -678,6 +706,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_external(visitor, child):
+        logger.info(f"CHILD: {child}")
         ans = visitor.Result()
         if all(is_fixed(arg) for arg in child.args):
             try:
@@ -696,6 +725,8 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     expand_nonlinear_products = False
+    # expand_nonlinear_products = True
+
     max_exponential_expansion = 1
 
     def __init__(
@@ -706,6 +737,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         sorter=None,
         var_recorder=None,
     ):
+        logger.debug(f"(LinearRepnVisitor) {self.__class__}: __init__")
         super().__init__()
         self.subexpression_cache = subexpression_cache
         if any(_ is not None for _ in (var_map, var_order, sorter)):
@@ -762,13 +794,16 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         return ans
 
     def initializeWalker(self, expr):
-        print(f"(LinearRepnVisitor) {self.__class__}.initializeWalker({expr})")
+        logger.info(f"{self.__class__.__name__}.initializeWalker({expr})")
         walk, result = self.beforeChild(None, expr, 0)
+        logger.info(f"  walk, result = {walk, result}")
         if not walk:
             return False, self.finalizeResult(result)
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
+        logger.info(f"before_child: {child}:{child_idx}  {type(child)}")
+        # logger.info(f"self.before_child_dispatcher[{child.__class__}]: {self.before_child_dispatcher[child.__class__]}")
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def enterNode(self, node):
@@ -781,15 +816,20 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         if data.__class__ is self.Result:
+            logger.info(f"returning data.walker_exitNode {data.walker_exitNode}")
             return data.walker_exitNode()
         #
         # General expressions...
         #
+        logger.info(f"exit lookup: {node.__class__.__name__, *map(itemgetter(0), data)}")
+        _fnc = self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))]
+        logger.info(f"EXITING return  {_fnc} ({node}, {data})")
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
 
     def finalizeResult(self, result):
+        logger.info(f"finalizeResult {result}")
         ans = result[1]
         if ans.__class__ is self.Result:
             mult = ans.multiplier
@@ -813,6 +853,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                         "will be preserved/emitted to comply with IEEE-754.",
                         version='6.6.0',
                     )
+                logger.info(f"returning {self.Result}()")
                 return self.Result()
             else:
                 # mult not in {0, 1}: factor it into the constant,
@@ -831,8 +872,10 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                 if ans.constant:
                     ans.constant *= mult
                 ans.multiplier = 1
+            logger.info(f"returning ans={ans}")
             return ans
         ans = self.Result()
         assert result[0] is _CONSTANT
         ans.constant = result[1]
+        logger.info(f"returning ans={ans}")
         return ans

@@ -25,17 +25,22 @@ from pyomo.repn.linear import LinearRepn
 _CONSTANT = util.ExprType.CONSTANT
 _VARIABLE = util.ExprType.VARIABLE
 _LINEAR = util.ExprType.LINEAR
+_GENERAL = util.ExprType.GENERAL
 
 code_type = deepcopy.__class__
 
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LinearTemplateRepn(LinearRepn):
     __slots__ = ("linear_sum",)
 
     def __init__(self):
+        logger.debug(f"(LinearTemplateRepn) {self.__class__.__name__}: __init__")
         super().__init__()
         self.linear_sum = []
-        print("(LinearTemplateRepn) Instantiated:", self.__class__)
 
     def __str__(self):
         return (
@@ -175,12 +180,12 @@ class LinearTemplateRepn(LinearRepn):
         remove_fixed_vars=False,
         check_duplicates=False,
     ):
-        print(f"> (LinearTemplateRepn) {self.__class__}.compile(...)")
+        logger.info(f"> (LinearTemplateRepn) {self.__class__}.compile(...)")
         ans, constant = self._build_evaluator(
             smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates
         )
         if not ans:
-            print("* compile RETURNING: constant=", constant,"\n")
+            logger.info("* compile RETURNING: constant={constant}")
             return constant
         indent = '\n    '
         if not constant and ans and ans[0].startswith('const +='):
@@ -205,7 +210,9 @@ class LinearTemplateRepn(LinearRepn):
                 0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
             )
         ans = indent.join(ans)
-        print(f"EXECUTING:\n{ans}\n\n* compile RETURNING: build_expr\n")
+        import textwrap
+        logger.info(f"EXECUTING:\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
+        # logger.info(f"EXECUTING:\n{ans}\n\n* compile RETURNING: build_expr\n")
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
@@ -286,8 +293,10 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     exit_node_dispatcher = linear.ExitNodeDispatcher(
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
+    expand_nonlinear_products = True
 
     def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
+        logger.info(f"(LinearTemplateRepnVisitor) {self.__class__}: __init__")
         super().__init__(subexpression_cache, var_recorder=var_recorder)
         self.indexed_vars = set()
         self.indexed_params = set()
@@ -296,83 +305,87 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}
         self.remove_fixed_vars = remove_fixed_vars
-        print("(LinearTemplateRepnVisitor): instantiated", self.__class__)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
+        logger.info(f"node = {type(node)} {node}")
         if node.__class__ is expr.TemplateSumExpression:
+            logger.info("   node.__class__ is expr.TemplateSumExpression")
             return node.template_args(), []
         if node.__class__ in linear.sum_like_expression_types:
+            logger.info("   node.__class__ in linear.sum_like_expression_types")
             return node.args, self.Result()
         else:
+            logger.info(f"   else: {node.args, []}")
             return node.args, []
 
     def expand_expression(self, obj, template_info):
         env = self.env
-        print(f"(LinearTemplateRepnVisitor) {self.__class__.__name__}.expand_expression(..)")
-        print("  obj:", type(obj))
-        print("  template_info:", type(template_info), [type(ti) for ti in template_info])
+        logger.info(f"(LinearTemplateRepnVisitor) {self.__class__.__name__}.expand_expression(..)")
+        logger.info(f"  obj={type(obj)}")
+        logger.info(f"  template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
+        logger.info(f"  id(template_info)={id(template_info)}")
         try:
             # attempt to look up already-constructed template
             body, lb, ub = self.expanded_templates[id(template_info)]
-            print("   body:", body)
-            print(f"   bounds: [ {lb}, {ub} ]")
+            logger.info(f"   body: {body}")
+            logger.info(f"   bounds: [ {lb}, {ub} ]")
         except KeyError:
             # create a new expanded template
-            print("! KeyError (create new expanded template)")
+            logger.info(f"NEW: create new expanded template")
             smap = self.symbolmap
-            print("  smap:", smap)
+            logger.info(f"  smap: {smap}")
             expr, indices = template_info
-            print("  expr:", expr)
-            print("  indices:", indices)
+            logger.info(f"  expr: {expr}")
+            logger.info(f"  indices: {indices}")
             args = [smap.getSymbol(i) for i in indices]
-            print("  args:", args)
+            logger.info(f"  args: {args}")
             if expr.is_expression_type(ExpressionType.RELATIONAL):
-                print("\n* expression_type = RELATIONAL")
-                print(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
+                logger.info("* expression_type = RELATIONAL")
+                logger.info(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
                 lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
-                    print("\n - self.walk_expression(BODY)")
+                    logger.info(" (*) self.walk_expression(BODY)")
                     _body = self.walk_expression(body)
-                    print("   ... _body:", type(_body), _body)
+                    logger.info(f"   ... _body: {type(_body)}, {_body}")
 
                     # body = self.walk_expression(body).compile(
                     body = _body.compile(
                         env, smap, self.expr_cache, args, False
                     )
-                    print("   ... body:", type(body), body)
+                    logger.info(f"   ... body: {type(body)}, {body}\n")
                 if lb is not None:
-                    print("\n - self.walk_expression(LB)")
+                    logger.info(" (*) self.walk_expression(LB)")
                     _lb = self.walk_expression(lb)
-                    print("   ... _lb:", type(_lb), _lb)
+                    logger.info(f"   ... _lb: {type(_lb)}, {_lb}")
                     lb = _lb.compile(
                     # lb = self.walk_expression(lb).compile(
                         env, smap, self.expr_cache, args, True
                     )
-                    print("   ... lb:", type(lb), lb)
+                    logger.info(f"   ... lb: {type(lb)}, {lb}\n")
                 if ub is not None:
-                    print("\n - self.walk_expression(UB)")
+                    logger.info(" (*) self.walk_expression(UB)")
                     _ub = self.walk_expression(ub)
-                    print("   ... _ub:", type(_ub), _ub)
+                    logger.info(f"   ... _ub: {type(_ub)}, {_ub}")
                     ub = _ub.compile(
                     # ub = self.walk_expression(ub).compile(
                         env, smap, self.expr_cache, args, True
                     )
-                    print("   ... ub:", type(ub), ub)
+                    logger.info(f"   ... ub: {type(ub)}, {ub}\n")
 
             elif expr is not None:
-                print("\n* expr is not None")
+                logger.info(f" * expr is not None")
                 lb = ub = None
-                print(" - self.walk_expression(expr)")
+                logger.info(" (X) self.walk_expression(expr)")
                 body = self.walk_expression(expr).compile(
                     env, smap, self.expr_cache, args, False
                 )
             else:
-                print("\n* expr else")
+                logger.info(" * expr else")
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            print(f"SET: self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
+            logger.info(f"SET: self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []

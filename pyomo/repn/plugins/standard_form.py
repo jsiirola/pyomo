@@ -40,6 +40,7 @@ from pyomo.core.base import (
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.linear_template import LinearTemplateRepnVisitor
+from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
@@ -122,6 +123,14 @@ class LinearStandardFormInfo(object):
         self.columns = columns
         self.objectives = objectives
         self.eliminated_vars = eliminated_vars
+        logger.info(f" c: {c}")
+        logger.info(f" c_offset: {c_offset}")
+        logger.info(f" A: {A}")
+        logger.info(f" rhs: {rhs}")
+        logger.info(f" rows: {rows}")
+        logger.info(f" columns: {columns}")
+        logger.info(f" objectives: {objectives}")
+        logger.info(f" eliminated_vars: {eliminated_vars}")
 
     @property
     def x(self):
@@ -240,6 +249,7 @@ class LinearStandardFormCompiler(object):
 
     def __init__(self):
         self.config = self.CONFIG()
+        logger.info(f"{self.__class__} __init__")
 
     @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream=None, **options):
@@ -259,6 +269,7 @@ class LinearStandardFormCompiler(object):
             and is ignored here.
 
         """
+        logger.info(f"{self.__class__.__name__}.write()")
         config = self.config(options)
 
         # Pause the GC, as the walker that generates the compiled LP
@@ -270,7 +281,8 @@ class LinearStandardFormCompiler(object):
 
 class _LinearStandardFormCompiler_impl(object):
     # Making these methods class attributes so that others can change the hooks
-    _get_visitor = LinearRepnVisitor
+    # _get_visitor = LinearRepnVisitor
+    _get_visitor = QuadraticRepnVisitor
     _to_vector = None
     _csc_matrix = None
     _csr_matrix = None
@@ -286,13 +298,14 @@ class _LinearStandardFormCompiler_impl(object):
             _LinearStandardFormCompiler_impl._csr_matrix = scipy.sparse.csr_array
 
     def write(self, model):
+        logger.info(f"{self.__class__.__qualname__}.write()")
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
         timer = TicTocTimer(logger=timing_logger)
         with_debug_timing = (
             timing_logger.isEnabledFor(logging.DEBUG) and timing_logger.hasHandlers()
         )
 
-        print("config.file_determinism:", self.config.file_determinism)
+        # logger.info(f"config.file_determinism: {self.config.file_determinism}")
         sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
             model,
@@ -314,6 +327,7 @@ class _LinearStandardFormCompiler_impl(object):
             targets={Suffix, Objective},
         )
         if unknown:
+            logger.error(f"unknown: {unknown}")
             raise ValueError(
                 "The model ('%s') contains the following active components "
                 "that the Linear Standard Form compiler does not know how to "
@@ -328,16 +342,19 @@ class _LinearStandardFormCompiler_impl(object):
                 )
             )
 
-        print("component_map:", component_map)
-        print("unknown:", unknown)
+        logger.info(f"component_map: {component_map}")
 
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
-        print("var_map:", var_map)
+        logger.info(f"var_map: {var_map}\n")
 
         var_recorder = TemplateVarRecorder(var_map, None, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
+        logger.info(f" visitor = {type(visitor)}")
+        # logger.warning("not creating visitor")
         template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
+        # template_visitor = QuadraticTemplateRepnVisitor({}, var_recorder=var_recorder)
+        logger.info(f" template_visitor = {type(template_visitor)}")
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -369,11 +386,11 @@ class _LinearStandardFormCompiler_impl(object):
         # Process objective
         #
         set_sense = self.config.set_sense
-        print("set_sense:", set_sense)
+        logger.info(f"set_sense: {set_sense}")
 
         objectives = []
         for blk in component_map[Objective]:
-            print("component_map[Objective] blk:", blk)
+            logger.info(f"component_map[Objective] blk: {blk}")
             objectives.extend(
                 blk.component_data_objects(
                     Objective, active=True, descend_into=False, sort=sorter
@@ -384,10 +401,10 @@ class _LinearStandardFormCompiler_impl(object):
         obj_data = []
         obj_index = []
         obj_index_ptr = [0]
-        print()
+
         for _i, obj in enumerate(objectives):
             if hasattr(obj, 'template_expr'):
-                print("+", __file__, f"({_i}) objective: template_expression")
+                logger.info(f"+ ({_i}) objective: template_expression")
                 offset, linear_index, linear_data, _, _ = (
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
@@ -396,7 +413,7 @@ class _LinearStandardFormCompiler_impl(object):
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
             else:
-                print("-", __file__, f"({_i}) objective: non_template_expression")
+                logger.info(f"- ({_i}) objective ({type(obj)}): non_template_expression")
                 repn = visitor.walk_expression(obj.expr)
                 N = len(repn.linear)
                 obj_index.append(map(var_recorder.var_order.__getitem__, repn.linear))
@@ -417,6 +434,10 @@ class _LinearStandardFormCompiler_impl(object):
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
 
+        logger.info("processed objective\n")
+        # logger.warning("processed objectives, stopping.\n")
+        # return None
+
         #
         # Tabulate constraints
         #
@@ -433,21 +454,22 @@ class _LinearStandardFormCompiler_impl(object):
         last_parent = None
         print()
         for _i, con in enumerate(ordered_active_constraints(model, self.config)):
+            logger.info(f"constraint: ({_i}:{con})")
             if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
                     timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
-                print("+", __file__, f"({_i}) constraint: template_expression")
+                logger.info(f"+ ({_i}) constraint: template_expression")
                 offset, linear_index, linear_data, lb, ub = (
                     template_visitor.expand_expression(con, con.template_expr())
                 )
                 N = len(linear_data)
-                print(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
+                logger.info(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
                       f"lb: {lb}, ub: {ub}")
             else:
-                print("-", __file__, f"({_i}) constraint: non_template_expression")
+                logger.info(f"- ({_i}) constraint: non_template_expression")
                 # Note: lb and ub could be a number, expression, or None
                 lb, body, ub = con.to_bounded_expression()
                 if lb.__class__ not in native_types:
@@ -455,7 +477,9 @@ class _LinearStandardFormCompiler_impl(object):
                 if ub.__class__ not in native_types:
                     ub = value(ub)
                 repn = visitor.walk_expression(body)
+                logger.info(f"repn: {repn}")
                 if repn.nonlinear is not None:
+                    logger.info(f"repn.nonlinear={repn.nonlinear} ({type(repn.nonlinear)})")
                     raise ValueError(
                         f"Model constraint ({con.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
@@ -466,6 +490,13 @@ class _LinearStandardFormCompiler_impl(object):
                 offset = repn.constant
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
+                logger.info(f"  N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}")
+                if getattr(repn, "quadratic", None):
+                    N2 = len(repn.quadratic)
+                    quadratic_index = map(var_recorder.var_order.__getitem__, repn.quadratic)
+                    quadratic_data = repn.quadratic.values()
+                    logger.info(f"     N2: {N2}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
@@ -483,8 +514,10 @@ class _LinearStandardFormCompiler_impl(object):
                 )
 
             if mixed_form:
+                logger.info("  - mixed_form -")
                 if lb == ub:
                     con_nnz += N
+                    logger.info(f"  rows.append(RowEntry({con}, 0))")
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
                     con_data.append(linear_data)
@@ -495,6 +528,7 @@ class _LinearStandardFormCompiler_impl(object):
                         if lb is not None:
                             linear_index = list(linear_index)
                         con_nnz += N
+                        logger.info(f"  rows.append(RowEntry({con}, 1))")
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
                         con_data.append(linear_data)
@@ -502,12 +536,14 @@ class _LinearStandardFormCompiler_impl(object):
                         con_index_ptr.append(con_nnz)
                     if lb is not None:
                         con_nnz += N
+                        logger.info(f"  rows.append(RowEntry({con}, 1))")
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
             elif slack_form:
+                logger.info("  - slack_form -")
                 if lb == ub:  # TODO: add tolerance?
                     rhs.append(ub - offset)
                 else:
@@ -538,6 +574,7 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
             else:
+                logger.info("  - not mixed or slack form -")
                 if ub is not None:
                     if lb is not None:
                         linear_index = list(linear_index)
@@ -564,8 +601,12 @@ class _LinearStandardFormCompiler_impl(object):
         n_cols = len(columns)
 
         # Convert the compiled data to scipy sparse matrices
+        logger.info(f"converting objective: {obj_index}")
+        logger.warning("FIX: handle template objective -- appears to break here") # FIX: template objective
         c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
+        logger.info(f"converting constraint: {con_index}")
         A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
+        logger.info(f" [A]: {A}")
 
         if with_debug_timing:
             timer.toc('Formed matrices', level=logging.DEBUG)
@@ -610,9 +651,11 @@ class _LinearStandardFormCompiler_impl(object):
             c, np.array(obj_offset), A, rhs, rows, columns, objectives, eliminated_vars
         )
         timer.toc("Generated linear standard form representation", delta=False)
+        logger.info(f" RETURNING: {type(info)} ")
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, n_cols):
+        logger.info(f"{self.__class__.__name__}._create_csc data={data}, index={index}")
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
