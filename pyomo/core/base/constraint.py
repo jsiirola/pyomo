@@ -209,10 +209,8 @@ class ConstraintData(ActiveComponentData):
             variable lower or upper bounds.
 
         """
-        logger.info(f"{self.__class__.__name__}.to_bounded_expression(evaluate_bounds={evaluate_bounds})")
         expr = self._expr
-        logger.info(f"  expr.__class__: {expr.__class__.__name__}")
-        # logger.info(f"  expr.args: {expr.args}")
+
         if expr.__class__ is RangedExpression:
             lb, body, ub = ans = expr.args
             if (
@@ -239,21 +237,6 @@ class ConstraintData(ActiveComponentData):
             ans = None, None, None
         else:
             lhs, rhs = expr.args
-            _lhs_potentially_variable = (hasattr(lhs, "is_potentially_variable") and
-                  lhs.is_potentially_variable())
-            _rhs_potentially_variable = (hasattr(rhs, "is_potentially_variable") and
-                  rhs.is_potentially_variable())
-            # logger.info(
-            #     "  is_potentially_variable():"
-            #     f" lhs: {_lhs_potentially_variable}"
-            #     f" rhs: {_rhs_potentially_variable}")
-
-            # logger.info(
-            #     f"  lhs.__class__ in native_types: {lhs.__class__ in native_types}"
-            # )
-            # logger.info(
-            #     f"  rhs.__class__ in native_types: {rhs.__class__ in native_types}"
-            # )
 
             if rhs.__class__ in native_types or not rhs.is_potentially_variable():
                 ans = rhs if expr.__class__ is EqualityExpression else None, lhs, rhs
@@ -263,10 +246,9 @@ class ConstraintData(ActiveComponentData):
                 ans = 0 if expr.__class__ is EqualityExpression else None, lhs - rhs, 0
 
         if evaluate_bounds:
-            logger.info("evaluating bounds")
             lb, body, ub = ans
             return self._evaluate_bound(lb, True), body, self._evaluate_bound(ub, False)
-        logger.info(f"returning  (lb, body, ub): {ans}\n")
+
         return ans
 
     def _evaluate_bound(self, bound, is_lb):
@@ -574,8 +556,8 @@ class TemplateConstraintData(ConstraintData):
         self._active = True
         self._index = index
         self._expr = template_info
-        logger.info(
-            f"{self.__class__.__qualname__} __init__:\n"
+        logger.debug(
+            f"{self.__class__.__qualname__}:\n"
             f" component={component},\n index={index},\n"
             f" template_info={template_info} ({type(template_info)})"
                     )
@@ -595,7 +577,6 @@ class TemplateConstraintData(ConstraintData):
         return self.set_value(expr)
 
     def to_bounded_expression(self):
-        logger.info(f"{self.__class__.__name__}.to_bounded_expression()")
         tmp, self._expr = self._expr, self._expr[0]
         try:
             return super().to_bounded_expression()

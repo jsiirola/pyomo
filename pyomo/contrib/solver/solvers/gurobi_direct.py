@@ -254,7 +254,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 self.release_license()
 
     def solve(self, model, **kwds) -> Results:
-        logger.info(f"(GurobiDirect (Legacy)) {self.__class__.__name__}.solve(): {kwds}")
+        logger.debug(f"{self.__class__.__name__}: {kwds}")
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         config = self.config(value=kwds, preserve_implicit=True)
         if not self.available():
@@ -273,19 +273,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
         repn = LinearStandardFormCompiler().write(
             model, mixed_form=True, set_sense=None
         )
-        logger.info(f"repn: {repn}")
-        logger.info(f"repn.rhs: {repn.rhs}")
         timer.stop('compile_model')
-        # return Results()
-
-        logger.info(f" columns: {repn.columns}")
-
-        for c in repn.columns:
-            logger.info(f"    {c}")
-
-        logger.info(f"    rows: {repn.rows}")
-        for r in repn.rows:
-            logger.info(f"    {r}")
 
         if len(repn.objectives) > 1:
             raise IncompatibleModelError(
@@ -327,7 +315,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 timer.start('transfer_model')
                 # only add linear objective coefficients with variables if no quadratic terms
                 _obj=(repn.c.todense()[0] if repn.c.shape[0] else 0) if not repn.is_quadratic else None
-                logger.info(f"_obj:{_obj}")
+
                 x = gurobi_model.addMVar(
                     len(repn.columns),
                     lb=lb,
@@ -335,17 +323,17 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                     obj=_obj,
                     vtype=vtype,
                 )
-                logger.info(f"repn.A: {repn.A.toarray()}  {type(repn.A.toarray())}")
-                logger.info(f"repn.is_quadratic: {repn.is_quadratic}")
-                logger.info(f"sense: {sense}")
-                logger.info(f"rhs: {repn.rhs}")
+                logger.debug(f"repn.A: {repn.A.toarray()}  {type(repn.A.toarray())}")
+                logger.debug(f"repn.is_quadratic: {repn.is_quadratic}")
+                logger.debug(f"sense: {sense}")
+                logger.debug(f"rhs: {repn.rhs}")
                 if repn.is_quadratic:
                     # quadratic: add each matrix constraint individually
                     A = [
                         gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
                         for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
                     ]
-                    logger.info(f"Q_obj: {[q.toarray() for q in repn.Q_obj]}, {repn.c.toarray()}, {repn.objectives[0].sense}, {repn.c_offset[0]}")
+
                     gurobi_model.setMObjective(
                         None if len(repn.Q_obj)<1 else repn.Q_obj[0],
                         repn.c.todense()[0], repn.c_offset[0], x, x, x, repn.objectives[0].sense
@@ -386,8 +374,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 timer.start('optimize')
                 gurobi_model.optimize()
                 timer.stop('optimize')
-                logger.info("writing: model_debug.lp")
-                gurobi_model.write("model_debug.lp")
+
         finally:
             os.chdir(orig_cwd)
 

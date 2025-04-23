@@ -124,14 +124,14 @@ class LinearStandardFormInfo(object):
         self.columns = columns
         self.objectives = objectives
         self.eliminated_vars = eliminated_vars
-        logger.info(f" c: {c.toarray()}")
-        logger.info(f" c_offset: {c_offset}")
-        logger.info(f" A: {A.toarray()}")
-        logger.info(f" rhs: {rhs}")
+        logger.debug(f" c: {c.toarray()}")
+        logger.debug(f" c_offset: {c_offset}")
+        logger.debug(f" A: {A.toarray()}")
+        logger.debug(f" rhs: {rhs}")
         logger.debug(f" rows: {rows}")
         logger.debug(f" columns: {columns}")
         logger.debug(f" objectives: {objectives}")
-        logger.info(f" eliminated_vars: {eliminated_vars}")
+        logger.debug(f" eliminated_vars: {eliminated_vars}")
 
     @property
     def x(self):
@@ -154,9 +154,9 @@ class QuadraticStandardFormInfo(LinearStandardFormInfo):
         self.Q_list = Q_list
         self.Q_obj = Q_obj
         for i,q in enumerate(Q_obj):
-            logger.info(f"  Q objective[{i}]: {None if q is None else q.toarray()}")
+            logger.debug(f"  Q objective[{i}]: {None if q is None else q.toarray()}")
         for i,q in enumerate(Q_list):
-            logger.info(f"  Q constraint[{i}]: {None if q is None else q.toarray()}")
+            logger.debug(f"  Q constraint[{i}]: {None if q is None else q.toarray()}")
         for Q in [Q_list, Q_obj]:
             if isinstance(Q, list) and any([q is not None and q is not [] for q in Q]):
                 self.is_quadratic = True
@@ -270,7 +270,6 @@ class LinearStandardFormCompiler(object):
 
     def __init__(self):
         self.config = self.CONFIG()
-        logger.info(f"{self.__class__} __init__")
 
     @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream=None, **options):
@@ -290,7 +289,6 @@ class LinearStandardFormCompiler(object):
             and is ignored here.
 
         """
-        logger.info(f"{self.__class__.__name__}.write()")
         config = self.config(options)
 
         # Pause the GC, as the walker that generates the compiled LP
@@ -319,7 +317,6 @@ class _LinearStandardFormCompiler_impl(object):
             _LinearStandardFormCompiler_impl._csr_matrix = scipy.sparse.csr_array
 
     def write(self, model):
-        logger.info(f"{self.__class__.__qualname__}.write()")
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
         timer = TicTocTimer(logger=timing_logger)
         with_debug_timing = (
@@ -363,19 +360,19 @@ class _LinearStandardFormCompiler_impl(object):
                 )
             )
 
-        logger.info(f"component_map: {component_map}")
+        logger.debug(f"component_map: {component_map}")
 
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
-        logger.info(f"var_map: {var_map}\n")
+        logger.debug(f"var_map: {var_map}")
 
         var_recorder = TemplateVarRecorder(var_map, None, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
-        logger.info(f" visitor = {type(visitor)}")
-        # logger.warning("not creating visitor")
+        logger.debug(f"visitor = {type(visitor)}")
+
         # template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
         template_visitor = QuadraticTemplateRepnVisitor({}, var_recorder=var_recorder)
-        logger.info(f" template_visitor = {type(template_visitor)}")
+        logger.debug(f"template_visitor = {type(template_visitor)}")
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -407,11 +404,9 @@ class _LinearStandardFormCompiler_impl(object):
         # Process objective
         #
         set_sense = self.config.set_sense
-        logger.info(f"set_sense: {set_sense}")
 
         objectives = []
         for blk in component_map[Objective]:
-            logger.info(f"component_map[Objective] blk: {blk}")
             objectives.extend(
                 blk.component_data_objects(
                     Objective, active=True, descend_into=False, sort=sorter
@@ -429,16 +424,13 @@ class _LinearStandardFormCompiler_impl(object):
         obj_quadratic_index_ptr = [0]
 
         for _i, obj in enumerate(objectives):
-            logger.info("\n")
-            logger.info(f"OBJECTIVE: {_i}:{obj} {obj.sense} ({type(obj)})")
+            logger.debug(f"OBJECTIVE: {_i}:{obj} {obj.sense} ({type(obj)})")
             if hasattr(obj, 'template_expr'):
-                logger.info(f"+ ({_i}) objective: template_expression")
                 expanded_expression_values = template_visitor.expand_expression(obj, obj.template_expr())
                 offset, linear_index, linear_data, _, _ = expanded_expression_values[:5]
                 # offset, linear_index, linear_data, _, _ = (
                 #     template_visitor.expand_expression(obj, obj.template_expr())
                 # )[:5]
-                logger.info(f"+ ({_i}) objective: **expand_expression COMPLETE**\n")
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
@@ -449,7 +441,6 @@ class _LinearStandardFormCompiler_impl(object):
                 else:
                     quadratic_index, quadratic_data = [], []
                 N_quadratic = len(quadratic_data)
-                logger.info(f"     N2: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
                 obj_quadratic_nnz += N_quadratic
                 obj_quadratic_data.append(quadratic_data)
                 if N_quadratic>0:
@@ -457,7 +448,6 @@ class _LinearStandardFormCompiler_impl(object):
                     obj_quadratic_index_ptr.append(obj_quadratic_nnz)
 
             else:
-                logger.info(f"- ({_i}) objective ({type(obj)}): non_template_expression")
                 repn = visitor.walk_expression(obj.expr)
                 N = len(repn.linear)
                 obj_index.append(map(var_recorder.var_order.__getitem__, repn.linear))
@@ -478,9 +468,7 @@ class _LinearStandardFormCompiler_impl(object):
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
 
-        logger.info(f"obj_index: {obj_index}")
-        logger.info(f"obj_data: {obj_data}")
-        logger.info("processed objectives\n")
+        logger.debug("processed objectives\n")
         # return None
 
         #
@@ -508,30 +496,27 @@ class _LinearStandardFormCompiler_impl(object):
         last_parent = None
         # print()
         for _i, con in enumerate(ordered_active_constraints(model, self.config)):
-            logger.info("\n")
-            logger.info(f"CONSTRAINT: {_i}:{con} ({type(con)})")
+            logger.debug(f"CONSTRAINT: {_i}:{con} ({type(con)})")
             if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
                     timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
-                logger.info(f"+ ({_i}) constraint: template_expression")
-                # offset, linear_index, linear_data, lb, ub = (
                 expanded_expression_values = (
                     template_visitor.expand_expression(con, con.template_expr())
                 )
                 offset, linear_index, linear_data, lb, ub = expanded_expression_values[:5]
-                logger.info(f"+ ({_i}) constraint: **expand_expression COMPLETE**\n")
+
                 N = len(linear_data)
-                logger.info(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
+                logger.debug(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
                       f"lb: {lb}, ub: {ub}")
                 if len(expanded_expression_values)>5:
                     quadratic_index, quadratic_data = expanded_expression_values[5:]
                 else:
                     quadratic_index, quadratic_data = [], []
                 N_quadratic = len(quadratic_data)
-                logger.info(f"     N2: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+                logger.debug(f"     N_quadratic: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
                 con_quadratic_nnz += N_quadratic
                 con_quadratic_data.append(quadratic_data)
                 if N_quadratic>0:
@@ -540,7 +525,6 @@ class _LinearStandardFormCompiler_impl(object):
 
 
             else:
-                logger.info(f"- ({_i}) constraint: non_template_expression")
                 # Note: lb and ub could be a number, expression, or None
                 lb, body, ub = con.to_bounded_expression()
                 if lb.__class__ not in native_types:
@@ -548,9 +532,9 @@ class _LinearStandardFormCompiler_impl(object):
                 if ub.__class__ not in native_types:
                     ub = value(ub)
                 repn = visitor.walk_expression(body)
-                logger.info(f"repn: {repn}")
+
                 if repn.nonlinear is not None:
-                    logger.info(f"repn.nonlinear={repn.nonlinear} ({type(repn.nonlinear)})")
+
                     raise ValueError(
                         f"Model constraint ({con.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
@@ -559,29 +543,25 @@ class _LinearStandardFormCompiler_impl(object):
                 N = len(repn.linear)
                 # Pull out the constant: we will move it to the bounds
                 offset = repn.constant
-                logger.info(f"var_recorder.var_order: {var_recorder.var_order} ({type(var_recorder.var_order)})")
-                logger.info(f"repn.linear = {repn.linear}")
+
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
-                logger.info(f"  N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}")
+                logger.debug(f"  N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}")
                 if getattr(repn, "quadratic", None):
                     N_quadratic = len(repn.quadratic)
                     con_quadratic_nnz += N_quadratic
-                    logger.info(f"repn.quadratic: {repn.quadratic}")
                     quadratic_index = map( lambda k :
                                           (var_recorder.var_order[k[0]],var_recorder.var_order[k[1]]),
                                           repn.quadratic)
-                    # quadratic_index = map(var_recorder.var_order.__getitem__, repn.quadratic)
-                    # quadratic_index = map( lambda i :
-                    #                       (var_recorder.var_order[i[0]],var_recorder.var_order[i[1]]))
+
                     quadratic_data = repn.quadratic.values()
-                    logger.info(f"     N2: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
+                    logger.debug(f"     N_quadratic: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
                     con_quadratic_data.append(quadratic_data)
                     con_quadratic_index.append(quadratic_index)
                     con_quadratic_index_ptr.append(con_quadratic_nnz)
                 else:
                     con_quadratic_data.append([])
-                    # con_quadratic_index.append()
+
                     N_quadratic = 0
 
 
@@ -590,7 +570,6 @@ class _LinearStandardFormCompiler_impl(object):
                 # Note: you *cannot* output trivial (unbounded)
                 # constraints in matrix format.  I suppose we could add a
                 # slack variable, but that seems rather silly.
-                logger.info(f"** lb is None and ub is None")
                 continue
 
             if not N and not N_quadratic:
@@ -603,10 +582,10 @@ class _LinearStandardFormCompiler_impl(object):
                 )
 
             if mixed_form:
-                logger.info("  ** mixed_form **")
+                logger.debug("mixed_form")
                 if lb == ub:
                     con_nnz += N
-                    logger.info(f"  rows.append(RowEntry({con}, 0))\n")
+                    logger.debug(f"rows.append(RowEntry({con}, 0))\n")
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
                     con_data.append(linear_data)
@@ -617,7 +596,7 @@ class _LinearStandardFormCompiler_impl(object):
                         if lb is not None:
                             linear_index = list(linear_index)
                         con_nnz += N
-                        logger.info(f"  rows.append(RowEntry({con}, +1))\n")
+                        logger.debug(f"rows.append(RowEntry({con}, +1))\n")
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
                         con_data.append(linear_data)
@@ -625,7 +604,7 @@ class _LinearStandardFormCompiler_impl(object):
                         con_index_ptr.append(con_nnz)
                     if lb is not None:
                         con_nnz += N
-                        logger.info(f"  rows.append(RowEntry({con}, -1))\n")
+                        logger.debug(f"rows.append(RowEntry({con}, -1))\n")
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
                         con_data.append(linear_data)
@@ -685,28 +664,27 @@ class _LinearStandardFormCompiler_impl(object):
             # report the last constraint
             timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
 
-        logger.info("** COMPLETED CONSTRAINTS **\n")
+        logger.debug("completed constraints\n")
 
         # Get the variable list
         columns = list(var_map.values())
         n_cols = len(columns)
 
         # Convert the compiled data to scipy sparse matrices
-        logger.info(f"converting objective: {obj_index}")
-        logger.warning("FIX: handle template objective when not using decorator -- appears to break here") # FIX: template objective
+        logger.debug(f"converting objective: {obj_index}")
         is_quadratic = any([qd for qd in obj_quadratic_data])
-        logger.info(f"objective.is_quadratic: {is_quadratic}")
-        # c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
+        logger.debug(f"objective.is_quadratic: {is_quadratic}")
+
         c, Q_obj = self._create_csc_quadratic(
             obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols,
             obj_quadratic_data, obj_quadratic_index
         )
 
-        logger.info(f"Objective:\n  c: {c.toarray()}\n  "
+        logger.debug(f"Objective:\n  c: {c.toarray()}\n  "
                     f"Q: {[q if not hasattr(q, 'toarray') else q.toarray() for q in Q_obj]}\n  "
                     f"offset: {obj_offset}")
 
-        logger.info(f"converting constraints: {con_index}")
+        logger.debug(f"converting constraints: {con_index}")
         is_quadratic = any([qd for qd in con_quadratic_data]) or any(
             [qd for qd in obj_quadratic_data]
         )
@@ -725,11 +703,6 @@ class _LinearStandardFormCompiler_impl(object):
 
         else: # linear: single A matrix
             A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
-
-            logger.info(f"con_linear_data: {con_data}")
-            logger.info(f"con_linear_index: {con_index}")
-            logger.info(f"con_lindex_index_ptr: {con_index_ptr}")
-            logger.info(f"con_quadratic_data: {con_quadratic_data}")
 
             if with_debug_timing:
                 timer.toc('Formed matrices', level=logging.DEBUG)
@@ -775,11 +748,11 @@ class _LinearStandardFormCompiler_impl(object):
             )
 
         timer.toc("Generated standard form representation", delta=False)
-        logger.info(f" RETURNING: {type(info)} ")
+        logger.debug(f"RETURNING: {type(info)} ")
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, n_cols, *, sum_duplicates=True, eliminate_zeros=True):
-        logger.info(f"data={data}, index={[i for i in index]}, "
+        logger.debug(f"data={data}, index={[i for i in index]}, "
                     f"index_ptr={index_ptr}, nnz={nnz}, n_cols={n_cols}")
         data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
         index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
@@ -794,10 +767,7 @@ class _LinearStandardFormCompiler_impl(object):
                 (data, index, index_ptr), [len(index_ptr) - 1, n_cols]
             ).tocsc()
 
-        logger.info(f"  data={data}")
-        logger.info(f"  index={index}")
         index_ptr = np.array(index_ptr, dtype=np.int32)
-        logger.info(f"  index_ptr={index_ptr}")
         A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, n_cols])
         A = A.tocsc()
         if sum_duplicates:
@@ -816,34 +786,20 @@ class _LinearStandardFormCompiler_impl(object):
         A = self._create_csc(linear_data, linear_index, linear_indez_ptr, linear_nnz, n_cols,
                              sum_duplicates=False, eliminate_zeros=False)
 
-        # logger.info(f"index_ptr={quadratic_index_ptr}, nnz={quadratic_nnz}, n_cols={n_cols}")
-        # data = self._to_vector(itertools.chain.from_iterable(quadratic_data), np.float64, quadratic_nnz)
-        # index = self._to_vector(itertools.chain.from_iterable(quadratic_index), tuple)#, quadratic_nnz)
-        # logger.info(f"  quadratic_data={data}")
-        # logger.info(f"  quadratic_index={index}")
-        # # for i,qi in enumerate(list(quadratic_index)):
-        # #     logger.info(f"    quadratic index {i}: {list(qi)}")
-        # # Q = self._csr_matrix((data, index), [len(quadratic_index_ptr) - 1, n_cols])
-        # # logger.info(f"Q:{Q}")
         qi = iter(quadratic_index)
         Q_list = []
         for i, coefficients in enumerate(quadratic_data):
-            logger.info(f" coefficients: {i}:{coefficients}")
+
             if coefficients:
                 index = list(next(qi))
                 row_ind, col_ind = zip(*index)
-                # logger.info(f"     index: {index}, row_ind:{row_ind}, col_ind:{col_ind}")
+
                 Q = self._csr_matrix((np.array(list(coefficients)), (row_ind,col_ind)), shape=[n_cols,n_cols])
                 Q = Q.tocsc()
-                # print(Q)
+
             else:
                 Q = None
-            #     # pass
-            # Q = Q.tocsc()
-            # Q.sum_duplicates()
-            # Q.eliminate_zeros()
-            # yield Q
-            # print(Q)
+
             Q_list.append(Q)
 
         return A, Q_list

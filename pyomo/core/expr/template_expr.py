@@ -781,22 +781,18 @@ def _reduce_template_to_component(expr):
     level = -1
 
     def beforeChild(node, child, child_idx):
-        logger.info(f"  (_reduce_template_to_component).before_child({node}, {child}, {type(child)}, {child_idx})")
+        logger.debug(f"({node}, {child}, {type(child)}, {child_idx})")
         # Efficiency: do not descend into leaf nodes.
         if type(child) in native_types:
-            logger.info("native type")
             return False, child
         elif not child.is_expression_type():
-            logger.info("not expression type")
             if hasattr(child, '_resolve_template'):
-                logger.info("has attr _resolve_template")
                 try:
                     ans = child._resolve_template(())
                 except TemplateExpressionError:
                     # We are attempting "loose" template resolution: for
                     # every unset IndexTemplate, search the underlying
                     # set to find *any* valid match.
-                    logger.error("TemplateExpressionError")
                     if child._group not in wildcard_groups:
                         wildcard_groups[child._group] = len(wildcards)
                         info = _wildcard_info(child._set, child)
@@ -806,10 +802,8 @@ def _reduce_template_to_component(expr):
                         info.objects.append(child)
                         child.set_value(info.value)
                     ans = child._resolve_template(())
-                logger.info(f"ans: {ans}")
                 return False, ans
             if child.is_variable_type():
-                logger.info("is_variable_type")
                 from pyomo.core.base.set import RangeSet
 
                 if child.domain.isdiscrete():

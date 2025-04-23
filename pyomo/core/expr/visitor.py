@@ -207,7 +207,6 @@ class StreamBasedExpressionVisitor(object):
         # to override both.  The hasattr check prevents the "None"
         # defaults from overriding attributes or methods defined on
         # derived classes.
-        logger.info(f"(StreamBasedExpressionVisitor) {self.__class__.__qualname__}.init({kwds})\n")
         for field in self.client_methods:
             if field in kwds:
                 setattr(self, field, kwds.pop(field))
@@ -267,31 +266,25 @@ class StreamBasedExpressionVisitor(object):
         """
         # logger.info(f"[WALK] (StreamBasedExpressionVisitor) {self.__class__.__qualname__}.walk_expression({expr})")
         if self.initializeWalker is not None:
-            logger.info("  - initializing walker")
             walk, root = self.initializeWalker(expr)
-            logger.info(f"  - walker initialized: walk={walk}, root={root}")
             if not walk:
-                logger.info(f" * RETURNING root: {type(root)}, {root}")
                 return root
             elif root is None:
                 root = expr
         else:
-            logger.info("  - NOT initializing walker")
             root = expr
 
         try:
-            logger.info(f"  - process_node -> {self._process_node.__name__}")
             result = self._process_node(root, RECURSION_LIMIT)
             _nonrecursive = None
         except RevertToNonrecursive:
-            logger.info("    - RevertToNonrecursive")
+            logger.debug("RevertToNonrecursive")
             ptr = (None,) + self.recursion_stack.pop()
             while self.recursion_stack:
                 ptr = (ptr,) + self.recursion_stack.pop()
             self.recursion_stack = None
             _nonrecursive = self._nonrecursive_walker_loop, ptr
         except RecursionError:
-            logger.info("    ! RecursionError")
             logger.warning(
                 'Unexpected RecursionError walking an expression tree.',
                 extra={'id': 'W1003'},
@@ -299,16 +292,14 @@ class StreamBasedExpressionVisitor(object):
             _nonrecursive = self.walk_expression_nonrecursive, expr
 
         if _nonrecursive is not None:
-            logger.info(f"_nonrecursive: {_nonrecursive}")
             return _nonrecursive[0](_nonrecursive[1])
 
         if self.finalizeResult is not None:
-            logger.info(f"  self.finalizeResult = {self.finalizeResult}")
             sr = self.finalizeResult(result)
-            logger.info(f"   * RETURNING: self.finalizeResult = {sr}")
+            logger.debug(f"RETURNING: self.finalizeResult = {sr}")
             return sr
         else:
-            logger.info(f"   * RETURNING result: {type(result)}, {result}")
+            logger.debug(f"RETURNING result: {type(result)}, {result}")
             return result
 
     def _compute_actual_recursion_limit(self):

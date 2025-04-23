@@ -215,9 +215,10 @@ class LinearTemplateRepn(LinearRepn):
                 0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
             )
         ans = indent.join(ans)
+        
         import textwrap
-        logger.info(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
-        # logger.info(f"EXECUTING:\n{ans}\n\n* compile RETURNING: build_expr\n")
+        logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
+
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
@@ -228,14 +229,12 @@ class LinearTemplateRepn(LinearRepn):
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
 
     def _before_indexed_var(self, visitor, child):
-        logger.info(f"CHILD: {child}")
         if child not in visitor.indexed_vars:
             visitor.var_recorder.add(child)
             visitor.indexed_vars.add(child)
         return False, (_VARIABLE, child)
 
     def _before_indexed_param(self, visitor, child):
-        logger.info(f"CHILD: {child}")
         if child not in visitor.indexed_params:
             visitor.indexed_params.add(child)
             name = visitor.symbolmap.getSymbol(child)
@@ -243,20 +242,16 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         return False, (_CONSTANT, child)
 
     def _before_indexed_component(self, visitor, child):
-        logger.info(f"CHILD: {child}")
         visitor.env[visitor.symbolmap.getSymbol(child)] = child
         return False, (_CONSTANT, child)
 
     def _before_index_template(self, visitor, child):
-        logger.info(f"CHILD: {child}")
         symb = visitor.symbolmap.getSymbol(child)
         visitor.env[symb] = 0
-        logger.info(f"EXPR_CACHE visitor.expr_cache[{id(expr)}] = {child}")
         visitor.expr_cache[id(child)] = child
         return False, (_CONSTANT, child)
 
     def _before_component(self, visitor, child):
-        logger.info(f"CHILD: {child}")
         visitor.env[visitor.symbolmap.getSymbol(child)] = child
         return False, (_CONSTANT, child)
 
@@ -265,7 +260,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
 
 
 def _handle_getitem(visitor, node, comp, *args):
-    logger.info(f"{node}, {comp}, {args}")
+
     expr = comp[1][tuple(arg[1] for arg in args)]
     if comp[0] is _CONSTANT:
         return (_CONSTANT, expr)
@@ -273,10 +268,8 @@ def _handle_getitem(visitor, node, comp, *args):
         # Because we are passing up an id() and not the expression
         # itself, we need to cache the expression that we just created
         # to preserve a reference to it and prevent deallocation / GC
-        logger.info(f"SETTING visitor.expr_cache[{id(expr)}] = {expr}")
         visitor.expr_cache[id(expr)] = expr
         ans = visitor.Result()
-        logger.info(f"INITIALIZING linear[{expr}] linear[{id(expr)}]=1")
         ans.linear[id(expr)] = 1
         return (_LINEAR, ans)
 
@@ -300,23 +293,6 @@ def define_exit_node_handlers(_exit_node_handlers=None):
 
     return _exit_node_handlers
 
-class _ExprCacheDict(dict):
-
-    def get(self, keyname, value=None):
-        logger.info(f"[**EXPR_CACHE**]: attempting to get '{keyname} (default:{value})'")
-        return super().get(keyname, value)
-
-    def __getitem__(self, key):
-        logger.info(f"[**EXPR_CACHE**]: getting '{key}'")
-        return super().__getitem__(key)
-
-    def __setitem__(self, key, value):
-        logger.info(f"[**EXPR_CACHE**]: setting '{key}': {value}")
-        return super().__setitem__(key, value)
-
-    def __delitem__(self, key):
-        logger.info(f"[**EXPR_CACHE**]: deleting '{key}'")
-        return super().__delitem__(key)
 
 class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     Result = LinearTemplateRepn
@@ -327,11 +303,10 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     expand_nonlinear_products = True
 
     def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
-        logger.info(f"(LinearTemplateRepnVisitor) {self.__class__}: __init__")
         super().__init__(subexpression_cache, var_recorder=var_recorder)
         self.indexed_vars = set()
         self.indexed_params = set()
-        self.expr_cache = _ExprCacheDict()
+        self.expr_cache = {}
         self.env = var_recorder.env
         self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}
@@ -340,83 +315,51 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        logger.info(f"node = {type(node).__name__} {node}")
+        logger.debug(f"node = {type(node).__name__} {node}")
         if node.__class__ is expr.TemplateSumExpression:
-            logger.info(f"   is expr.TemplateSumExpression -> {node.template_args()}, []")
             return node.template_args(), []
         if node.__class__ in linear.sum_like_expression_types:
-            logger.info(f"   in linear.sum_like_expression_types -> {node.args}, {self.Result}")
             return node.args, self.Result()
         else:
-            logger.info(f"   else: not TemplateSumExpression or sum_like_expression_types: {node.args, []}")
             return node.args, []
 
     def expand_expression(self, obj, template_info):
         env = self.env
-        logger.info(f"{self.__class__.__name__}.expand_expression(..)")
-        logger.info(f"  obj={type(obj)}")
-        logger.info(f"  template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
-        logger.info(f"  id(template_info)={id(template_info)}")
+        logger.debug(f"obj={type(obj)}")
+        logger.debug(f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
+        logger.debug(f"id(template_info)={id(template_info)}")
         try:
             # attempt to look up already-constructed template
             body, lb, ub = self.expanded_templates[id(template_info)]
-            logger.info(f"   body: {body}")
-            logger.info(f"   bounds: [ {lb}, {ub} ]")
         except KeyError:
             # create a new expanded template
-            logger.info(f"NEW: create new expanded template")
             smap = self.symbolmap
-            logger.info(f"  smap: {smap.bySymbol}, {smap.aliases}")
             expr, indices = template_info
-            logger.info(f"  expr: {expr}")
-            logger.info(f"  indices: {indices}")
             args = [smap.getSymbol(i) for i in indices]
-            logger.info(f"  args: {[(a,type(a)) for a in args]}")
             if expr.is_expression_type(ExpressionType.RELATIONAL):
-                logger.info("* expression_type = RELATIONAL")
-                # logger.info(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
                 lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
-                    logger.info(" (*) self.walk_expression(BODY)")
-                    _body = self.walk_expression(body)
-                    logger.info(f"   ... _body: {type(_body)}, {_body}")
-
-                    # body = self.walk_expression(body).compile(
-                    body = _body.compile(
+                    body = self.walk_expression(body).compile(
                         env, smap, self.expr_cache, args, False
                     )
-                    logger.info(f"   ... body: {type(body)}, {body}\n")
                 if lb is not None:
-                    logger.info(" (*) self.walk_expression(LB)")
-                    _lb = self.walk_expression(lb)
-                    logger.info(f"   ... _lb: {type(_lb)}, {_lb}")
-                    lb = _lb.compile(
-                    # lb = self.walk_expression(lb).compile(
+                    lb = self.walk_expression(lb).compile(
                         env, smap, self.expr_cache, args, True
                     )
-                    logger.info(f"   ... lb: {type(lb)}, {lb}\n")
                 if ub is not None:
-                    logger.info(" (*) self.walk_expression(UB)")
-                    _ub = self.walk_expression(ub)
-                    logger.info(f"   ... _ub: {type(_ub)}, {_ub}")
-                    ub = _ub.compile(
-                    # ub = self.walk_expression(ub).compile(
+                    ub = self.walk_expression(ub).compile(
                         env, smap, self.expr_cache, args, True
                     )
-                    logger.info(f"   ... ub: {type(ub)}, {ub}\n")
 
             elif expr is not None:
-                logger.info(f" * expr is not None")
                 lb = ub = None
-                logger.info(" (X) self.walk_expression(expr)")
                 body = self.walk_expression(expr).compile(
                     env, smap, self.expr_cache, args, False
                 )
             else:
-                logger.info(" * expr else")
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            logger.info(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
+            logger.debug(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []

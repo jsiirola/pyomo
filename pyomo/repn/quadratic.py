@@ -80,7 +80,7 @@ class QuadraticRepn(object):
             return _CONSTANT, self.multiplier * self.constant
 
     def duplicate(self):
-        logger.info(f"DUPLICATE: {self}")
+        logger.debug(f"DUPLICATE: {self}")
         ans = self.__class__.__new__(self.__class__)
         ans.multiplier = self.multiplier
         ans.constant = self.constant
@@ -94,9 +94,9 @@ class QuadraticRepn(object):
 
     def to_expression(self, visitor):
         var_map = visitor.var_map
-        logger.info(f"var_map: {var_map}")
-        logger.info(f"self: linear={self.linear}, quadratic={self.quadratic}, nonlinear={self.nonlinear}")
-        logger.info(f"constant: {self.constant}, multiplier: {self.multiplier}")
+        logger.debug(f"var_map: {var_map}")
+        logger.debug(f"self: linear={self.linear}, quadratic={self.quadratic}, nonlinear={self.nonlinear}")
+        logger.debug(f"constant: {self.constant}, multiplier: {self.multiplier}")
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
             # assignment) in case the term is a non-numeric node (like a
@@ -173,32 +173,18 @@ class QuadraticRepn(object):
 
 
 def _mul_linear_linear(visitor, linear1, linear2):
-    logger.info(f"linear1: {linear1}, linear2: {linear2}")
+    logger.debug(f"linear1: {linear1}, linear2: {linear2}")
     quadratic = {}
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
             key = (min(vid1,vid2), max(vid2,vid1))
             quadratic[key] = quadratic.get(key,0) + (coef1*coef2)
-    # vo = visitor.var_recorder.var_order
-    # logger.info(f"var_order: {vo}")
-    # logger.info(f"var_map: {visitor.var_recorder.var_map}")
-    # for vid1, coef1 in linear1.items():
-    #     logger.info(f"vid1: {vid1}, coef1: {coef1}")
-    #     for vid2, coef2 in linear2.items():
-    #         logger.info(f"  vid2: {vid2}, coef2: {coef2}")
-    #         if vo[vid1] < vo[vid2]:
-    #             key = vid1, vid2
-    #         else:
-    #             key = vid2, vid1
-    #         if key in quadratic:
-    #             quadratic[key] += coef1 * coef2
-    #         else:
-    #             quadratic[key] = coef1 * coef2
+
     return quadratic
 
 
 def _handle_product_linear_linear(visitor, node, arg1, arg2):
-    logger.info(f"{node}, {arg1}, {arg2}")
+    logger.debug(f"{node}, {arg1}, {arg2}")
     _, arg1 = arg1
     _, arg2 = arg2
     # Quadratic first, because we will update linear in a minute
@@ -387,13 +373,10 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
 
 class QuadraticTemplateRepn(QuadraticRepn):
     # __slots__ = ("linear_sum",)
-    # _build_evaluator = linear_template.LinearTemplateRepn._build_evaluator
-    # compile = linear_template.LinearTemplateRepn.compile
 
     def __init__(self):
         super().__init__()
         self.linear_sum=[]
-        logger.info(f"self.linear_sum={self.linear_sum}")
 
     @classmethod
     def _resolve_symbols(cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map):
@@ -403,35 +386,21 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map) for _k in k
             ])+")"
 
-        logger.info(f" (1) k={k} ({type(k)})")
-        logger.info(f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, "
+        logger.debug(f"k={k} ({type(k)})")
+        logger.debug(f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, "
                     f"var_map: {[(k,v._index,v._value,v._component()) for k, v in var_map.items()]}")
 
-        # if k in expr_cache or (k in var_map and str(var_map[k]) in smap.bySymbol):
         if k in expr_cache or k in var_map:
             if k in expr_cache:
                 k = expr_cache[k]
             else:
                 symbol_obj_id = id(var_map[k]._component())
-                logger.info(f"symbol_obj_id = {symbol_obj_id}")
-                k=f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
-                # k = var_map[k]._component()
-                # k = var_map[k]._component()[var_map[k]._index]
-                # logger.info(f"({k._index, k._component, k._value})")
-                # k = str(var_map[k])
-                # k = smap.bySymbol[k]
-            # else:
-            #     k = smap.byObject[k]
+                if symbol_obj_id in smap.byObject:
+                    k=f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
 
-            logger.info(f" (2) k={k} ({type(k)})")
-
-            logger.info(f"    k.__class__ in native_types: {k.__class__ in native_types}")
-            logger.info(f"    k.is_expression_type(): {hasattr(k,'is_expression_type') and k.is_expression_type()}")
-
+            logger.debug(f"k={k} ({type(k)})")
 
             if k.__class__ not in native_types and k.is_expression_type():
-                logger.info("k.__class__ not in native_types and k.is_expression_type()")
-                logger.info(f"k.to_string(smap=smap) = {k.to_string(smap=smap)}")
                 ans.append('v = ' + k.to_string(smap=smap))
                 k = 'v'
                 if remove_fixed_vars:
@@ -441,10 +410,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
                     ans.append('else:')
                     indent = '    ' # FIX
                 elif not check_duplicates:
-                    # Directly substitute the expression into the
-                    # 'linear[vid] = coef below
-                    #
-                    # Remove the 'v = ' from the beginning of the last line:
                     k = ans.pop()[4:]
 
         return k
@@ -460,12 +425,10 @@ class QuadraticTemplateRepn(QuadraticRepn):
         *,
         var_map={}
     ):
-        logger.info(f"> {self.__class__.__name__}.compile(...)")
         ans, constant = self._build_evaluator(
             smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates, var_map=var_map
         )
         if not ans:
-            logger.info(f"* compile RETURNING: constant={constant}")
             return constant
         indent = '\n    '
         if not constant and ans and ans[0].startswith('const +='):
@@ -491,7 +454,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
             )
         ans = indent.join(ans)
         import textwrap
-        logger.info(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
+        logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
         # logger.info(f"EXECUTING:\n{ans}\n\n* compile RETURNING: build_expr\n")
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
@@ -512,7 +475,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
         *,
         var_map=None
     ):
-        logger.info(
+        logger.debug(
             f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
             f"remove_fixed_vars:{remove_fixed_vars}, check_duplicates:{check_duplicates}\n\n"
         )
@@ -531,7 +494,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
 
         for term_type in ["linear", "quadratic"]:
             for k, coef in list(getattr(self, term_type).items()):
-                logger.info(f"  * {term_type}: ({k} ({k.__class__.__name__}): {coef})")
+                logger.debug(f"{term_type}: ({k} ({k.__class__.__name__}): {coef})")
                 coef *= multiplier
                 if coef.__class__ not in native_types and coef.is_expression_type():
                     coef = coef.to_string(smap=smap)
@@ -623,70 +586,44 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
 
     def expand_expression(self, obj, template_info):
         env = self.env
-        logger.info(f"{self.__class__.__name__}.expand_expression(..)")
-        logger.info(f"  obj={type(obj)}")
-        logger.info(f"  template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
-        logger.info(f"  id(template_info)={id(template_info)}")
+        logger.debug(f"obj={type(obj)}")
+        logger.debug(f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
+        logger.debug(f"id(template_info)={id(template_info)}")
         try:
             # attempt to look up already-constructed template
             body, lb, ub = self.expanded_templates[id(template_info)]
-            logger.info(f"   body: {body}")
-            logger.info(f"   bounds: [ {lb}, {ub} ]")
         except KeyError:
             # create a new expanded template
-            logger.info(f"NEW: create new expanded template")
+            logger.debug(f"create new expanded template")
             smap = self.symbolmap
-            logger.info(f"  smap: {smap.bySymbol}, {smap.aliases}")
             expr, indices = template_info
-            logger.info(f"  expr: {expr}")
-            logger.info(f"  indices: {indices}")
             args = [smap.getSymbol(i) for i in indices]
-            logger.info(f"  args: {[(a,type(a)) for a in args]}")
             if expr.is_expression_type(ExpressionType.RELATIONAL):
-                logger.info("* expression_type = RELATIONAL")
+                logger.debug("expression_type = RELATIONAL")
                 # logger.info(" - (LinearTemplateRepnVisitor.expand_expression()): obj.to_bounded_expression()")
                 lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
-                    logger.info(" (*) self.walk_expression(BODY)")
-                    _body = self.walk_expression(body)
-                    logger.info(f"   ... _body: {type(_body)}, {_body}")
-
-                    # body = self.walk_expression(body).compile(
-                    body = _body.compile(
+                    body = self.walk_expression(body).compile(
                         env, smap, self.expr_cache, args, False, var_map=self.var_map
                     )
-                    logger.info(f"   ... body: {type(body)}, {body}\n")
                 if lb is not None:
-                    logger.info(" (*) self.walk_expression(LB)")
-                    _lb = self.walk_expression(lb)
-                    logger.info(f"   ... _lb: {type(_lb)}, {_lb}")
-                    lb = _lb.compile(
-                    # lb = self.walk_expression(lb).compile(
+                    lb = self.walk_expression(lb).compile(
                         env, smap, self.expr_cache, args, True, var_map=self.var_map
                     )
-                    logger.info(f"   ... lb: {type(lb)}, {lb}\n")
                 if ub is not None:
-                    logger.info(" (*) self.walk_expression(UB)")
-                    _ub = self.walk_expression(ub)
-                    logger.info(f"   ... _ub: {type(_ub)}, {_ub}")
-                    ub = _ub.compile(
-                    # ub = self.walk_expression(ub).compile(
+                    ub = self.walk_expression(ub).compile(
                         env, smap, self.expr_cache, args, True, var_map=self.var_map
                     )
-                    logger.info(f"   ... ub: {type(ub)}, {ub}\n")
 
             elif expr is not None:
-                logger.info(f" * expr is not None: {expr}")
                 lb = ub = None
-                logger.info(" (X) self.walk_expression(expr)")
                 body = self.walk_expression(expr).compile(
                     env, smap, self.expr_cache, args, False, var_map=self.var_map
                 )
             else:
-                logger.info(" * expr else")
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            logger.info(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
+            logger.debug(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []
@@ -708,7 +645,7 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
             ub = ub(*call_args, *index)
             if linear_indices:
                 raise RuntimeError(f"Constraint {obj} has non-fixed upper bound")
-        logger.info(f"index = {index}")
+
         return (
             body(*call_args, *index),
             linear_indices,

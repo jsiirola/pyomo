@@ -13,29 +13,6 @@
 import logging
 logger = logging.getLogger(__name__)
 
-class _TrackingDict(dict):
-
-    def __init__(self, name):
-        self._name = name
-        super().__init__()
-
-    def get(self, keyname, value=None):
-        logger.info(f"[**{self._name}**]: attempting to get '{keyname} (default:{value})'")
-        return super().get(keyname, value)
-
-    def __getitem__(self, key):
-        val = super().__getitem__(key)
-        logger.info(f"[**{self._name}**]: getting '{key}' -> {val}")
-        return val
-
-    def __setitem__(self, key, value):
-        logger.info(f"[**{self._name}**]: setting '{key}'={value} ({value.__class__.__name__})")
-        return super().__setitem__(key, value)
-
-    def __delitem__(self, key):
-        logger.info(f"[**{self._name}**]: deleting '{key}'")
-        return super().__delitem__(key)
-
 
 class SymbolMap(object):
     """
@@ -65,9 +42,9 @@ class SymbolMap(object):
     """
 
     def __init__(self, labeler=None):
-        self.byObject = _TrackingDict("SymbolMap.byObject")
-        self.bySymbol = _TrackingDict("SymbolMap.bySymbol")
-        self.aliases = _TrackingDict("SymbolMap.aliases")
+        self.byObject = {}
+        self.bySymbol = {}
+        self.aliases = {}
         self.default_labeler = labeler
 
     class UnknownSymbol:

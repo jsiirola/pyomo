@@ -721,7 +721,7 @@ class NumericExpression(ExpressionBase, NumericValue):
     PRECEDENCE = 0
 
     def __init__(self, args):
-        logger.info(f"{self.__class__}.__init__: args={args}")
+        logger.debug(f"{self.__class__}.__init__: args={args}")
         self._args_ = args
 
     def nargs(self):
@@ -1174,7 +1174,7 @@ class SumExpression(NumericExpression):
 
     def __init__(self, args):
         # unlike other expressions, we expect (require) args to be a list
-        logger.info(f"SumExpression: args={args}")
+        logger.debug(f"SumExpression: args={args}")
         if args.__class__ is not list:
             args = list(args)
         self._args_ = args
@@ -1297,7 +1297,7 @@ class LinearExpression(SumExpression):
         # I am not sure why LinearExpression allows omitting args, but
         # it does.  If they are provided, they should be the (non-zero)
         # constant followed by MonomialTermExpressions.
-        logger.info(f"LinearExpression: args={args},constant={constant}, linear_coefs={linear_coefs}, "
+        logger.debug(f"LinearExpression: args={args},constant={constant}, linear_coefs={linear_coefs}, "
                     f"linear_vars={linear_vars}")
         if args is not None:
             if not (constant is None and linear_coefs is None and linear_vars is None):

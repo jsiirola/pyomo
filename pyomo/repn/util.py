@@ -830,7 +830,6 @@ class TemplateVarRecorder(object):
         self.sorter = sorter
         self.env = {None: 0}
         self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
-        logger.info(f"var_map={var_map}, var_order={var_order}")
 
     @property
     def var_order(self):
@@ -848,8 +847,6 @@ class TemplateVarRecorder(object):
         name = self.symbolmap.getSymbol(var_comp)
         if name in self.env:
             return
-
-        logger.info(f"{self.__class__.__name__}: **ADD** {var}")
 
         # We always add all indices to the var_map at once so that
         # we can honor deterministic ordering of unordered sets
@@ -869,14 +866,12 @@ class TemplateVarRecorder(object):
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vm[id(v)] = v
                 ve[idx] = i
-                logger.info(f"{i}: var_map[{id(v)}] = {v} ({type(v)}), ve[{idx}] = {i}")
         else:
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vid = id(v)
                 vm[vid] = v
                 ve[idx] = i
                 vo[vid] = i
-                logger.info(f"{i}: var_map[{vid}] = {v} ({type(v)}), ve[{idx}] = {i}, vo[{idx}] = {i}")
 
 
 # Copied from cpxlp.py:
