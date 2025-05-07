@@ -49,6 +49,8 @@ logger = logging.getLogger(__name__)
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
+# NOTE: set this if you would like the gurobi solver to write a file at the end (handy for debugging)
+DEBUG_LP_FILE = None
 
 class GurobiConfigMixin:
     """
@@ -376,6 +378,10 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
         finally:
             os.chdir(orig_cwd)
+
+        if DEBUG_LP_FILE:
+            logger.info(f"writing: {DEBUG_LP_FILE}")
+            gurobi_model.write(DEBUG_LP_FILE)
 
         res = self._postsolve(
             timer,

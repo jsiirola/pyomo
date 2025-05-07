@@ -168,7 +168,7 @@ class ConstraintData(ActiveComponentData):
         self._expr = None
         if expr is not None:
             self.set_value(expr)
-        logger.info(f"{self.__class__} __init__: expr={expr}")
+        logger.debug(f"{self.__class__} __init__: expr={expr}")
 
     def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint."""
