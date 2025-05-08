@@ -46,17 +46,41 @@ def create_model(
 
 
 class TestGurobiQuadraticTemplate(unittest.TestCase):
+    """
+    Set of end-to-end tests of quadratic template objectives and constraints using
+    gurobi_direct solver.
+    """
 
     def test_verify_using_templatized_constraints_and_objectives(self):
         self.assertTrue(pyomo.core.base.constraint.TEMPLATIZE_CONSTRAINTS)
         self.assertTrue(pyomo.core.base.objective.TEMPLATIZE_OBJECTIVES)
 
+    def test_linear_constraint_and_objective(self):
+        """Make sure linear still works"""
+        model, opt = create_model()
+        rng=list(range(2))
+        model.x = pyomo.environ.Var(rng, bounds=(1,100))
+
+        @model.Objective([(0,1)], sense=pyomo.environ.maximize)
+        def obj(model, i, j):
+            return model.x[i] + 2*model.x[j]
+
+        @model.Constraint([(0,1)])
+        def c1(model, i, j):
+            return model.x[i] + model.x[j] <= 5
+
+        opt.solve(model, tee=False)
+        self.assertAlmostEqual(model.x[0].value, 1.0, delta=0.1)
+        self.assertAlmostEqual(model.x[1].value, 4.0, delta=0.1)
+
     def test_quadratic_objective_decorator(self): pass
+        # model, opt = create_model()
+        # rng=list(range(2))
+        # model.x = pyomo.environ.Var(rng, bounds=(1,100))
+
     def test_quadratic_objective_nondecorator(self): pass
-    def test_linear_objective(self): pass
 
 
-    def test_linear_constraint(self): pass # make sure linear still works
 
     def test_quadratic_constraint_nondecorator(self):
         model, opt = create_model()
@@ -71,6 +95,8 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
     def test_quadratic_constraint_binomial_expansion(self):
         """
         FIX: This case of binomial expansion does not appear to work.
+        While raising a binomial 〖(ax+b)〗^2 appears to work correctly,
+        the general binomial expansion case of (ax+b)(cx+d) does not in the decorator.
         """
         self.skipTest("This case does not work")
         model, opt = create_model()
@@ -91,7 +117,7 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         rng=list(range(2))
         model.x = pyomo.environ.Var(rng, bounds=(0,6))
         model.obj = pyomo.environ.Objective(expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize)
-        # model.c1 = pyomo.environ.Constraint(expr=model.x[1]<= (model.x[0]-2) * (model.x[0]-5))
+
         @model.Constraint([tuple(rng)])
         def c1(model, i,j):
             return model.x[j] - model.x[i]**2 + 7*model.x[i] <= 10
