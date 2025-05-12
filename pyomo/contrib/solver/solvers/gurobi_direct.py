@@ -44,13 +44,15 @@ from pyomo.contrib.solver.common.results import (
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
-gurobipy, gurobipy_available = attempt_import('gurobipy')
+gurobipy, gurobipy_available = attempt_import("gurobipy")
 
 # NOTE: set this if you would like the gurobi solver to write a file at the end (handy for debugging)
 DEBUG_LP_FILE = None
+
 
 class GurobiConfigMixin:
     """
@@ -59,7 +61,7 @@ class GurobiConfigMixin:
 
     def __init__(self):
         self.use_mipstart: bool = self.declare(
-            'use_mipstart',
+            "use_mipstart",
             ConfigValue(
                 default=False,
                 domain=bool,
@@ -155,7 +157,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
                 last = con_info_dual[0][0]
                 yield con_info_dual
 
-        iterator = dedup(zip(self._pyo_cons, self._grb_cons.getAttr('Pi').tolist()))
+        iterator = dedup(zip(self._pyo_cons, self._grb_cons.getAttr("Pi").tolist()))
         if cons_to_load:
             cons_to_load = set(cons_to_load)
             iterator = filter(
@@ -167,7 +169,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoReducedCostsError()
 
-        iterator = zip(self._pyo_vars, self._grb_vars.getAttr('Rc').tolist())
+        iterator = zip(self._pyo_vars, self._grb_vars.getAttr("Rc").tolist())
         if vars_to_load:
             vars_to_load = ComponentSet(vars_to_load)
             iterator = filter(lambda var_rc: var_rc[0] in vars_to_load, iterator)
@@ -209,7 +211,7 @@ class GurobiSolverMixin:
     def _check_full_license(cls, model=None):
         if model is None:
             model = gurobipy.Model()
-        model.setParam('OutputFlag', 0)
+        model.setParam("OutputFlag", 0)
         try:
             model.addVars(range(2001))
             model.optimize()
@@ -261,8 +263,8 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
         if not self.available():
             c = self.__class__
             raise ApplicationError(
-                f'Solver {c.__module__}.{c.__qualname__} is not available '
-                f'({self.available()}).'
+                f"Solver {c.__module__}.{c.__qualname__} is not available "
+                f"({self.available()})."
             )
         if config.timer is None:
             config.timer = HierarchicalTimer()
@@ -270,11 +272,11 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
         StaleFlagManager.mark_all_as_stale()
 
-        timer.start('compile_model')
+        timer.start("compile_model")
         repn = LinearStandardFormCompiler().write(
             model, mixed_form=True, set_sense=None
         )
-        timer.stop('compile_model')
+        timer.stop("compile_model")
 
         if len(repn.objectives) > 1:
             raise IncompatibleModelError(
@@ -282,10 +284,10 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 f"with zero or one objectives (received {len(repn.objectives)})."
             )
 
-        timer.start('prepare_matrices')
-        inf = float('inf')
+        timer.start("prepare_matrices")
+        inf = float("inf")
         ninf = -inf
-        bounds = list(map(operator.attrgetter('bounds'), repn.columns))
+        bounds = list(map(operator.attrgetter("bounds"), repn.columns))
         lb = [ninf if _b is None else _b for _b in map(operator.itemgetter(0), bounds)]
         ub = [inf if _b is None else _b for _b in map(operator.itemgetter(1), bounds)]
         CON = gurobipy.GRB.CONTINUOUS
@@ -295,13 +297,13 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             (
                 CON
                 if v.is_continuous()
-                else BIN if v.is_binary() else INT if v.is_integer() else '?'
+                else BIN if v.is_binary() else INT if v.is_integer() else "?"
             )
             for v in repn.columns
         ]
-        sense_type = list('=<>')  # Note: ordering matches 0, 1, -1
+        sense_type = list("=<>")  # Note: ordering matches 0, 1, -1
         sense = [sense_type[r[1]] for r in repn.rows]
-        timer.stop('prepare_matrices')
+        timer.stop("prepare_matrices")
 
         ostreams = [io.StringIO()] + config.tee
         res = Results()
@@ -313,16 +315,16 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             with capture_output(TeeStream(*ostreams), capture_fd=False):
                 gurobi_model = gurobipy.Model()
 
-                timer.start('transfer_model')
+                timer.start("transfer_model")
                 # only add linear objective coefficients with variables if no quadratic terms
-                _obj=(repn.c.todense()[0] if repn.c.shape[0] else 0) if not repn.is_quadratic else None
+                _obj = (
+                    (repn.c.todense()[0] if repn.c.shape[0] else 0)
+                    if not repn.is_quadratic
+                    else None
+                )
 
                 x = gurobi_model.addMVar(
-                    len(repn.columns),
-                    lb=lb,
-                    ub=ub,
-                    obj=_obj,
-                    vtype=vtype,
+                    len(repn.columns), lb=lb, ub=ub, obj=_obj, vtype=vtype
                 )
                 logger.debug(f"repn.A: {repn.A.toarray()}  {type(repn.A.toarray())}")
                 logger.debug(f"repn.is_quadratic: {repn.is_quadratic}")
@@ -331,13 +333,18 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 if repn.is_quadratic:
                     # quadratic: add each matrix constraint individually
                     A = [
-                        gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
+                        gurobi_model.addMQConstr(q, a, sense[i], repn.rhs[i], x, x, x)
                         for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
                     ]
 
                     gurobi_model.setMObjective(
-                        None if len(repn.Q_obj)<1 else repn.Q_obj[0],
-                        repn.c.todense()[0], repn.c_offset[0], x, x, x, repn.objectives[0].sense
+                        None if len(repn.Q_obj) < 1 else repn.Q_obj[0],
+                        repn.c.todense()[0],
+                        repn.c_offset[0],
+                        x,
+                        x,
+                        x,
+                        repn.objectives[0].sense,
                     )
 
                 else:
@@ -345,26 +352,28 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                     A = gurobi_model.addMConstr(repn.A, x, sense, repn.rhs)
 
                     if repn.c.shape[0]:
-                        gurobi_model.setAttr('ObjCon', repn.c_offset[0])
-                        gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))
+                        gurobi_model.setAttr("ObjCon", repn.c_offset[0])
+                        gurobi_model.setAttr(
+                            "ModelSense", int(repn.objectives[0].sense)
+                        )
 
                 # Note: calling gurobi_model.update() here is not
                 # necessary (it will happen as part of optimize()):
                 # gurobi_model.update()
-                timer.stop('transfer_model')
+                timer.stop("transfer_model")
 
                 options = config.solver_options
 
-                gurobi_model.setParam('LogToConsole', 1)
+                gurobi_model.setParam("LogToConsole", 1)
 
                 if config.threads is not None:
-                    gurobi_model.setParam('Threads', config.threads)
+                    gurobi_model.setParam("Threads", config.threads)
                 if config.time_limit is not None:
-                    gurobi_model.setParam('TimeLimit', config.time_limit)
+                    gurobi_model.setParam("TimeLimit", config.time_limit)
                 if config.rel_gap is not None:
-                    gurobi_model.setParam('MIPGap', config.rel_gap)
+                    gurobi_model.setParam("MIPGap", config.rel_gap)
                 if config.abs_gap is not None:
-                    gurobi_model.setParam('MIPGapAbs', config.abs_gap)
+                    gurobi_model.setParam("MIPGapAbs", config.abs_gap)
 
                 if config.use_mipstart:
                     raise MouseTrap("MIPSTART not yet supported")
@@ -372,9 +381,9 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 for key, option in options.items():
                     gurobi_model.setParam(key, option)
 
-                timer.start('optimize')
+                timer.start("optimize")
                 gurobi_model.optimize()
-                timer.stop('optimize')
+                timer.stop("optimize")
 
         finally:
             os.chdir(orig_cwd)
@@ -392,7 +401,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
         )
 
         res.solver_config = config
-        res.solver_name = 'Gurobi'
+        res.solver_name = "Gurobi"
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()
 
@@ -448,15 +457,15 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             results.incumbent_objective = None
             results.objective_bound = None
 
-        results.iteration_count = grb_model.getAttr('IterCount')
+        results.iteration_count = grb_model.getAttr("IterCount")
 
-        timer.start('load solution')
+        timer.start("load solution")
         if config.load_solutions:
             if grb_model.SolCount > 0:
                 results.solution_loader.load_vars()
             else:
                 raise NoFeasibleSolutionError()
-        timer.stop('load solution')
+        timer.stop("load solution")
 
         return results
 

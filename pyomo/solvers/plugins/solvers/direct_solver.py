@@ -22,7 +22,7 @@ from pyomo.core.kernel.suffix import import_suffix_generator
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 
-logger = logging.getLogger('pyomo.solvers')
+logger = logging.getLogger("pyomo.solvers")
 
 
 class DirectSolver(DirectOrPersistentSolver):
@@ -104,7 +104,7 @@ class DirectSolver(DirectOrPersistentSolver):
                     )
 
                 if len(model_suffixes) > 0:
-                    kwds_suffixes = kwds.setdefault('suffixes', [])
+                    kwds_suffixes = kwds.setdefault("suffixes", [])
                     for name in model_suffixes:
                         if name not in kwds_suffixes:
                             kwds_suffixes.append(name)
@@ -120,9 +120,9 @@ class DirectSolver(DirectOrPersistentSolver):
 
         self.options = Bunch()
         self.options.update(orig_options)
-        self.options.update(kwds.pop('options', {}))
+        self.options.update(kwds.pop("options", {}))
         self.options.update(
-            self._options_string_to_dict(kwds.pop('options_string', ''))
+            self._options_string_to_dict(kwds.pop("options_string", ""))
         )
         try:
             # we're good to go.
@@ -141,9 +141,9 @@ class DirectSolver(DirectOrPersistentSolver):
                 self._initialize_callbacks(_model)
 
             _status = self._apply_solver()
-            if hasattr(self, '_transformation_data'):
+            if hasattr(self, "_transformation_data"):
                 del self._transformation_data
-            if not hasattr(_status, 'rc'):
+            if not hasattr(_status, "rc"):
                 logger.warning(
                     "Solver (%s) did not return a solver status code.\n"
                     "This is indicative of an internal solver plugin error.\n"
@@ -156,7 +156,7 @@ class DirectSolver(DirectOrPersistentSolver):
                 )
                 if self._tee:
                     logger.error("See the solver log above for diagnostic information.")
-                elif hasattr(_status, 'log') and _status.log:
+                elif hasattr(_status, "log") and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
                 raise ApplicationError("Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()

@@ -16,7 +16,7 @@ import sys
 from copy import deepcopy
 from collections import deque
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger("pyomo.core")
 
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
@@ -192,13 +192,13 @@ class StreamBasedExpressionVisitor(object):
     # that supports beforeChild, enterNode, and exitNode, but NOT
     # afterChild or acceptChildResult.
     client_methods = {
-        'enterNode': 'e',
-        'exitNode': 'x',
-        'beforeChild': 'b',
-        'afterChild': 'a',
-        'acceptChildResult': 'c',
-        'initializeWalker': '',
-        'finalizeResult': '',
+        "enterNode": "e",
+        "exitNode": "x",
+        "beforeChild": "b",
+        "afterChild": "a",
+        "acceptChildResult": "c",
+        "initializeWalker": "",
+        "finalizeResult": "",
     }
 
     def __init__(self, **kwds):
@@ -216,7 +216,7 @@ class StreamBasedExpressionVisitor(object):
             raise RuntimeError("Unrecognized keyword arguments: %s" % (kwds,))
 
         # Handle deprecated APIs
-        _fcns = (('beforeChild', 2), ('acceptChildResult', 3), ('afterChild', 2))
+        _fcns = (("beforeChild", 2), ("acceptChildResult", 3), ("afterChild", 2))
         for name, nargs in _fcns:
             fcn = getattr(self, name)
             if fcn is None:
@@ -228,7 +228,7 @@ class StreamBasedExpressionVisitor(object):
                     "Note that the API for the StreamBasedExpressionVisitor "
                     "has changed to include the child index for the %s() "
                     "method.  Please update your walker callbacks." % (name,),
-                    version='5.7.0',
+                    version="5.7.0",
                 )
 
                 def wrap(fcn, nargs):
@@ -244,9 +244,9 @@ class StreamBasedExpressionVisitor(object):
         # Set up the custom recursive node handler function (customized
         # for the specific set of callbacks that are defined for this
         # class instance).
-        recursive_node_handler = '_process_node_' + ''.join(
+        recursive_node_handler = "_process_node_" + "".join(
             sorted(
-                '' if getattr(self, f[0]) is None else f[1]
+                "" if getattr(self, f[0]) is None else f[1]
                 for f in self.client_methods.items()
             )
         )
@@ -284,8 +284,8 @@ class StreamBasedExpressionVisitor(object):
             _nonrecursive = self._nonrecursive_walker_loop, ptr
         except RecursionError:
             logger.warning(
-                'Unexpected RecursionError walking an expression tree.',
-                extra={'id': 'W1003'},
+                "Unexpected RecursionError walking an expression tree.",
+                extra={"id": "W1003"},
             )
             _nonrecursive = self.walk_expression_nonrecursive, expr
 
@@ -339,7 +339,7 @@ class StreamBasedExpressionVisitor(object):
 
         # Because we do not require the args to be a context manager, we
         # will mock up the "with args" using a try-finally.
-        context_manager = hasattr(args, '__enter__')
+        context_manager = hasattr(args, "__enter__")
         if context_manager:
             args.__enter__()
 
@@ -393,7 +393,9 @@ class StreamBasedExpressionVisitor(object):
         also the definition of the client_methods dict).
 
         """
-        logger.debug(f"{self.__class__.__name__}._process_node_bex({node}, level={RECURSION_LIMIT-recursion_limit})")
+        logger.debug(
+            f"{self.__class__.__name__}._process_node_bex({node}, level={RECURSION_LIMIT-recursion_limit})"
+        )
         if not recursion_limit:
             recursion_limit = self._compute_actual_recursion_limit()
         else:
@@ -413,10 +415,9 @@ class StreamBasedExpressionVisitor(object):
                 args = node.args
             logger.debug(f" args={args}\n")
 
-
         # Because we do not require the args to be a context manager, we
         # will mock up the "with args" using a try-finally.
-        context_manager = hasattr(args, '__enter__')
+        context_manager = hasattr(args, "__enter__")
         if context_manager:
             args.__enter__()
 
@@ -428,7 +429,9 @@ class StreamBasedExpressionVisitor(object):
             arg_iter = iter(args)
             for child in arg_iter:
                 child_idx += 1
-                logger.debug(f"  child [{child_idx}: {node}] {child.__class__.__name__} {child}")
+                logger.debug(
+                    f"  child [{child_idx}: {node}] {child.__class__.__name__} {child}"
+                )
                 tmp = self.beforeChild(node, child, child_idx)
                 logger.debug(f"      child descend, child_result={tmp}")
                 if tmp is None:
@@ -501,10 +504,10 @@ class StreamBasedExpressionVisitor(object):
         return self.exitNode(node, data)
 
     def _recursive_frame_to_nonrecursive_stack(self, local):
-        child_idx = local['child_idx']
+        child_idx = local["child_idx"]
         _arg_list = [None] * child_idx
-        _arg_list.append(local['child'])
-        _arg_list.extend(local['arg_iter'])
+        _arg_list.append(local["child"])
+        _arg_list.extend(local["arg_iter"])
         if not self.recursion_stack:
             # For the deepest stack frame, the recursion limit hit
             # as we started to enter the child.  As we haven't
@@ -512,7 +515,7 @@ class StreamBasedExpressionVisitor(object):
             # child_idx so that it is revisited
             child_idx -= 1
         self.recursion_stack.append(
-            (local['node'], _arg_list, len(_arg_list) - 1, local['data'], child_idx)
+            (local["node"], _arg_list, len(_arg_list) - 1, local["data"], child_idx)
         )
 
     def walk_expression_nonrecursive(self, expr):
@@ -558,7 +561,7 @@ class StreamBasedExpressionVisitor(object):
                 args = ()
             else:
                 args = expr.args
-        if hasattr(args, '__enter__'):
+        if hasattr(args, "__enter__"):
             args.__enter__()
         node = expr
         # Note that because we increment child_idx just before fetching
@@ -641,7 +644,7 @@ class StreamBasedExpressionVisitor(object):
                             args = ()
                         else:
                             args = child.args
-                    if hasattr(args, '__enter__'):
+                    if hasattr(args, "__enter__"):
                         args.__enter__()
                     node = child
                     child_idx = -1
@@ -650,7 +653,7 @@ class StreamBasedExpressionVisitor(object):
                 else:  # child_idx == ptr[3]:
                     # We are done with this node.  Call exitNode to compute
                     # any result
-                    if hasattr(ptr[2], '__exit__'):
+                    if hasattr(ptr[2], "__exit__"):
                         ptr[2].__exit__(None, None, None)
                     if self.exitNode is not None:
                         node_result = self.exitNode(node, data)
@@ -686,7 +689,7 @@ class StreamBasedExpressionVisitor(object):
 
         finally:
             while ptr is not None:
-                if hasattr(ptr[2], '__exit__'):
+                if hasattr(ptr[2], "__exit__"):
                     ptr[2].__exit__(None, None, None)
                 ptr = ptr[0]
 
@@ -694,7 +697,7 @@ class StreamBasedExpressionVisitor(object):
 @deprecated(
     "The SimpleExpressionVisitor is deprecated.  "
     "Please use the StreamBasedExpressionVisitor instead.",
-    version='6.9.0',
+    version="6.9.0",
 )
 class SimpleExpressionVisitor(object):
     """
@@ -1017,23 +1020,23 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
         self.rm_named_expr = remove_named_expressions
 
         kwds = {}
-        if hasattr(self, 'visiting_potential_leaf'):
+        if hasattr(self, "visiting_potential_leaf"):
             deprecation_warning(
                 "ExpressionReplacementVisitor: this walker has been ported "
                 "to derive from StreamBasedExpressionVisitor.  "
                 "visiting_potential_leaf() has been replaced by beforeChild()"
                 "(note to implementers: the sense of the bool return value "
                 "has been inverted).",
-                version='6.2',
+                version="6.2",
             )
 
             def beforeChild(node, child, child_idx):
                 is_leaf, ans = self.visiting_potential_leaf(child)
                 return not is_leaf, ans
 
-            kwds['beforeChild'] = beforeChild
+            kwds["beforeChild"] = beforeChild
 
-        if hasattr(self, 'visit'):
+        if hasattr(self, "visit"):
             raise DeveloperError(
                 "ExpressionReplacementVisitor: this walker has been ported "
                 "to derive from StreamBasedExpressionVisitor.  "
@@ -1095,7 +1098,7 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
         "ExpressionReplacementVisitor: this walker has been ported "
         "to derive from StreamBasedExpressionVisitor.  "
         "dfs_postorder_stack() has been replaced with walk_expression()",
-        version='6.2',
+        version="6.2",
     )
     def dfs_postorder_stack(self, expr):
         return self.walk_expression(expr)
@@ -1164,7 +1167,7 @@ def clone_expression(expr, substitute=None):
 
     """
     common.clone_counter._count += 1
-    memo = {'__block_scope__': {id(None): False}}
+    memo = {"__block_scope__": {id(None): False}}
     if substitute:
         expr = replace_expressions(expr, substitute)
     return deepcopy(expr, memo)
@@ -1684,7 +1687,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         node_prec = node.PRECEDENCE
         if node_prec is not None and not self.verbose:
             for i, (val, arg) in enumerate(zip(values, node.args)):
-                arg_prec = getattr(arg, 'PRECEDENCE', None)
+                arg_prec = getattr(arg, "PRECEDENCE", None)
                 if arg_prec is None:
                     # This embedded constant (4) is evil, but to actually
                     # import the NegationExpression.PRECEDENCE from
@@ -1692,7 +1695,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
                     #
                     # FIXME: rework the dependencies between
                     # numeric_expr and visitor
-                    if val[0] == '-' and node_prec < 4:
+                    if val[0] == "-" and node_prec < 4:
                         values[i] = f"({val})"
                 else:
                     if node_prec < arg_prec:
@@ -1721,7 +1724,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         Return True if the node is not expanded.
         """
         if node is None:
-            return True, 'Undefined'
+            return True, "Undefined"
 
         if node.__class__ in native_numeric_types:
             return True, str(node)
@@ -1732,7 +1735,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node.is_expression_type() and node.__class__ not in self._leaf_node_types:
             return False, None
 
-        if hasattr(node, 'to_string'):
+        if hasattr(node, "to_string"):
             return True, node.to_string(verbose=self.verbose, smap=self.smap)
         elif self.smap is not None:
             return True, self.smap.getSymbol(node)
