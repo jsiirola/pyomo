@@ -113,7 +113,7 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         self.assertAlmostEqual(model.x[0].value, 1.0, delta=0.1)
         self.assertAlmostEqual(model.x[1].value, 4.0, delta=0.1)
 
-    def test_quadratic_constraint_nondecorator(self):
+    def test_quadratic_constraint_binomial_constraint_nondecorator(self):
         model, opt = create_model()
         rng = list(range(2))
         model.x = pyomo.environ.Var(rng, bounds=(0, 6))
@@ -127,13 +127,13 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         self.assertAlmostEqual(model.x[0].value, 6.0, delta=0.1)
         self.assertAlmostEqual(model.x[1].value, 4.0, delta=0.1)
 
-    def test_quadratic_constraint_binomial_expansion(self):
+    def test_quadratic_constraint_binomial_expansion_decorator(self):
         """
         FIX: This case of binomial expansion does not appear to work.
         While raising a binomial 〖(ax+b)〗^2 appears to work correctly,
         the general binomial expansion case of (ax+b)(cx+d) does not in the decorator.
         """
-        self.skipTest("This case does not work")
+        # self.skipTest("This case does not work")
         model, opt = create_model()
         rng = list(range(2))
         model.x = pyomo.environ.Var(rng, bounds=(0, 6))
