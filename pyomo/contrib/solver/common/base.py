@@ -39,9 +39,7 @@ from pyomo.contrib.solver.common.results import (
 )
 
 import logging
-
 logger = logging.getLogger(__name__)
-
 
 class Availability(IntEnum):
     """
@@ -86,8 +84,8 @@ class SolverBase:
 
     def __init__(self, **kwds) -> None:
         if "name" in kwds:
-            self.name = kwds.pop("name")
-        elif not hasattr(self, "name"):
+            self.name = kwds.pop('name')
+        elif not hasattr(self, 'name'):
             self.name = type(self).__name__.lower()
         self.config = self.CONFIG(value=kwds)
 
@@ -244,7 +242,7 @@ class PersistentSolverBase(SolverBase):
             A map of variables to primals.
         """
         raise NotImplementedError(
-            f"{type(self)} does not support the get_primals method"
+            f'{type(self)} does not support the get_primals method'
         )
 
     def _get_duals(
@@ -264,7 +262,7 @@ class PersistentSolverBase(SolverBase):
         duals: dict
             Maps constraints to dual values
         """
-        raise NotImplementedError(f"{type(self)} does not support the get_duals method")
+        raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def _get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
@@ -282,7 +280,7 @@ class PersistentSolverBase(SolverBase):
             Maps variable to reduced cost
         """
         raise NotImplementedError(
-            f"{type(self)} does not support the get_reduced_costs method"
+            f'{type(self)} does not support the get_reduced_costs method'
         )
 
     def set_instance(self, model: BlockData):
@@ -389,20 +387,20 @@ class LegacySolverWrapper:
     """
 
     def __init__(self, **kwargs):
-        if "solver_io" in kwargs:
-            raise NotImplementedError("Still working on this")
+        if 'solver_io' in kwargs:
+            raise NotImplementedError('Still working on this')
         # There is no reason for a user to be trying to mix both old
         # and new options. That is silly. So we will yell at them.
-        _options = kwargs.pop("options", None)
-        if "solver_options" in kwargs:
+        _options = kwargs.pop('options', None)
+        if 'solver_options' in kwargs:
             if _options is not None:
                 raise ValueError(
                     "Both 'options' and 'solver_options' were requested. "
                     "Please use one or the other, not both."
                 )
-            _options = kwargs.pop("solver_options")
+            _options = kwargs.pop('solver_options')
         if _options is not None:
-            kwargs["solver_options"] = _options
+            kwargs['solver_options'] = _options
         super().__init__(**kwargs)
         # Make the legacy 'options' attribute an alias of the new
         # config.solver_options
@@ -420,7 +418,7 @@ class LegacySolverWrapper:
     def __setattr__(self, attr, value):
         # 'options' and 'config' are really singleton attributes.  Map
         # any assignment to set_value()
-        if attr in ("options", "config") and attr in self.__dict__:
+        if attr in ('options', 'config') and attr in self.__dict__:
             getattr(self, attr).set_value(value)
         else:
             super().__setattr__(attr, value)
@@ -443,9 +441,9 @@ class LegacySolverWrapper:
         writer_config=NOTSET,
     ):
         """Map between legacy and new interface configuration options"""
-        if "report_timing" not in self.config:
+        if 'report_timing' not in self.config:
             self.config.declare(
-                "report_timing", ConfigValue(domain=bool, default=False)
+                'report_timing', ConfigValue(domain=bool, default=False)
             )
         if tee is not NOTSET:
             self.config.tee = tee
@@ -482,24 +480,24 @@ class LegacySolverWrapper:
                 raise_exception_on_nonoptimal_result
             )
         if solver_io is not NOTSET and solver_io is not None:
-            raise NotImplementedError("Still working on this")
+            raise NotImplementedError('Still working on this')
         if suffixes is not NOTSET and suffixes is not None:
-            raise NotImplementedError("Still working on this")
+            raise NotImplementedError('Still working on this')
         if logfile is not NOTSET and logfile is not None:
-            raise NotImplementedError("Still working on this")
-        if keepfiles or "keepfiles" in self.config:
+            raise NotImplementedError('Still working on this')
+        if keepfiles or 'keepfiles' in self.config:
             cwd = os.getcwd()
             deprecation_warning(
                 "`keepfiles` has been deprecated in the new solver interface. "
                 "Use `working_dir` instead to designate a directory in which files "
                 f"should be generated and saved. Setting `working_dir` to `{cwd}`.",
-                version="6.7.1",
+                version='6.7.1',
             )
             self.config.working_dir = cwd
         # I believe this currently does nothing; however, it is unclear what
         # our desired behavior is for this.
         if solnfile is not NOTSET:
-            if "filename" in self.config:
+            if 'filename' in self.config:
                 filename = os.path.splitext(solnfile)[0]
                 self.config.filename = filename
 
@@ -515,8 +513,8 @@ class LegacySolverWrapper:
         ]
         legacy_soln.status = legacy_solution_status_map(results)
         legacy_results.solver.termination_message = str(results.termination_condition)
-        legacy_results.problem.number_of_constraints = float("nan")
-        legacy_results.problem.number_of_variables = float("nan")
+        legacy_results.problem.number_of_constraints = float('nan')
+        legacy_results.problem.number_of_variables = float('nan')
         number_of_objectives = sum(
             1
             for _ in model.component_data_objects(
@@ -548,33 +546,33 @@ class LegacySolverWrapper:
     ):
         """Method to handle the preferred action for the solution"""
         symbol_map = SymbolMap()
-        symbol_map.default_labeler = NumericLabeler("x")
-        if not hasattr(model, "solutions"):
+        symbol_map.default_labeler = NumericLabeler('x')
+        if not hasattr(model, 'solutions'):
             # This logic gets around Issue #2130 in which
             # solutions is not an attribute on Blocks
             from pyomo.core.base.PyomoModel import ModelSolutions
 
-            setattr(model, "solutions", ModelSolutions(model))
+            setattr(model, 'solutions', ModelSolutions(model))
         model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
         if load_solutions:
-            if hasattr(model, "dual") and model.dual.import_enabled():
+            if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
                     model.dual[con] = val
-            if hasattr(model, "rc") and model.rc.import_enabled():
+            if hasattr(model, 'rc') and model.rc.import_enabled():
                 for var, val in results.solution_loader.get_reduced_costs().items():
                     model.rc[var] = val
         elif results.incumbent_objective is not None:
             delete_legacy_soln = False
             for var, val in results.solution_loader.get_primals().items():
-                legacy_soln.variable[symbol_map.getSymbol(var)] = {"Value": val}
-            if hasattr(model, "dual") and model.dual.import_enabled():
+                legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
+            if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
-                    legacy_soln.constraint[symbol_map.getSymbol(con)] = {"Dual": val}
-            if hasattr(model, "rc") and model.rc.import_enabled():
+                    legacy_soln.constraint[symbol_map.getSymbol(con)] = {'Dual': val}
+            if hasattr(model, 'rc') and model.rc.import_enabled():
                 for var, val in results.solution_loader.get_reduced_costs().items():
-                    legacy_soln.variable["Rc"] = val
+                    legacy_soln.variable['Rc'] = val
 
         legacy_results.solution.insert(legacy_soln)
         # Timing info was not originally on the legacy results, but we want
@@ -616,20 +614,20 @@ class LegacySolverWrapper:
         original_config = self.config
 
         map_args = (
-            "tee",
-            "load_solutions",
-            "symbolic_solver_labels",
-            "timelimit",
-            "report_timing",
-            "raise_exception_on_nonoptimal_result",
-            "solver_io",
-            "suffixes",
-            "logfile",
-            "keepfiles",
-            "solnfile",
-            "options",
-            "solver_options",
-            "writer_config",
+            'tee',
+            'load_solutions',
+            'symbolic_solver_labels',
+            'timelimit',
+            'report_timing',
+            'raise_exception_on_nonoptimal_result',
+            'solver_io',
+            'suffixes',
+            'logfile',
+            'keepfiles',
+            'solnfile',
+            'options',
+            'solver_options',
+            'writer_config',
         )
         loc = locals()
         filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
@@ -659,7 +657,7 @@ class LegacySolverWrapper:
         if exception_flag and not ans:
             raise ApplicationError(
                 f'Solver "{self.name}" is not available. '
-                f"The returned status is: {ans}."
+                f'The returned status is: {ans}.'
             )
         return bool(ans)
 

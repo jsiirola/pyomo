@@ -40,7 +40,7 @@ from pyomo.core.base.initializer import (
     CountedCallInitializer,
 )
 
-logger = logging.getLogger("pyomo.core")
+logger = logging.getLogger('pyomo.core')
 
 TEMPLATIZE_OBJECTIVES = False
 
@@ -157,12 +157,12 @@ class ObjectiveData(NamedExpressionData, ActiveComponentData):
 
 class _ObjectiveData(metaclass=RenamedClass):
     __renamed__new_class__ = ObjectiveData
-    __renamed__version__ = "6.7.2"
+    __renamed__version__ = '6.7.2'
 
 
 class _GeneralObjectiveData(metaclass=RenamedClass):
     __renamed__new_class__ = ObjectiveData
-    __renamed__version__ = "6.7.2"
+    __renamed__version__ = '6.7.2'
 
 
 class TemplateObjectiveData(ObjectiveData):
@@ -180,9 +180,7 @@ class TemplateObjectiveData(ObjectiveData):
         self._index = index
         self._args_ = template_info
         self._sense = sense
-        logger.debug(
-            f"index={index}, template_info={template_info} ({type(template_info)})"
-        )
+        logger.debug(f"index={index}, template_info={template_info} ({type(template_info)})")
 
     @property
     def args(self):
@@ -264,10 +262,10 @@ class Objective(ActiveIndexedComponent):
     ): ...
 
     def __init__(self, *args, **kwargs):
-        _sense = kwargs.pop("sense", minimize)
-        _init = self._pop_from_kwargs("Objective", kwargs, ("rule", "expr"), None)
+        _sense = kwargs.pop('sense', minimize)
+        _init = self._pop_from_kwargs('Objective', kwargs, ('rule', 'expr'), None)
 
-        kwargs.setdefault("ctype", Objective)
+        kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
         self.rule = Initializer(_init)
@@ -540,7 +538,7 @@ class ScalarObjective(ObjectiveData, Objective):
 
 class SimpleObjective(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarObjective
-    __renamed__version__ = "6.0"
+    __renamed__version__ = '6.0'
 
 
 class IndexedObjective(Objective):
@@ -569,10 +567,10 @@ class ObjectiveList(IndexedObjective):
 
     def __init__(self, **kwargs):
         """Constructor"""
-        if "expr" in kwargs:
+        if 'expr' in kwargs:
             raise ValueError("ObjectiveList does not accept the 'expr' keyword")
-        _rule = kwargs.pop("rule", None)
-        self._starting_index = kwargs.pop("starting_index", 1)
+        _rule = kwargs.pop('rule', None)
+        self._starting_index = kwargs.pop('starting_index', 1)
 
         super().__init__(Set(dimen=1), **kwargs)
 

@@ -95,9 +95,7 @@ class QuadraticRepn(object):
     def to_expression(self, visitor):
         var_map = visitor.var_map
         logger.debug(f"var_map: {var_map}")
-        logger.debug(
-            f"self: linear={self.linear}, quadratic={self.quadratic}, nonlinear={self.nonlinear}"
-        )
+        logger.debug(f"self: linear={self.linear}, quadratic={self.quadratic}, nonlinear={self.nonlinear}")
         logger.debug(f"constant: {self.constant}, multiplier: {self.multiplier}")
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
@@ -179,8 +177,8 @@ def _mul_linear_linear(visitor, linear1, linear2):
     quadratic = {}
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
-            key = (min(vid1, vid2), max(vid2, vid1))
-            quadratic[key] = quadratic.get(key, 0) + (coef1 * coef2)
+            key = (min(vid1,vid2), max(vid2,vid1))
+            quadratic[key] = quadratic.get(key,0) + (coef1*coef2)
 
     return quadratic
 
@@ -338,12 +336,8 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     #
     # (no changes needed)
 
-    _exit_node_handlers[expr.GetItemExpression] = {
-        None: linear_template._handle_getitem
-    }
-    _exit_node_handlers[expr.TemplateSumExpression] = {
-        None: linear_template._handle_templatesum
-    }
+    _exit_node_handlers[expr.GetItemExpression] = {None: linear_template._handle_getitem}
+    _exit_node_handlers[expr.TemplateSumExpression] = {None: linear_template._handle_templatesum}
 
     return _exit_node_handlers
 
@@ -358,15 +352,13 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     ## handle quadratics, then let LinearRepnVisitor handle the rest
     def finalizeResult(self, result):
         ans = result[1]
-        if (
-            ans.__class__ is self.Result
+        if (ans.__class__ is self.Result
             and ans.multiplier
-            and ans.multiplier != 1
-            and ans.quadratic
-        ):
+            and ans.multiplier!=1
+            and ans.quadratic):
             mult = ans.multiplier
             quadratic = ans.quadratic
-            zeros = []
+            zeros=[]
             for vid, coef in quadratic.items():
                 if coef:
                     quadratic[vid] = coef * mult
@@ -383,38 +375,19 @@ class QuadraticTemplateRepn(QuadraticRepn):
 
     def __init__(self):
         super().__init__()
-        self.linear_sum = []
+        self.linear_sum=[]
 
     @classmethod
-    def _resolve_symbols(
-        cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map
-    ):
+    def _resolve_symbols(cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map):
 
         if isinstance(k, tuple):
-            return (
-                "("
-                + ",".join(
-                    [
-                        cls._resolve_symbols(
-                            _k,
-                            ans,
-                            expr_cache,
-                            smap,
-                            remove_fixed_vars,
-                            check_duplicates,
-                            var_map,
-                        )
-                        for _k in k
-                    ]
-                )
-                + ")"
-            )
+            return "("+",".join([
+                cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map) for _k in k
+            ])+")"
 
         logger.debug(f"k={k} ({type(k)})")
-        logger.debug(
-            f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, "
-            f"var_map: {[(k,v._index,v._value,v._component()) for k, v in var_map.items()]}"
-        )
+        logger.debug(f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, "
+                    f"var_map: {[(k,v._index,v._value,v._component()) for k, v in var_map.items()]}")
 
         if k in expr_cache or k in var_map:
             if k in expr_cache:
@@ -422,19 +395,19 @@ class QuadraticTemplateRepn(QuadraticRepn):
             else:
                 symbol_obj_id = id(var_map[k]._component())
                 if symbol_obj_id in smap.byObject:
-                    k = f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
+                    k=f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
 
             logger.debug(f"k={k} ({type(k)})")
 
             if k.__class__ not in native_types and k.is_expression_type():
-                ans.append("v = " + k.to_string(smap=smap))
-                k = "v"
+                ans.append('v = ' + k.to_string(smap=smap))
+                k = 'v'
                 if remove_fixed_vars:
-                    ans.append("if v.__class__ is tuple:")
-                    ans.append("    const += v[0] * {coef}")
-                    ans.append("    v = None")
-                    ans.append("else:")
-                    indent = "    "  # FIX
+                    ans.append('if v.__class__ is tuple:')
+                    ans.append('    const += v[0] * {coef}')
+                    ans.append('    v = None')
+                    ans.append('else:')
+                    indent = '    ' # FIX
                 elif not check_duplicates:
                     k = ans.pop()[4:]
 
@@ -449,47 +422,45 @@ class QuadraticTemplateRepn(QuadraticRepn):
         remove_fixed_vars=False,
         check_duplicates=False,
         *,
-        var_map={},
+        var_map={}
     ):
         ans, constant = self._build_evaluator(
             smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates, var_map=var_map
         )
         if not ans:
             return constant
-        indent = "\n    "
-        if not constant and ans and ans[0].startswith("const +="):
+        indent = '\n    '
+        if not constant and ans and ans[0].startswith('const +='):
             # Convert initial "const +=" to "const ="
-            ans[0] = "".join(ans[0].split("+", 1))
+            ans[0] = ''.join(ans[0].split('+', 1))
         else:
-            ans.insert(0, "const = " + repr(constant))
+            ans.insert(0, 'const = ' + repr(constant))
         fcn_body = indent.join(ans[1:])
-        if "const" not in fcn_body:
+        if 'const' not in fcn_body:
             # No constants in the expression.  Move the initial const
             # term to the return value and avoid declaring the local
             # variable
-            ans = ["return " + ans[0].split("=", 1)[1]]
+            ans = ['return ' + ans[0].split('=', 1)[1]]
             if fcn_body:
                 ans.insert(0, fcn_body)
         else:
-            ans = [ans[0], fcn_body, "return const"]
+            ans = [ans[0], fcn_body, 'return const']
         if check_duplicates:
             ans.insert(0, f"def build_expr(linear, quadratic, {', '.join(args)}):")
         else:
             ans.insert(
-                0,
-                f"def build_expr(linear_indices, linear_data, quadratic_indices, quadratic_data, {', '.join(args)}):",
+                0, f"def build_expr(linear_indices, linear_data, quadratic_indices, quadratic_data, {', '.join(args)}):"
             )
         ans = indent.join(ans)
         import textwrap
-
-        logger.debug(
-            f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n"
-        )
+        logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
         exec(ans, env)
-        return env.pop("build_expr")
+        return env.pop('build_expr')
+
+
 
     def _build_evaluator(
         self,
@@ -500,7 +471,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
         remove_fixed_vars,
         check_duplicates,
         *,
-        var_map=None,
+        var_map=None
     ):
         logger.debug(
             f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
@@ -514,7 +485,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
             if not repetitions or (
                 constant.__class__ not in native_types and constant.is_expression_type()
             ):
-                ans.append("const += " + constant.to_string(smap=smap))
+                ans.append('const += ' + constant.to_string(smap=smap))
                 constant = 0
             else:
                 constant *= repetitions
@@ -530,30 +501,25 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 else:
                     continue
 
-                indent = ""
+                indent = ''
 
                 k = self.__class__._resolve_symbols(
-                    k,
-                    ans,
-                    expr_cache,
-                    smap,
-                    remove_fixed_vars,
-                    check_duplicates,
-                    var_map,
+                    k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map
                 )
 
+
                 if check_duplicates:
-                    ans.append(indent + f"if {k} in {term_type}:")
-                    ans.append(indent + f"    {term_type}[{k}] += {coef}")
-                    ans.append(indent + "else:")
-                    ans.append(indent + f"    {term_type}[{k}] = {coef}")
+                    ans.append(indent + f'if {k} in {term_type}:')
+                    ans.append(indent + f'    {term_type}[{k}] += {coef}')
+                    ans.append(indent + 'else:')
+                    ans.append(indent + f'    {term_type}[{k}] = {coef}')
                 else:
-                    ans.append(indent + f"{term_type}_indices.append({k})")
-                    ans.append(indent + f"{term_type}_data.append({coef})")
+                    ans.append(indent + f'{term_type}_indices.append({k})')
+                    ans.append(indent + f'{term_type}_data.append({coef})')
 
         for subrepn, subindices, subsets in getattr(self, "linear_sum", []):
             ans.extend(
-                "    " * i
+                '    ' * i
                 + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
                 + (
                     _set.to_string(smap=smap)
@@ -577,10 +543,11 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 remove_fixed_vars,
                 check_duplicates,
             )
-            indent = "    " * (len(subsets))
+            indent = '    ' * (len(subsets))
             ans.extend(indent + line for line in subans)
             constant += subconst
         return ans, constant
+
 
 
 class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
@@ -595,15 +562,13 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
     ## multi-class inheritance (QuadaraticRepnVisitor vs. LinearTemplateRepnVisitor)
     def finalizeResult(self, result):
         ans = result[1]
-        if (
-            ans.__class__ is self.Result
+        if (ans.__class__ is self.Result
             and ans.multiplier
-            and ans.multiplier != 1
-            and ans.quadratic
-        ):
+            and ans.multiplier!=1
+            and ans.quadratic):
             mult = ans.multiplier
             quadratic = ans.quadratic
-            zeros = []
+            zeros=[]
             for vid, coef in quadratic.items():
                 if coef:
                     quadratic[vid] = coef * mult
@@ -617,9 +582,7 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
     def expand_expression(self, obj, template_info):
         env = self.env
         logger.debug(f"obj={type(obj)}")
-        logger.debug(
-            f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}"
-        )
+        logger.debug(f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
         logger.debug(f"id(template_info)={id(template_info)}")
         try:
             # attempt to look up already-constructed template
@@ -655,9 +618,7 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
             else:
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            logger.debug(
-                f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}"
-            )
+            logger.debug(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []
@@ -687,5 +648,7 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
             lb,
             ub,
             quadratic_indices,
-            quadratic_data,
+            quadratic_data
         )
+
+

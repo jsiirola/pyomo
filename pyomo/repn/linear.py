@@ -95,6 +95,7 @@ class LinearRepn(object):
         self.linear = {}
         self.nonlinear = None
 
+
     def __str__(self):
         return (
             f"LinearRepn(mult={self.multiplier}, const={self.constant}, "
@@ -227,7 +228,7 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
                 "Mapping the NaN result to 0 for compatibility "
                 "with the lp_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
-                version="6.6.0",
+                version='6.6.0',
             )
             return _CONSTANT, 0
     return _CONSTANT, ans
@@ -598,7 +599,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         "tree.  Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
-                        version="6.6.0",
+                        version='6.6.0',
                     )
             return False, (_CONSTANT, arg1)
 
@@ -632,7 +633,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                                 "tree.  Mapping the NaN result to 0 for compatibility "
                                 "with the lp_v1 writer.  In the future, this NaN "
                                 "will be preserved/emitted to comply with IEEE-754.",
-                                version="6.6.0",
+                                version='6.6.0',
                             )
                     continue
 
@@ -726,7 +727,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             deprecation_warning(
                 "var_map, var_order, and sorter are deprecated arguments to "
                 "LinearRepnVisitor().  Please pass the VarRecorder object directly.",
-                version="6.8.1",
+                version='6.8.1',
             )
             var_recorder = OrderedVarRecorder(var_map, var_order, sorter)
         if var_recorder is None:
@@ -797,9 +798,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        logger.debug(
-            f"exit lookup: {node.__class__.__name__}, {[i.name for i in map(itemgetter(0), data)]}"
-        )
+        logger.debug(f"exit lookup: {node.__class__.__name__}, {[i.name for i in map(itemgetter(0), data)]}")
 
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
@@ -828,7 +827,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                         "Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
-                        version="6.6.0",
+                        version='6.6.0',
                     )
                 return self.Result()
             else:

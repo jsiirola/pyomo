@@ -64,7 +64,7 @@ class GetItemExpression(ExpressionBase):
         if cls is not GetItemExpression:
             return super().__new__(cls)
         npv_args = not any(
-            hasattr(arg, "is_potentially_variable") and arg.is_potentially_variable()
+            hasattr(arg, 'is_potentially_variable') and arg.is_potentially_variable()
             for arg in args
         )
         try:
@@ -92,7 +92,7 @@ class GetItemExpression(ExpressionBase):
             return super().__new__(Structural_GetItemExpression)
 
     def __getattr__(self, attr):
-        if attr.startswith("__") and attr.endswith("__"):
+        if attr.startswith('__') and attr.endswith('__'):
             raise AttributeError()
         return GetAttrExpression((self, attr))
 
@@ -112,13 +112,13 @@ class GetItemExpression(ExpressionBase):
         if not all(values[1:]):
             return False
         _true = lambda: True
-        return all(getattr(x, "is_fixed", _true)() for x in values[0].values())
+        return all(getattr(x, 'is_fixed', _true)() for x in values[0].values())
 
     def _to_string(self, values, verbose, smap):
-        values = tuple(_[1:-1] if _[0] == "(" and _[-1] == ")" else _ for _ in values)
+        values = tuple(_[1:-1] if _[0] == '(' and _[-1] == ')' else _ for _ in values)
         if verbose:
-            return "getitem(%s, %s)" % (values[0], ", ".join(values[1:]))
-        return "%s[%s]" % (values[0], ",".join(values[1:]))
+            return "getitem(%s, %s)" % (values[0], ', '.join(values[1:]))
+        return "%s[%s]" % (values[0], ','.join(values[1:]))
 
     def _resolve_template(self, args):
         return args[0].__getitem__(args[1:])
@@ -139,7 +139,7 @@ class Numeric_GetItemExpression(GetItemExpression, NumericExpression):
         ans = 0
         for x in result[0].values():
             if x.__class__ in nonpyomo_leaf_types or not hasattr(
-                x, "polynomial_degree"
+                x, 'polynomial_degree'
             ):
                 continue
             tmp = x.polynomial_degree()
@@ -208,7 +208,7 @@ class GetAttrExpression(ExpressionBase):
         return self
 
     def __getattr__(self, attr):
-        if attr.startswith("__") and attr.endswith("__"):
+        if attr.startswith('__') and attr.endswith('__'):
             raise AttributeError()
         return GetAttrExpression((self, attr))
 
@@ -238,7 +238,7 @@ class GetAttrExpression(ExpressionBase):
             if not args:
                 if not kwargs:
                     return super().__call__()
-                elif len(kwargs) == 1 and "exception" in kwargs:
+                elif len(kwargs) == 1 and 'exception' in kwargs:
                     return super().__call__(**kwargs)
             elif (
                 not kwargs and len(args) == 1 and (args[0] is True or args[0] is False)
@@ -254,7 +254,7 @@ class GetAttrExpression(ExpressionBase):
         return CallExpression((self,) + args, kwargs)
 
     def getname(self, *args, **kwds):
-        return "getattr"
+        return 'getattr'
 
     def nargs(self):
         return 2
@@ -270,7 +270,7 @@ class GetAttrExpression(ExpressionBase):
         # Note that the string argument for getattr comes quoted, so we
         # need to remove the quotes.
         attr = values[1]
-        if attr[0] in "\"'" and attr[0] == attr[-1]:
+        if attr[0] in '\"\'' and attr[0] == attr[-1]:
             attr = attr[1:-1]
         return "%s.%s" % (values[0], attr)
 
@@ -312,7 +312,7 @@ class CallExpression(NumericExpression):
     Expression to call :func:`__call__` on the base object.
     """
 
-    __slots__ = ("_kwds",)
+    __slots__ = ('_kwds',)
     PRECEDENCE = None
 
     def __init__(self, args, kwargs):
@@ -323,7 +323,7 @@ class CallExpression(NumericExpression):
         return len(self._args_)
 
     def __getattr__(self, attr):
-        if attr.startswith("__") and attr.endswith("__"):
+        if attr.startswith('__') and attr.endswith('__'):
             raise AttributeError()
         return GetAttrExpression((self, attr))
 
@@ -337,7 +337,7 @@ class CallExpression(NumericExpression):
         return len(value(self))
 
     def getname(self, *args, **kwds):
-        return "call"
+        return 'call'
 
     def _compute_polynomial_degree(self, result):
         return None
@@ -348,12 +348,12 @@ class CallExpression(NumericExpression):
 
     def _to_string(self, values, verbose, smap):
         na = len(self._args_) - len(self._kwds)
-        args = ", ".join(values[1:na])
+        args = ', '.join(values[1:na])
         if self._kwds:
             if na > 1:
-                args += ", "
-            args += ", ".join(
-                f"{key}={val}" for key, val in zip(self._kwds, values[na:])
+                args += ', '
+            args += ', '.join(
+                f'{key}={val}' for key, val in zip(self._kwds, values[na:])
             )
         if verbose:
             return f"call({values[0]}, {args})"
@@ -445,7 +445,7 @@ class TemplateSumExpression(NumericExpression):
     Expression to represent an unexpanded sum over one or more sets.
     """
 
-    __slots__ = ("_iters", "_local_args_")
+    __slots__ = ('_iters', '_local_args_')
     PRECEDENCE = 1
 
     def __init__(self, args, _iters):
@@ -509,20 +509,20 @@ class TemplateSumExpression(NumericExpression):
         return sum(result)
 
     def to_string(self, verbose=None, smap=None):
-        ans = ""
+        ans = ''
         assert len(self._local_args_) == 1
         val = expression_to_string(self._local_args_[0], verbose=verbose, smap=smap)
-        if val[0] == "(" and val[-1] == ")" and _balanced_parens(val[1:-1]):
+        if val[0] == '(' and val[-1] == ')' and _balanced_parens(val[1:-1]):
             val = val[1:-1]
         iterStrGenerator = (
             (
-                ", ".join(
+                ', '.join(
                     (smap.getSymbol(i) if smap is not None else str(i))
                     for i in iterGroup
                 ),
                 (
                     iterGroup[0]._set.to_string(verbose=verbose, smap=smap)
-                    if hasattr(iterGroup[0]._set, "to_string")
+                    if hasattr(iterGroup[0]._set, 'to_string')
                     else (
                         smap.getSymbol(iterGroup[0]._set)
                         if smap is not None
@@ -533,11 +533,11 @@ class TemplateSumExpression(NumericExpression):
             for iterGroup in self._iters
         )
         if verbose:
-            iterStr = ", ".join("iter(%s, %s)" % x for x in iterStrGenerator)
-            return "templatesum(%s, %s)" % (val, iterStr)
+            iterStr = ', '.join('iter(%s, %s)' % x for x in iterStrGenerator)
+            return 'templatesum(%s, %s)' % (val, iterStr)
         else:
-            iterStr = " ".join("for %s in %s" % x for x in iterStrGenerator)
-            return "SUM(%s %s)" % (val, iterStr)
+            iterStr = ' '.join('for %s in %s' % x for x in iterStrGenerator)
+            return 'SUM(%s %s)' % (val, iterStr)
 
     def _resolve_template(self, args):
         with mutable_expression() as e:
@@ -570,7 +570,7 @@ class IndexTemplate(NumericValue):
        _set: the Set from which this IndexTemplate can take values
     """
 
-    __slots__ = ("_set", "_value", "_index", "_id", "_group", "_lock")
+    __slots__ = ('_set', '_value', '_index', '_id', '_group', '_lock')
 
     def __init__(self, _set, index=0, _id=None, _group=None):
         self._set = _set
@@ -589,7 +589,7 @@ class IndexTemplate(NumericValue):
         # a proper Component: that way it could leverage the normal
         # logic of using the parent_block scope to dictate the behavior
         # of deepcopy.
-        if "__block_scope__" in memo:
+        if '__block_scope__' in memo:
             memo[id(self)] = self
             return self
         #
@@ -689,14 +689,14 @@ class _TemplateResolver(StreamBasedExpressionVisitor):
         if type(child) in native_types:
             return False, child
         elif not child.is_expression_type():
-            if hasattr(child, "_resolve_template"):
+            if hasattr(child, '_resolve_template'):
                 return False, child._resolve_template(())
             return False, child
         else:
             return True, None
 
     def exitNode(self, node, args):
-        if hasattr(node, "_resolve_template"):
+        if hasattr(node, '_resolve_template'):
             return node._resolve_template(args)
         if len(args) == node.nargs() and all(a is b for a, b in zip(node.args, args)):
             return node
@@ -727,7 +727,7 @@ resolve_template.visitor = None
 
 
 class _wildcard_info(object):
-    __slots__ = ("iter", "source", "value", "original_value", "objects")
+    __slots__ = ('iter', 'source', 'value', 'original_value', 'objects')
 
     def __init__(self, src, obj):
         self.source = src
@@ -781,7 +781,7 @@ def _reduce_template_to_component(expr):
         if type(child) in native_types:
             return False, child
         elif not child.is_expression_type():
-            if hasattr(child, "_resolve_template"):
+            if hasattr(child, '_resolve_template'):
                 try:
                     ans = child._resolve_template(())
                 except TemplateExpressionError:
@@ -818,7 +818,7 @@ def _reduce_template_to_component(expr):
             return True, None
 
     def exitNode(node, args):
-        if hasattr(node, "_resolve_template"):
+        if hasattr(node, '_resolve_template'):
             return node._resolve_template(args)
         if len(args) == node.nargs() and all(a is b for a, b in zip(node.args, args)):
             return node
@@ -875,7 +875,7 @@ class ReplaceTemplateExpression(ExpressionReplacementVisitor):
     }
 
     def __init__(self, substituter, *args, **kwargs):
-        kwargs.setdefault("remove_named_expressions", True)
+        kwargs.setdefault('remove_named_expressions', True)
         super().__init__(**kwargs)
         self.substituter = substituter
         self.substituter_args = args
@@ -966,7 +966,7 @@ class _GetItemIndexer(object):
             return False
 
     def __str__(self):
-        return "%s[%s]" % (self._base.name, ",".join(str(x) for x in self._args))
+        return "%s[%s]" % (self._base.name, ','.join(str(x) for x in self._args))
 
 
 def substitute_getitem_with_param(expr, _map):
@@ -985,7 +985,7 @@ def substitute_getitem_with_param(expr, _map):
     if _id not in _map:
         _map[_id] = pyomo.core.base.param.Param(mutable=True)
         _map[_id].construct()
-        _map[_id]._name = "%s[%s]" % (_id.base.name, ",".join(str(x) for x in _id.args))
+        _map[_id]._name = "%s[%s]" % (_id.base.name, ','.join(str(x) for x in _id.args))
     return _map[_id]
 
 
@@ -1089,7 +1089,7 @@ class _template_iter_context(object):
 
 class _template_iter_manager(object):
     class _iter_wrapper(object):
-        __slots__ = ("_class", "_iter", "_old_iter")
+        __slots__ = ('_class', '_iter', '_old_iter')
 
         def __init__(self, cls, context):
             def _iter_fcn(obj):
@@ -1106,7 +1106,7 @@ class _template_iter_manager(object):
             self._class.__iter__ = self._old_iter
 
     class _pause_template_iter_manager(object):
-        __slots__ = ("iter_manager",)
+        __slots__ = ('iter_manager',)
 
         def __init__(self, iter_manager):
             self.iter_manager = iter_manager

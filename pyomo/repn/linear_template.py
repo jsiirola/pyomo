@@ -31,9 +31,7 @@ code_type = deepcopy.__class__
 
 
 import logging
-
 logger = logging.getLogger(__name__)
-
 
 class LinearTemplateRepn(LinearRepn):
     __slots__ = ("linear_sum",)
@@ -76,7 +74,7 @@ class LinearTemplateRepn(LinearRepn):
         """
         super().append(other)
         _type, other = other
-        if getattr(other, "linear_sum", None):
+        if getattr(other, 'linear_sum', None):
             mult = other.multiplier
             if not mult:
                 return
@@ -106,7 +104,7 @@ class LinearTemplateRepn(LinearRepn):
             if not repetitions or (
                 constant.__class__ not in native_types and constant.is_expression_type()
             ):
-                ans.append("const += " + constant.to_string(smap=smap))
+                ans.append('const += ' + constant.to_string(smap=smap))
                 constant = 0
             else:
                 constant *= repetitions
@@ -119,18 +117,18 @@ class LinearTemplateRepn(LinearRepn):
             else:
                 continue
 
-            indent = ""
+            indent = ''
             if k in expr_cache:
                 k = expr_cache[k]
                 if k.__class__ not in native_types and k.is_expression_type():
-                    ans.append("v = " + k.to_string(smap=smap))
-                    k = "v"
+                    ans.append('v = ' + k.to_string(smap=smap))
+                    k = 'v'
                     if remove_fixed_vars:
-                        ans.append("if v.__class__ is tuple:")
-                        ans.append("    const += v[0] * {coef}")
-                        ans.append("    v = None")
-                        ans.append("else:")
-                        indent = "    "
+                        ans.append('if v.__class__ is tuple:')
+                        ans.append('    const += v[0] * {coef}')
+                        ans.append('    v = None')
+                        ans.append('else:')
+                        indent = '    '
                     elif not check_duplicates:
                         # Directly substitute the expression into the
                         # 'linear[vid] = coef below
@@ -138,17 +136,17 @@ class LinearTemplateRepn(LinearRepn):
                         # Remove the 'v = ' from the beginning of the last line:
                         k = ans.pop()[4:]
             if check_duplicates:
-                ans.append(indent + f"if {k} in linear:")
-                ans.append(indent + f"    linear[{k}] += {coef}")
-                ans.append(indent + "else:")
-                ans.append(indent + f"    linear[{k}] = {coef}")
+                ans.append(indent + f'if {k} in linear:')
+                ans.append(indent + f'    linear[{k}] += {coef}')
+                ans.append(indent + 'else:')
+                ans.append(indent + f'    linear[{k}] = {coef}')
             else:
-                ans.append(indent + f"linear_indices.append({k})")
-                ans.append(indent + f"linear_data.append({coef})")
+                ans.append(indent + f'linear_indices.append({k})')
+                ans.append(indent + f'linear_data.append({coef})')
 
         for subrepn, subindices, subsets in getattr(self, "linear_sum", []):
             ans.extend(
-                "    " * i
+                '    ' * i
                 + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
                 + (
                     _set.to_string(smap=smap)
@@ -172,7 +170,7 @@ class LinearTemplateRepn(LinearRepn):
                 remove_fixed_vars,
                 check_duplicates,
             )
-            indent = "    " * (len(subsets))
+            indent = '    ' * (len(subsets))
             ans.extend(indent + line for line in subans)
             constant += subconst
         return ans, constant
@@ -191,22 +189,22 @@ class LinearTemplateRepn(LinearRepn):
         )
         if not ans:
             return constant
-        indent = "\n    "
-        if not constant and ans and ans[0].startswith("const +="):
+        indent = '\n    '
+        if not constant and ans and ans[0].startswith('const +='):
             # Convert initial "const +=" to "const ="
-            ans[0] = "".join(ans[0].split("+", 1))
+            ans[0] = ''.join(ans[0].split('+', 1))
         else:
-            ans.insert(0, "const = " + repr(constant))
+            ans.insert(0, 'const = ' + repr(constant))
         fcn_body = indent.join(ans[1:])
-        if "const" not in fcn_body:
+        if 'const' not in fcn_body:
             # No constants in the expression.  Move the initial const
             # term to the return value and avoid declaring the local
             # variable
-            ans = ["return " + ans[0].split("=", 1)[1]]
+            ans = ['return ' + ans[0].split('=', 1)[1]]
             if fcn_body:
                 ans.insert(0, fcn_body)
         else:
-            ans = [ans[0], fcn_body, "return const"]
+            ans = [ans[0], fcn_body, 'return const']
         if check_duplicates:
             ans.insert(0, f"def build_expr(linear, {', '.join(args)}):")
         else:
@@ -216,16 +214,13 @@ class LinearTemplateRepn(LinearRepn):
         ans = indent.join(ans)
 
         import textwrap
-
-        logger.debug(
-            f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n"
-        )
+        logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
 
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
         exec(ans, env)
-        return env.pop("build_expr")
+        return env.pop('build_expr')
 
 
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
@@ -328,9 +323,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     def expand_expression(self, obj, template_info):
         env = self.env
         logger.debug(f"obj={type(obj)}")
-        logger.debug(
-            f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}"
-        )
+        logger.debug(f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
         logger.debug(f"id(template_info)={id(template_info)}")
         try:
             # attempt to look up already-constructed template
@@ -363,9 +356,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             else:
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            logger.debug(
-                f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}"
-            )
+            logger.debug(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []

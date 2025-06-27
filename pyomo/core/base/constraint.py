@@ -57,11 +57,11 @@ from pyomo.core.base.initializer import (
 )
 
 
-logger = logging.getLogger("pyomo.core")
+logger = logging.getLogger('pyomo.core')
 
 TEMPLATIZE_CONSTRAINTS = False
 
-_inf = float("inf")
+_inf = float('inf')
 _nonfinite_values = {_inf, -_inf}
 _known_relational_expressions = {
     EqualityExpression,
@@ -149,7 +149,7 @@ class ConstraintData(ActiveComponentData):
 
     """
 
-    __slots__ = ("_expr",)
+    __slots__ = ('_expr',)
 
     # Set to true when a constraint class stores its expression
     # in linear canonical form
@@ -389,7 +389,7 @@ class ConstraintData(ActiveComponentData):
         # Clear any previously-cached normalized constraint
         self._expr = None
         if expr.__class__ in _known_relational_expressions:
-            if getattr(expr, "strict", False) in _strict_relational_exprs:
+            if getattr(expr, 'strict', False) in _strict_relational_exprs:
                 raise ValueError(
                     "Constraint '%s' encountered a strict "
                     "inequality expression ('>' or '<').  All "
@@ -535,12 +535,12 @@ class ConstraintData(ActiveComponentData):
 
 class _ConstraintData(metaclass=RenamedClass):
     __renamed__new_class__ = ConstraintData
-    __renamed__version__ = "6.7.2"
+    __renamed__version__ = '6.7.2'
 
 
 class _GeneralConstraintData(metaclass=RenamedClass):
     __renamed__new_class__ = ConstraintData
-    __renamed__version__ = "6.7.2"
+    __renamed__version__ = '6.7.2'
 
 
 class TemplateConstraintData(ConstraintData):
@@ -560,7 +560,7 @@ class TemplateConstraintData(ConstraintData):
             f"{self.__class__.__qualname__}:\n"
             f" component={component},\n index={index},\n"
             f" template_info={template_info} ({type(template_info)})"
-        )
+                    )
 
     @property
     def expr(self):
@@ -659,14 +659,14 @@ class Constraint(ActiveIndexedComponent):
     def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
-        _init = self._pop_from_kwargs("Constraint", kwargs, ("rule", "expr"), None)
+        _init = self._pop_from_kwargs('Constraint', kwargs, ('rule', 'expr'), None)
         # Special case: we accept 2- and 3-tuples as constraints
         if type(_init) is tuple:
             self.rule = Initializer(_init, treat_sequences_as_mappings=False)
         else:
             self.rule = Initializer(_init)
 
-        kwargs.setdefault("ctype", Constraint)
+        kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
@@ -929,20 +929,20 @@ class ScalarConstraint(ConstraintData, Constraint):
 
 class SimpleConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarConstraint
-    __renamed__version__ = "6.0"
+    __renamed__version__ = '6.0'
 
 
 @disable_methods(
     {
-        "add",
-        "set_value",
-        "to_bounded_expression",
-        "body",
-        "lower",
-        "upper",
-        "equality",
-        "strict_lower",
-        "strict_upper",
+        'add',
+        'set_value',
+        'to_bounded_expression',
+        'body',
+        'lower',
+        'upper',
+        'equality',
+        'strict_lower',
+        'strict_upper',
     }
 )
 class AbstractScalarConstraint(ScalarConstraint):
@@ -951,7 +951,7 @@ class AbstractScalarConstraint(ScalarConstraint):
 
 class AbstractSimpleConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractScalarConstraint
-    __renamed__version__ = "6.0"
+    __renamed__version__ = '6.0'
 
 
 class IndexedConstraint(Constraint):
@@ -985,10 +985,10 @@ class ConstraintList(IndexedConstraint):
 
     def __init__(self, **kwargs):
         """Constructor"""
-        if "expr" in kwargs:
+        if 'expr' in kwargs:
             raise ValueError("ConstraintList does not accept the 'expr' keyword")
-        _rule = kwargs.pop("rule", None)
-        self._starting_index = kwargs.pop("starting_index", 1)
+        _rule = kwargs.pop('rule', None)
+        self._starting_index = kwargs.pop('starting_index', 1)
 
         super(ConstraintList, self).__init__(Set(dimen=1), **kwargs)
 
