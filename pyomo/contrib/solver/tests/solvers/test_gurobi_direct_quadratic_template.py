@@ -14,6 +14,7 @@ import pyomo.core.base.constraint
 import pyomo.core.base.objective
 import pyomo.environ
 import logging
+
 LOGGER = logging.getLogger(__name__)
 
 opt = pyomo.contrib.solver.solvers.gurobi_direct.GurobiDirect()
@@ -32,7 +33,8 @@ def create_model(
     templatize_constraints=True,
     templatize_objectives=True,
     solver_name=SOLVER_NAME,
-        debug_file=None):
+    debug_file=None,
+):
 
     pyomo.core.base.constraint.TEMPLATIZE_CONSTRAINTS = templatize_constraints
     pyomo.core.base.objective.TEMPLATIZE_OBJECTIVES = templatize_objectives
@@ -42,7 +44,8 @@ def create_model(
     LOGGER.info(f"TEMPLATIZE_CONSTRAINTS = {templatize_constraints}")
     LOGGER.info(f"TEMPLATIZE_OBJECTIVES = {templatize_objectives}")
     LOGGER.info(
-        f"DEBUG_LP_FILE = {pyomo.contrib.solver.solvers.gurobi_direct.DEBUG_LP_FILE}")
+        f"DEBUG_LP_FILE = {pyomo.contrib.solver.solvers.gurobi_direct.DEBUG_LP_FILE}"
+    )
 
     return pyomo.environ.ConcreteModel(), get_solver(solver_name)
 
@@ -66,7 +69,7 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
 
         @model.Objective([(0, 1)], sense=pyomo.environ.maximize)
         def obj(model, i, j):
-            return model.x[i] + 2*model.x[j]
+            return model.x[i] + 2 * model.x[j]
 
         @model.Constraint([(0, 1)])
         def c1(model, i, j):
@@ -83,7 +86,7 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
 
         @model.Objective([(0, 1)], sense=pyomo.environ.maximize)
         def obj(model, i, j):
-            return model.x[i] + model.x[j]**2
+            return model.x[i] + model.x[j] ** 2
 
         @model.Constraint([(0, 1)])
         def c1(model, i, j):
@@ -99,7 +102,8 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         model.x = pyomo.environ.Var(rng, bounds=(1, 100))
 
         model.obj = pyomo.environ.Objective(
-            expr=model.x[0] + model.x[1]**2, sense=pyomo.environ.maximize)
+            expr=model.x[0] + model.x[1] ** 2, sense=pyomo.environ.maximize
+        )
 
         @model.Constraint([(0, 1)])
         def c1(model, i, j):
@@ -114,9 +118,11 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         rng = list(range(2))
         model.x = pyomo.environ.Var(rng, bounds=(0, 6))
         model.obj = pyomo.environ.Objective(
-            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize)
+            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize
+        )
         model.c1 = pyomo.environ.Constraint(
-            expr=model.x[1] <= (model.x[0]-2) * (model.x[0]-5))
+            expr=model.x[1] <= (model.x[0] - 2) * (model.x[0] - 5)
+        )
         opt.solve(model, tee=False)
         self.assertAlmostEqual(model.x[0].value, 6.0, delta=0.1)
         self.assertAlmostEqual(model.x[1].value, 4.0, delta=0.1)
@@ -132,11 +138,13 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         rng = list(range(2))
         model.x = pyomo.environ.Var(rng, bounds=(0, 6))
         model.obj = pyomo.environ.Objective(
-            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize)
+            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize
+        )
 
         @model.Constraint([tuple(rng)])
         def c1(model, i, j):
-            return model.x[j] <= (model.x[i]-2) * (model.x[i]-5)
+            return model.x[j] <= (model.x[i] - 2) * (model.x[i] - 5)
+
         opt.solve(model, tee=False)
 
         self.assertAlmostEqual(model.x[0].value, 6.0, delta=0.1)
@@ -148,11 +156,13 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         rng = list(range(2))
         model.x = pyomo.environ.Var(rng, bounds=(0, 6))
         model.obj = pyomo.environ.Objective(
-            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize)
+            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize
+        )
 
         @model.Constraint([tuple(rng)])
         def c1(model, i, j):
-            return model.x[j] - model.x[i]**2 + 7*model.x[i] <= 10
+            return model.x[j] - model.x[i] ** 2 + 7 * model.x[i] <= 10
+
         opt.solve(model, tee=False)
         self.assertAlmostEqual(model.x[0].value, 6.0, delta=0.1)
         self.assertAlmostEqual(model.x[1].value, 4.0, delta=0.1)
@@ -163,11 +173,13 @@ class TestGurobiQuadraticTemplate(unittest.TestCase):
         rng = list(range(2))
         model.x = pyomo.environ.Var(rng, bounds=(0, 6))
         model.obj = pyomo.environ.Objective(
-            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize)
+            expr=model.x[0] + model.x[1], sense=pyomo.environ.maximize
+        )
 
         @model.Constraint([tuple(rng)])
         def c1(model, i, j):
-            return model.x[j] <= (model.x[i]-4.0)**2
+            return model.x[j] <= (model.x[i] - 4.0) ** 2
+
         opt.solve(model, tee=False)
         self.assertAlmostEqual(model.x[0].value, 6.0, delta=0.1)
         self.assertAlmostEqual(model.x[1].value, 4.0, delta=0.1)

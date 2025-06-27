@@ -113,7 +113,8 @@ class LinearStandardFormInfo(object):
         appeared in the standard form, or appear *earlier* in this list.
 
     """
-    is_quadratic=False
+
+    is_quadratic = False
 
     def __init__(self, c, c_offset, A, rhs, rows, columns, objectives, eliminated_vars):
         self.c = c
@@ -145,15 +146,13 @@ class QuadraticStandardFormInfo(LinearStandardFormInfo):
         super().__init__(*args, **kwargs)
         self.Q_list = Q_list
         self.Q_obj = Q_obj
-        for i,q in enumerate(Q_obj):
+        for i, q in enumerate(Q_obj):
             logger.debug(f"  Q objective[{i}]: {None if q is None else q.toarray()}")
-        for i,q in enumerate(Q_list):
+        for i, q in enumerate(Q_list):
             logger.debug(f"  Q constraint[{i}]: {None if q is None else q.toarray()}")
         for Q in [Q_list, Q_obj]:
             if isinstance(Q, list) and any([q is not None and q is not [] for q in Q]):
                 self.is_quadratic = True
-
-
 
 
 @WriterFactory.register(
@@ -409,7 +408,9 @@ class _LinearStandardFormCompiler_impl(object):
 
         for _i, obj in enumerate(objectives):
             if hasattr(obj, 'template_expr'):
-                expanded_expression_values = template_visitor.expand_expression(obj, obj.template_expr())
+                expanded_expression_values = template_visitor.expand_expression(
+                    obj, obj.template_expr()
+                )
                 offset, linear_index, linear_data, _, _ = expanded_expression_values[:5]
 
                 N = len(linear_index)
@@ -417,14 +418,14 @@ class _LinearStandardFormCompiler_impl(object):
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
 
-                if len(expanded_expression_values)>5:
+                if len(expanded_expression_values) > 5:
                     quadratic_index, quadratic_data = expanded_expression_values[5:]
                 else:
                     quadratic_index, quadratic_data = [], []
                 N_quadratic = len(quadratic_data)
                 obj_quadratic_nnz += N_quadratic
                 obj_quadratic_data.append(quadratic_data)
-                if N_quadratic>0:
+                if N_quadratic > 0:
                     obj_quadratic_index.append(quadratic_index)
                     obj_quadratic_index_ptr.append(obj_quadratic_nnz)
 
@@ -475,23 +476,24 @@ class _LinearStandardFormCompiler_impl(object):
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
-                expanded_expression_values = (
-                    template_visitor.expand_expression(con, con.template_expr())
+                expanded_expression_values = template_visitor.expand_expression(
+                    con, con.template_expr()
                 )
-                offset, linear_index, linear_data, lb, ub = expanded_expression_values[:5]
+                offset, linear_index, linear_data, lb, ub = expanded_expression_values[
+                    :5
+                ]
 
                 N = len(linear_data)
-                if len(expanded_expression_values)>5:
+                if len(expanded_expression_values) > 5:
                     quadratic_index, quadratic_data = expanded_expression_values[5:]
                 else:
                     quadratic_index, quadratic_data = [], []
                 N_quadratic = len(quadratic_data)
                 con_quadratic_nnz += N_quadratic
                 con_quadratic_data.append(quadratic_data)
-                if N_quadratic>0:
+                if N_quadratic > 0:
                     con_quadratic_index.append(quadratic_index)
                     con_quadratic_index_ptr.append(con_quadratic_nnz)
-
 
             else:
                 # Note: lb and ub could be a number, expression, or None
@@ -516,9 +518,13 @@ class _LinearStandardFormCompiler_impl(object):
                 if getattr(repn, "quadratic", None):
                     N_quadratic = len(repn.quadratic)
                     con_quadratic_nnz += N_quadratic
-                    quadratic_index = map( lambda k :
-                                          (var_recorder.var_order[k[0]],var_recorder.var_order[k[1]]),
-                                          repn.quadratic)
+                    quadratic_index = map(
+                        lambda k: (
+                            var_recorder.var_order[k[0]],
+                            var_recorder.var_order[k[1]],
+                        ),
+                        repn.quadratic,
+                    )
 
                     quadratic_data = repn.quadratic.values()
                     con_quadratic_data.append(quadratic_data)
@@ -528,8 +534,6 @@ class _LinearStandardFormCompiler_impl(object):
                     con_quadratic_data.append([])
 
                     N_quadratic = 0
-
-
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
@@ -629,8 +633,13 @@ class _LinearStandardFormCompiler_impl(object):
 
         # Convert the compiled data to scipy sparse matrices
         c, Q_obj = self._create_csc_quadratic(
-            obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols,
-            obj_quadratic_data, obj_quadratic_index
+            obj_data,
+            obj_index,
+            obj_index_ptr,
+            obj_nnz,
+            n_cols,
+            obj_quadratic_data,
+            obj_quadratic_index,
         )
 
         is_quadratic = any([qd for qd in con_quadratic_data]) or any(
@@ -640,16 +649,30 @@ class _LinearStandardFormCompiler_impl(object):
         # if quadratic, create A (linear) and quadratic Q matrices
         if is_quadratic:
             A, Q_list = self._create_csc_quadratic(
-                con_data, con_index, con_index_ptr, con_nnz, n_cols,
-                con_quadratic_data, con_quadratic_index)
+                con_data,
+                con_index,
+                con_index_ptr,
+                con_nnz,
+                n_cols,
+                con_quadratic_data,
+                con_quadratic_index,
+            )
             if with_debug_timing:
                 timer.toc('Formed matrices', level=logging.DEBUG)
             info = QuadraticStandardFormInfo(
-                c, np.array(obj_offset), A, rhs, rows, columns, objectives, [],
-                Q_list=Q_list, Q_obj=Q_obj
+                c,
+                np.array(obj_offset),
+                A,
+                rhs,
+                rows,
+                columns,
+                objectives,
+                [],
+                Q_list=Q_list,
+                Q_obj=Q_obj,
             )
 
-        else: # linear: single A matrix
+        else:  # linear: single A matrix
             A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
 
             if with_debug_timing:
@@ -692,13 +715,30 @@ class _LinearStandardFormCompiler_impl(object):
                 eliminated_vars = []
 
             info = LinearStandardFormInfo(
-                c, np.array(obj_offset), A, rhs, rows, columns, objectives, eliminated_vars
+                c,
+                np.array(obj_offset),
+                A,
+                rhs,
+                rows,
+                columns,
+                objectives,
+                eliminated_vars,
             )
 
         timer.toc("Generated standard form representation", delta=False)
         return info
 
-    def _create_csc(self, data, index, index_ptr, nnz, n_cols, *, sum_duplicates=True, eliminate_zeros=True):
+    def _create_csc(
+        self,
+        data,
+        index,
+        index_ptr,
+        nnz,
+        n_cols,
+        *,
+        sum_duplicates=True,
+        eliminate_zeros=True,
+    ):
         data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
         index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
         if not nnz:
@@ -723,13 +763,27 @@ class _LinearStandardFormCompiler_impl(object):
 
     # For quadratic programs, create A (linear) matrix and list of Q (quadratic) matrices
     def _create_csc_quadratic(
-            self, linear_data, linear_index, linear_indez_ptr, linear_nnz, n_cols,
-            quadratic_data, quadratic_index) -> tuple:
+        self,
+        linear_data,
+        linear_index,
+        linear_indez_ptr,
+        linear_nnz,
+        n_cols,
+        quadratic_data,
+        quadratic_index,
+    ) -> tuple:
 
         # Create A (linear) matrix, but do not reduce; need to keep rows in order to correspond with
         # Q matrices
-        A = self._create_csc(linear_data, linear_index, linear_indez_ptr, linear_nnz, n_cols,
-                             sum_duplicates=False, eliminate_zeros=False)
+        A = self._create_csc(
+            linear_data,
+            linear_index,
+            linear_indez_ptr,
+            linear_nnz,
+            n_cols,
+            sum_duplicates=False,
+            eliminate_zeros=False,
+        )
 
         qi = iter(quadratic_index)
         Q_list = []
@@ -739,7 +793,10 @@ class _LinearStandardFormCompiler_impl(object):
                 index = list(next(qi))
                 row_ind, col_ind = zip(*index)
 
-                Q = self._csr_matrix((np.array(list(coefficients)), (row_ind,col_ind)), shape=[n_cols,n_cols])
+                Q = self._csr_matrix(
+                    (np.array(list(coefficients)), (row_ind, col_ind)),
+                    shape=[n_cols, n_cols],
+                )
                 Q = Q.tocsc()
 
             else:
@@ -748,7 +805,6 @@ class _LinearStandardFormCompiler_impl(object):
             Q_list.append(Q)
 
         return A, Q_list
-
 
     def _csc_to_nonnegative_vars(self, c, A, columns):
         eliminated_vars = []

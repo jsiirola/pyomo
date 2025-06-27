@@ -308,25 +308,30 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
                 timer.start('transfer_model')
                 # only add linear objective coefficients with variables if no quadratic terms
-                _obj=(repn.c.todense()[0] if repn.c.shape[0] else 0) if not repn.is_quadratic else None
+                _obj = (
+                    (repn.c.todense()[0] if repn.c.shape[0] else 0)
+                    if not repn.is_quadratic
+                    else None
+                )
 
                 x = gurobi_model.addMVar(
-                    len(repn.columns),
-                    lb=lb,
-                    ub=ub,
-                    obj=_obj,
-                    vtype=vtype,
+                    len(repn.columns), lb=lb, ub=ub, obj=_obj, vtype=vtype
                 )
                 if repn.is_quadratic:
                     # quadratic: add each matrix constraint individually
                     A = [
-                        gurobi_model.addMQConstr(q, a, sense[i],  repn.rhs[i], x, x, x)
+                        gurobi_model.addMQConstr(q, a, sense[i], repn.rhs[i], x, x, x)
                         for i, (a, q) in enumerate(zip(repn.A, repn.Q_list))
                     ]
 
                     gurobi_model.setMObjective(
-                        None if len(repn.Q_obj)<1 else repn.Q_obj[0],
-                        repn.c.todense()[0], repn.c_offset[0], x, x, x, repn.objectives[0].sense
+                        None if len(repn.Q_obj) < 1 else repn.Q_obj[0],
+                        repn.c.todense()[0],
+                        repn.c_offset[0],
+                        x,
+                        x,
+                        x,
+                        repn.objectives[0].sense,
                     )
 
                 else:
@@ -335,7 +340,9 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
                     if repn.c.shape[0]:
                         gurobi_model.setAttr('ObjCon', repn.c_offset[0])
-                        gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))
+                        gurobi_model.setAttr(
+                            'ModelSense', int(repn.objectives[0].sense)
+                        )
 
                 # Note: calling gurobi_model.update() here is not
                 # necessary (it will happen as part of optimize()):
@@ -364,7 +371,6 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 timer.start('optimize')
                 gurobi_model.optimize()
                 timer.stop('optimize')
-
         finally:
             os.chdir(orig_cwd)
 

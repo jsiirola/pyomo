@@ -168,8 +168,8 @@ def _mul_linear_linear(visitor, linear1, linear2):
     quadratic = {}
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
-            key = (min(vid1,vid2), max(vid2,vid1))
-            quadratic[key] = quadratic.get(key,0) + (coef1*coef2)
+            key = (min(vid1, vid2), max(vid2, vid1))
+            quadratic[key] = quadratic.get(key, 0) + (coef1 * coef2)
 
     return quadratic
 
@@ -326,8 +326,12 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     #
     # (no changes needed)
 
-    _exit_node_handlers[expr.GetItemExpression] = {None: linear_template._handle_getitem}
-    _exit_node_handlers[expr.TemplateSumExpression] = {None: linear_template._handle_templatesum}
+    _exit_node_handlers[expr.GetItemExpression] = {
+        None: linear_template._handle_getitem
+    }
+    _exit_node_handlers[expr.TemplateSumExpression] = {
+        None: linear_template._handle_templatesum
+    }
 
     return _exit_node_handlers
 
@@ -342,13 +346,15 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     ## handle quadratics, then let LinearRepnVisitor handle the rest
     def finalizeResult(self, result):
         ans = result[1]
-        if (ans.__class__ is self.Result
+        if (
+            ans.__class__ is self.Result
             and ans.multiplier
-            and ans.multiplier!=1
-            and ans.quadratic):
+            and ans.multiplier != 1
+            and ans.quadratic
+        ):
             mult = ans.multiplier
             quadratic = ans.quadratic
-            zeros=[]
+            zeros = []
             for vid, coef in quadratic.items():
                 if coef:
                     quadratic[vid] = coef * mult
@@ -365,15 +371,32 @@ class QuadraticTemplateRepn(QuadraticRepn):
 
     def __init__(self):
         super().__init__()
-        self.linear_sum=[]
+        self.linear_sum = []
 
     @classmethod
-    def _resolve_symbols(cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map):
+    def _resolve_symbols(
+        cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map
+    ):
 
         if isinstance(k, tuple):
-            return "("+",".join([
-                cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map) for _k in k
-            ])+")"
+            return (
+                "("
+                + ",".join(
+                    [
+                        cls._resolve_symbols(
+                            _k,
+                            ans,
+                            expr_cache,
+                            smap,
+                            remove_fixed_vars,
+                            check_duplicates,
+                            var_map,
+                        )
+                        for _k in k
+                    ]
+                )
+                + ")"
+            )
 
         if k in expr_cache or k in var_map:
             if k in expr_cache:
@@ -381,7 +404,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
             else:
                 symbol_obj_id = id(var_map[k]._component())
                 if symbol_obj_id in smap.byObject:
-                    k=f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
+                    k = f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
 
             if k.__class__ not in native_types and k.is_expression_type():
                 ans.append('v = ' + k.to_string(smap=smap))
@@ -391,7 +414,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
                     ans.append('    const += v[0] * {coef}')
                     ans.append('    v = None')
                     ans.append('else:')
-                    indent = '    ' # FIX
+                    indent = '    '  # FIX
                 elif not check_duplicates:
                     k = ans.pop()[4:]
 
@@ -406,7 +429,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
         remove_fixed_vars=False,
         check_duplicates=False,
         *,
-        var_map={}
+        var_map={},
     ):
         ans, constant = self._build_evaluator(
             smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates, var_map=var_map
@@ -433,17 +456,17 @@ class QuadraticTemplateRepn(QuadraticRepn):
             ans.insert(0, f"def build_expr(linear, quadratic, {', '.join(args)}):")
         else:
             ans.insert(
-                0, f"def build_expr(linear_indices, linear_data, quadratic_indices, quadratic_data, {', '.join(args)}):"
+                0,
+                f"def build_expr(linear_indices, linear_data, quadratic_indices, quadratic_data, {', '.join(args)}):",
             )
         ans = indent.join(ans)
         import textwrap
+
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
         exec(ans, env)
         return env.pop('build_expr')
-
-
 
     def _build_evaluator(
         self,
@@ -454,7 +477,7 @@ class QuadraticTemplateRepn(QuadraticRepn):
         remove_fixed_vars,
         check_duplicates,
         *,
-        var_map=None
+        var_map=None,
     ):
         ans = []
         multiplier *= self.multiplier
@@ -482,9 +505,14 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 indent = ''
 
                 k = self.__class__._resolve_symbols(
-                    k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map
+                    k,
+                    ans,
+                    expr_cache,
+                    smap,
+                    remove_fixed_vars,
+                    check_duplicates,
+                    var_map,
                 )
-
 
                 if check_duplicates:
                     ans.append(indent + f'if {k} in {term_type}:')
@@ -527,7 +555,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
         return ans, constant
 
 
-
 class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
     Result = QuadraticTemplateRepn
     max_exponential_expansion = 2
@@ -540,13 +567,15 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
     ## multi-class inheritance (QuadaraticRepnVisitor vs. LinearTemplateRepnVisitor)
     def finalizeResult(self, result):
         ans = result[1]
-        if (ans.__class__ is self.Result
+        if (
+            ans.__class__ is self.Result
             and ans.multiplier
-            and ans.multiplier!=1
-            and ans.quadratic):
+            and ans.multiplier != 1
+            and ans.quadratic
+        ):
             mult = ans.multiplier
             quadratic = ans.quadratic
-            zeros=[]
+            zeros = []
             for vid, coef in quadratic.items():
                 if coef:
                     quadratic[vid] = coef * mult
@@ -619,7 +648,5 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
             lb,
             ub,
             quadratic_indices,
-            quadratic_data
+            quadratic_data,
         )
-
-
