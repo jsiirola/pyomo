@@ -124,14 +124,6 @@ class LinearStandardFormInfo(object):
         self.columns = columns
         self.objectives = objectives
         self.eliminated_vars = eliminated_vars
-        logger.debug(f" c: {c.toarray()}")
-        logger.debug(f" c_offset: {c_offset}")
-        logger.debug(f" A: {A.toarray()}")
-        logger.debug(f" rhs: {rhs}")
-        logger.debug(f" rows: {rows}")
-        logger.debug(f" columns: {columns}")
-        logger.debug(f" objectives: {objectives}")
-        logger.debug(f" eliminated_vars: {eliminated_vars}")
 
     @property
     def x(self):
@@ -363,11 +355,9 @@ class _LinearStandardFormCompiler_impl(object):
 
         var_recorder = TemplateVarRecorder(var_map, None, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
-        logger.debug(f"visitor = {type(visitor)}")
 
         # template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
         template_visitor = QuadraticTemplateRepnVisitor({}, var_recorder=var_recorder)
-        logger.debug(f"template_visitor = {type(template_visitor)}")
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -418,7 +408,6 @@ class _LinearStandardFormCompiler_impl(object):
         obj_quadratic_index_ptr = [0]
 
         for _i, obj in enumerate(objectives):
-            logger.debug(f"OBJECTIVE: {_i}:{obj} {obj.sense} ({type(obj)})")
             if hasattr(obj, 'template_expr'):
                 expanded_expression_values = template_visitor.expand_expression(obj, obj.template_expr())
                 offset, linear_index, linear_data, _, _ = expanded_expression_values[:5]
@@ -460,14 +449,11 @@ class _LinearStandardFormCompiler_impl(object):
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
 
-        logger.debug("processed objectives\n")
-
         #
         # Tabulate constraints
         #
         slack_form = self.config.slack_form
         mixed_form = self.config.mixed_form
-
         if slack_form and mixed_form:
             raise ValueError("cannot specify both slack_form and mixed_form")
         rows = []
@@ -515,9 +501,7 @@ class _LinearStandardFormCompiler_impl(object):
                 if ub.__class__ not in native_types:
                     ub = value(ub)
                 repn = visitor.walk_expression(body)
-
                 if repn.nonlinear is not None:
-
                     raise ValueError(
                         f"Model constraint ({con.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
@@ -529,7 +513,6 @@ class _LinearStandardFormCompiler_impl(object):
 
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
-                logger.debug(f"  N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}")
                 if getattr(repn, "quadratic", None):
                     N_quadratic = len(repn.quadratic)
                     con_quadratic_nnz += N_quadratic
@@ -538,7 +521,6 @@ class _LinearStandardFormCompiler_impl(object):
                                           repn.quadratic)
 
                     quadratic_data = repn.quadratic.values()
-                    logger.debug(f"     N_quadratic: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
                     con_quadratic_data.append(quadratic_data)
                     con_quadratic_index.append(quadratic_index)
                     con_quadratic_index_ptr.append(con_quadratic_nnz)
@@ -565,10 +547,8 @@ class _LinearStandardFormCompiler_impl(object):
                 )
 
             if mixed_form:
-                logger.debug("mixed_form")
                 if lb == ub:
                     con_nnz += N
-                    logger.debug(f"rows.append(RowEntry({con}, 0))\n")
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
                     con_data.append(linear_data)
@@ -579,7 +559,6 @@ class _LinearStandardFormCompiler_impl(object):
                         if lb is not None:
                             linear_index = list(linear_index)
                         con_nnz += N
-                        logger.debug(f"rows.append(RowEntry({con}, +1))\n")
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
                         con_data.append(linear_data)
@@ -587,14 +566,12 @@ class _LinearStandardFormCompiler_impl(object):
                         con_index_ptr.append(con_nnz)
                     if lb is not None:
                         con_nnz += N
-                        logger.debug(f"rows.append(RowEntry({con}, -1))\n")
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
             elif slack_form:
-                logger.debug("slack_form")
                 if lb == ub:  # TODO: add tolerance?
                     rhs.append(ub - offset)
                 else:
@@ -625,7 +602,6 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
             else:
-                logger.info("not mixed or slack form")
                 if ub is not None:
                     if lb is not None:
                         linear_index = list(linear_index)
@@ -647,26 +623,16 @@ class _LinearStandardFormCompiler_impl(object):
             # report the last constraint
             timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
 
-        logger.debug("completed constraints\n")
-
         # Get the variable list
         columns = list(var_map.values())
         n_cols = len(columns)
 
         # Convert the compiled data to scipy sparse matrices
-        logger.debug(f"converting objective: {obj_index}")
-        logger.debug(f"objective.is_quadratic: {any([qd for qd in obj_quadratic_data])}")
-
         c, Q_obj = self._create_csc_quadratic(
             obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols,
             obj_quadratic_data, obj_quadratic_index
         )
 
-        logger.debug(f"Objective:\n  c: {c.toarray()}\n  "
-                    f"Q: {[q if not hasattr(q, 'toarray') else q.toarray() for q in Q_obj]}\n  "
-                    f"offset: {obj_offset}")
-
-        logger.debug(f"converting constraints: {con_index}")
         is_quadratic = any([qd for qd in con_quadratic_data]) or any(
             [qd for qd in obj_quadratic_data]
         )
@@ -730,12 +696,9 @@ class _LinearStandardFormCompiler_impl(object):
             )
 
         timer.toc("Generated standard form representation", delta=False)
-        logger.debug(f"RETURNING: {type(info)} ")
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, n_cols, *, sum_duplicates=True, eliminate_zeros=True):
-        logger.debug(f"data={data}, index={[i for i in index]}, "
-                    f"index_ptr={index_ptr}, nnz={nnz}, n_cols={n_cols}")
         data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
         index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
         if not nnz:

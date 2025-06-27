@@ -46,8 +46,6 @@ from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
-# NOTE: set this if you would like the gurobi solver to write a file at the end (handy for debugging)
-DEBUG_LP_FILE = None
 
 class GurobiConfigMixin:
     """
@@ -319,10 +317,6 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                     obj=_obj,
                     vtype=vtype,
                 )
-                logger.debug(f"repn.A: {repn.A.toarray()}  {type(repn.A.toarray())}")
-                logger.debug(f"repn.is_quadratic: {repn.is_quadratic}")
-                logger.debug(f"sense: {sense}")
-                logger.debug(f"rhs: {repn.rhs}")
                 if repn.is_quadratic:
                     # quadratic: add each matrix constraint individually
                     A = [
@@ -373,10 +367,6 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
         finally:
             os.chdir(orig_cwd)
-
-        if DEBUG_LP_FILE:
-            logger.info(f"writing: {DEBUG_LP_FILE}")
-            gurobi_model.write(DEBUG_LP_FILE)
 
         res = self._postsolve(
             timer,

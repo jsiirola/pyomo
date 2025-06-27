@@ -89,7 +89,6 @@ class LinearRepn(object):
     __slots__ = ("multiplier", "constant", "linear", "nonlinear")
 
     def __init__(self):
-        logger.debug(f"(LinearRepn) {self.__class__.__qualname__}: __init__")
         self.multiplier = 1
         self.constant = 0
         self.linear = {}
@@ -132,12 +131,8 @@ class LinearRepn(object):
             var_map = visitor.var_map
             with mutable_expression() as e:
                 for vid, coef in self.linear.items():
-                    try:
-                        if coef:
-                            e += coef * var_map[vid]
-                    except Exception:
-                        logger.exception(f"vid={vid}, coef={coef}, var_map={var_map}")
-                        raise
+                    if coef:
+                        e += coef * var_map[vid]
             if e.nargs() > 1:
                 ans += e
             elif e.nargs() == 1:
@@ -315,9 +310,7 @@ def _handle_pow_constant_constant(visitor, node, arg1, arg2):
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     _, exp = arg2
-    logger.debug(f"exp={exp}")
     if exp == 1:
-        logger.debug(f"returning {arg1}")
         return arg1
     elif exp > 1 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
         _type, _arg = arg1
@@ -558,7 +551,6 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 return False, (_CONSTANT, visitor.check_constant(child.value, child))
             visitor.var_recorder.add(child)
         ans = visitor.Result()
-        logger.debug(f"setting linear[{child}] linear[{_id}] = 1")
         ans.linear[_id] = 1
         return False, (_LINEAR, ans)
 
@@ -608,7 +600,6 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_linear(visitor, child):
-
         var_map = visitor.var_map
         ans = visitor.Result()
         const = 0
@@ -714,7 +705,6 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         sorter=None,
         var_recorder=None,
     ):
-        logger.debug(f"(LinearRepnVisitor) {self.__class__}: __init__")
         super().__init__()
         self.subexpression_cache = subexpression_cache
         if any(_ is not None for _ in (var_map, var_order, sorter)):
@@ -772,13 +762,11 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
 
     def initializeWalker(self, expr):
         walk, result = self.beforeChild(None, expr, 0)
-        logger.debug(f"  walk, result = {walk, result}")
         if not walk:
             return False, self.finalizeResult(result)
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        logger.debug(f"before_child: {child}:{child_idx}  {type(child)}")
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def enterNode(self, node):
@@ -790,20 +778,16 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             return node.args, []
 
     def exitNode(self, node, data):
-
         if data.__class__ is self.Result:
             return data.walker_exitNode()
         #
         # General expressions...
         #
-        logger.debug(f"exit lookup: {node.__class__.__name__}, {[i.name for i in map(itemgetter(0), data)]}")
-
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
 
     def finalizeResult(self, result):
-
         ans = result[1]
         if ans.__class__ is self.Result:
             mult = ans.multiplier

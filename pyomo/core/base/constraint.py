@@ -168,7 +168,6 @@ class ConstraintData(ActiveComponentData):
         self._expr = None
         if expr is not None:
             self.set_value(expr)
-        logger.debug(f"{self.__class__} __init__: expr={expr}")
 
     def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint."""
@@ -246,7 +245,6 @@ class ConstraintData(ActiveComponentData):
         if evaluate_bounds:
             lb, body, ub = ans
             return self._evaluate_bound(lb, True), body, self._evaluate_bound(ub, False)
-
         return ans
 
     def _evaluate_bound(self, bound, is_lb):
@@ -554,11 +552,6 @@ class TemplateConstraintData(ConstraintData):
         self._active = True
         self._index = index
         self._expr = template_info
-        logger.debug(
-            f"{self.__class__.__qualname__}:\n"
-            f" component={component},\n index={index},\n"
-            f" template_info={template_info} ({type(template_info)})"
-                    )
 
     @property
     def expr(self):

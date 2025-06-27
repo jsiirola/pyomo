@@ -38,8 +38,6 @@ from pyomo.contrib.solver.common.results import (
     legacy_solution_status_map,
 )
 
-import logging
-logger = logging.getLogger(__name__)
 
 class Availability(IntEnum):
     """
@@ -633,9 +631,7 @@ class LegacySolverWrapper:
         filtered_args = {k: loc[k] for k in map_args if loc.get(k, None) is not None}
         self._map_config(**filtered_args)
 
-        logger.debug(f"{self.__class__.__name__} calling: super().solve(model)")
         results: Results = super().solve(model)
-        logger.debug(f"{self.__class__.__name__} complete: super().solve(model)")
         legacy_results, legacy_soln = self._map_results(model, results)
         legacy_results = self._solution_handler(
             load_solutions, model, results, legacy_results, legacy_soln

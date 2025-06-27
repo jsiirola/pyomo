@@ -37,11 +37,7 @@ import pyomo.core.expr as expr
 from pyomo.core.expr import ExpressionType
 from pyomo.common.numeric_types import native_types
 
-import logging
-
 code_type = copy.deepcopy.__class__
-
-logger = logging.getLogger(__name__)
 
 _CONSTANT = linear.ExprType.CONSTANT
 _LINEAR = linear.ExprType.LINEAR
@@ -80,7 +76,6 @@ class QuadraticRepn(object):
             return _CONSTANT, self.multiplier * self.constant
 
     def duplicate(self):
-        logger.debug(f"DUPLICATE: {self}")
         ans = self.__class__.__new__(self.__class__)
         ans.multiplier = self.multiplier
         ans.constant = self.constant
@@ -94,9 +89,6 @@ class QuadraticRepn(object):
 
     def to_expression(self, visitor):
         var_map = visitor.var_map
-        logger.debug(f"var_map: {var_map}")
-        logger.debug(f"self: linear={self.linear}, quadratic={self.quadratic}, nonlinear={self.nonlinear}")
-        logger.debug(f"constant: {self.constant}, multiplier: {self.multiplier}")
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
             # assignment) in case the term is a non-numeric node (like a
@@ -173,7 +165,6 @@ class QuadraticRepn(object):
 
 
 def _mul_linear_linear(visitor, linear1, linear2):
-    logger.debug(f"linear1: {linear1}, linear2: {linear2}")
     quadratic = {}
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
@@ -184,7 +175,6 @@ def _mul_linear_linear(visitor, linear1, linear2):
 
 
 def _handle_product_linear_linear(visitor, node, arg1, arg2):
-    logger.debug(f"{node}, {arg1}, {arg2}")
     _, arg1 = arg1
     _, arg2 = arg2
     # Quadratic first, because we will update linear in a minute
@@ -385,10 +375,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 cls._resolve_symbols(_k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map) for _k in k
             ])+")"
 
-        logger.debug(f"k={k} ({type(k)})")
-        logger.debug(f"expr_cache: {expr_cache}, smap: {smap.bySymbol} {smap.byObject}, "
-                    f"var_map: {[(k,v._index,v._value,v._component()) for k, v in var_map.items()]}")
-
         if k in expr_cache or k in var_map:
             if k in expr_cache:
                 k = expr_cache[k]
@@ -396,8 +382,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
                 symbol_obj_id = id(var_map[k]._component())
                 if symbol_obj_id in smap.byObject:
                     k=f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
-
-            logger.debug(f"k={k} ({type(k)})")
 
             if k.__class__ not in native_types and k.is_expression_type():
                 ans.append('v = ' + k.to_string(smap=smap))
@@ -453,7 +437,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
             )
         ans = indent.join(ans)
         import textwrap
-        logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
@@ -473,10 +456,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
         *,
         var_map=None
     ):
-        logger.debug(
-            f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
-            f"remove_fixed_vars:{remove_fixed_vars}, check_duplicates:{check_duplicates}\n\n"
-        )
         ans = []
         multiplier *= self.multiplier
         constant = self.constant
@@ -492,7 +471,6 @@ class QuadraticTemplateRepn(QuadraticRepn):
 
         for term_type in ["linear", "quadratic"]:
             for k, coef in list(getattr(self, term_type).items()):
-                logger.debug(f"{term_type}: ({k} ({k.__class__.__name__}): {coef})")
                 coef *= multiplier
                 if coef.__class__ not in native_types and coef.is_expression_type():
                     coef = coef.to_string(smap=smap)
@@ -581,21 +559,15 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
 
     def expand_expression(self, obj, template_info):
         env = self.env
-        logger.debug(f"obj={type(obj)}")
-        logger.debug(f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
-        logger.debug(f"id(template_info)={id(template_info)}")
         try:
             # attempt to look up already-constructed template
             body, lb, ub = self.expanded_templates[id(template_info)]
         except KeyError:
             # create a new expanded template
-            logger.debug(f"create new expanded template")
             smap = self.symbolmap
             expr, indices = template_info
             args = [smap.getSymbol(i) for i in indices]
             if expr.is_expression_type(ExpressionType.RELATIONAL):
-                logger.debug("expression_type = RELATIONAL")
-
                 lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
                     body = self.walk_expression(body).compile(
@@ -618,7 +590,6 @@ class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
             else:
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            logger.debug(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []

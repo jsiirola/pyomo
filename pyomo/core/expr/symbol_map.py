@@ -155,7 +155,6 @@ class SymbolMap(object):
                 "component '%s' (conflicting component: '%s')"
                 % (symbol, self.bySymbol[symbol].name, obj.name)
             )
-
         self.bySymbol[symbol] = obj
         self.byObject[obj_id] = symbol
         return symbol

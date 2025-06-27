@@ -394,9 +394,7 @@ class StreamBasedExpressionVisitor(object):
         else:
             recursion_limit -= 1
 
-        logger.debug(f"self.enterNode = {self.enterNode}")
         tmp = self.enterNode(node)
-        logger.debug(f" args,data={tmp}")
         if tmp is None:
             args = data = None
         else:
@@ -406,8 +404,6 @@ class StreamBasedExpressionVisitor(object):
                 args = ()
             else:
                 args = node.args
-            logger.debug(f" args={args}\n")
-
 
         # Because we do not require the args to be a context manager, we
         # will mock up the "with args" using a try-finally.
@@ -423,9 +419,7 @@ class StreamBasedExpressionVisitor(object):
             arg_iter = iter(args)
             for child in arg_iter:
                 child_idx += 1
-                logger.debug(f"  child [{child_idx}: {node}] {child.__class__.__name__} {child}")
                 tmp = self.beforeChild(node, child, child_idx)
-                logger.debug(f"      child descend, child_result={tmp}")
                 if tmp is None:
                     descend = True
                 else:
@@ -445,7 +439,6 @@ class StreamBasedExpressionVisitor(object):
 
         # We are done with this node.  Call exitNode to compute
         # any result
-        logger.debug(f"self.exitNode={self.exitNode}")
         return self.exitNode(node, data)
 
     def _process_node_bx(self, node, recursion_limit):

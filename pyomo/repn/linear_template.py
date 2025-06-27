@@ -30,14 +30,10 @@ _GENERAL = util.ExprType.GENERAL
 code_type = deepcopy.__class__
 
 
-import logging
-logger = logging.getLogger(__name__)
-
 class LinearTemplateRepn(LinearRepn):
     __slots__ = ("linear_sum",)
 
     def __init__(self):
-        logger.debug(f"(LinearTemplateRepn) {self.__class__.__name__}: __init__")
         super().__init__()
         self.linear_sum = []
 
@@ -92,10 +88,6 @@ class LinearTemplateRepn(LinearRepn):
         remove_fixed_vars,
         check_duplicates,
     ):
-        logger.debug(
-            f"smap:{smap}, expr_cache:{expr_cache}, multiplier:{multiplier}, repetitions:{repetitions}, "
-            f"remove_fixed_vars:{remove_fixed_vars}, check_duplicates:{check_duplicates}"
-        )
         ans = []
         multiplier *= self.multiplier
         constant = self.constant
@@ -253,7 +245,6 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
 
 
 def _handle_getitem(visitor, node, comp, *args):
-
     expr = comp[1][tuple(arg[1] for arg in args)]
     if comp[0] is _CONSTANT:
         return (_CONSTANT, expr)
@@ -308,7 +299,6 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        logger.debug(f"node = {type(node).__name__} {node}")
         if node.__class__ is expr.TemplateSumExpression:
             return node.template_args(), []
         if node.__class__ in linear.sum_like_expression_types:

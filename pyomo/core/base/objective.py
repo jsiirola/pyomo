@@ -180,7 +180,6 @@ class TemplateObjectiveData(ObjectiveData):
         self._index = index
         self._args_ = template_info
         self._sense = sense
-        logger.debug(f"index={index}, template_info={template_info} ({type(template_info)})")
 
     @property
     def args(self):

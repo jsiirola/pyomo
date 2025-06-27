@@ -71,7 +71,6 @@ class DirectSolver(DirectOrPersistentSolver):
 
     def solve(self, *args, **kwds):
         """Solve the problem"""
-        # Note this does not get called with LegacySolver -- it does its own solve
 
         self.available(exception_flag=True)
         #
