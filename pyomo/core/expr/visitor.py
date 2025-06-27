@@ -276,7 +276,6 @@ class StreamBasedExpressionVisitor(object):
             result = self._process_node(root, RECURSION_LIMIT)
             _nonrecursive = None
         except RevertToNonrecursive:
-            logger.debug("RevertToNonrecursive")
             ptr = (None,) + self.recursion_stack.pop()
             while self.recursion_stack:
                 ptr = (ptr,) + self.recursion_stack.pop()
@@ -293,11 +292,8 @@ class StreamBasedExpressionVisitor(object):
             return _nonrecursive[0](_nonrecursive[1])
 
         if self.finalizeResult is not None:
-            sr = self.finalizeResult(result)
-            logger.debug(f"RETURNING: self.finalizeResult = {sr}")
-            return sr
+            return self.finalizeResult(result)
         else:
-            logger.debug(f"RETURNING result: {type(result)}, {result}")
             return result
 
     def _compute_actual_recursion_limit(self):
@@ -393,7 +389,6 @@ class StreamBasedExpressionVisitor(object):
         also the definition of the client_methods dict).
 
         """
-        logger.debug(f"{self.__class__.__name__}._process_node_bex({node}, level={RECURSION_LIMIT-recursion_limit})")
         if not recursion_limit:
             recursion_limit = self._compute_actual_recursion_limit()
         else:

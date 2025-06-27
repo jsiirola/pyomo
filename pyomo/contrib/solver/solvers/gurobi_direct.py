@@ -43,9 +43,6 @@ from pyomo.contrib.solver.common.results import (
 )
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
-import logging
-logger = logging.getLogger(__name__)
-
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
@@ -238,7 +235,6 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
     _tc_map = None
 
     def __init__(self, **kwds):
-        logger.debug(f"(GurobiDirect (Legacy)): {self.__class__} __init__: {kwds} ")
         super().__init__(**kwds)
         GurobiDirect._num_instances += 1
 
@@ -255,7 +251,6 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 self.release_license()
 
     def solve(self, model, **kwds) -> Results:
-        logger.debug(f"{self.__class__.__name__}: {kwds}")
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         config = self.config(value=kwds, preserve_implicit=True)
         if not self.available():

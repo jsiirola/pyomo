@@ -358,11 +358,8 @@ class _LinearStandardFormCompiler_impl(object):
                 )
             )
 
-        logger.debug(f"component_map: {component_map}")
-
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
-        logger.debug(f"var_map: {var_map}")
 
         var_recorder = TemplateVarRecorder(var_map, None, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
@@ -402,7 +399,6 @@ class _LinearStandardFormCompiler_impl(object):
         # Process objective
         #
         set_sense = self.config.set_sense
-
         objectives = []
         for blk in component_map[Objective]:
             objectives.extend(
@@ -486,8 +482,7 @@ class _LinearStandardFormCompiler_impl(object):
         con_quadratic_index = []
         con_quadratic_index_ptr = [0]
         last_parent = None
-        for _i, con in enumerate(ordered_active_constraints(model, self.config)):
-            logger.debug(f"CONSTRAINT: {_i}:{con} ({type(con)})")
+        for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
                     timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
@@ -500,14 +495,11 @@ class _LinearStandardFormCompiler_impl(object):
                 offset, linear_index, linear_data, lb, ub = expanded_expression_values[:5]
 
                 N = len(linear_data)
-                logger.debug(f"   N: {N}, offset: {offset}, linear_index: {linear_index}, linear_data: {linear_data}, "
-                      f"lb: {lb}, ub: {ub}")
                 if len(expanded_expression_values)>5:
                     quadratic_index, quadratic_data = expanded_expression_values[5:]
                 else:
                     quadratic_index, quadratic_data = [], []
                 N_quadratic = len(quadratic_data)
-                logger.debug(f"     N_quadratic: {N_quadratic}, quadratic_index: {quadratic_index}, quadratic_data: {quadratic_data}")
                 con_quadratic_nnz += N_quadratic
                 con_quadratic_data.append(quadratic_data)
                 if N_quadratic>0:

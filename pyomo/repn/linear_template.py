@@ -212,10 +212,6 @@ class LinearTemplateRepn(LinearRepn):
                 0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
             )
         ans = indent.join(ans)
-
-        import textwrap
-        logger.debug(f"EXECUTING:\n\n{textwrap.indent(ans, '  ')}\n* compile RETURNING: build_expr\n")
-
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
@@ -322,11 +318,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
 
     def expand_expression(self, obj, template_info):
         env = self.env
-        logger.debug(f"obj={type(obj)}")
-        logger.debug(f"template_info={type(template_info)}, {[type(ti) for ti in template_info]}")
-        logger.debug(f"id(template_info)={id(template_info)}")
         try:
-            # attempt to look up already-constructed template
             body, lb, ub = self.expanded_templates[id(template_info)]
         except KeyError:
             # create a new expanded template
@@ -347,7 +339,6 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
                     ub = self.walk_expression(ub).compile(
                         env, smap, self.expr_cache, args, True
                     )
-
             elif expr is not None:
                 lb = ub = None
                 body = self.walk_expression(expr).compile(
@@ -356,11 +347,9 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             else:
                 body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
-            logger.debug(f"SET: {template_info} self.expanded_templates[{id(template_info)}] = {body}, {lb}, {ub}")
 
         linear_indices = []
         linear_data = []
-
         index = obj.index()
         if index.__class__ is not tuple:
             if index is None and not obj.parent_component().is_indexed():

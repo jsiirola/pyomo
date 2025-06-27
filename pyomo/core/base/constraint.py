@@ -210,7 +210,6 @@ class ConstraintData(ActiveComponentData):
 
         """
         expr = self._expr
-
         if expr.__class__ is RangedExpression:
             lb, body, ub = ans = expr.args
             if (
@@ -237,7 +236,6 @@ class ConstraintData(ActiveComponentData):
             ans = None, None, None
         else:
             lhs, rhs = expr.args
-
             if rhs.__class__ in native_types or not rhs.is_potentially_variable():
                 ans = rhs if expr.__class__ is EqualityExpression else None, lhs, rhs
             elif lhs.__class__ in native_types or not lhs.is_potentially_variable():

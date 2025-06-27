@@ -776,7 +776,6 @@ def _reduce_template_to_component(expr):
     level = -1
 
     def beforeChild(node, child, child_idx):
-        logger.debug(f"({node}, {child}, {type(child)}, {child_idx})")
         # Efficiency: do not descend into leaf nodes.
         if type(child) in native_types:
             return False, child

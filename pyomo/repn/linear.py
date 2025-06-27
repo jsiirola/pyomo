@@ -95,7 +95,6 @@ class LinearRepn(object):
         self.linear = {}
         self.nonlinear = None
 
-
     def __str__(self):
         return (
             f"LinearRepn(mult={self.multiplier}, const={self.constant}, "
@@ -772,7 +771,6 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         return ans
 
     def initializeWalker(self, expr):
-        logger.debug(f"{self.__class__.__name__}.initializeWalker({expr})")
         walk, result = self.beforeChild(None, expr, 0)
         logger.debug(f"  walk, result = {walk, result}")
         if not walk:
