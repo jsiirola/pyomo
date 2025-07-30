@@ -25,7 +25,6 @@ from pyomo.repn.linear import LinearRepn
 _CONSTANT = util.ExprType.CONSTANT
 _VARIABLE = util.ExprType.VARIABLE
 _LINEAR = util.ExprType.LINEAR
-_GENERAL = util.ExprType.GENERAL
 
 code_type = deepcopy.__class__
 
@@ -135,8 +134,7 @@ class LinearTemplateRepn(LinearRepn):
             else:
                 ans.append(indent + f'linear_indices.append({k})')
                 ans.append(indent + f'linear_data.append({coef})')
-
-        for subrepn, subindices, subsets in getattr(self, "linear_sum", []):
+        for subrepn, subindices, subsets in self.linear_sum:
             ans.extend(
                 '    ' * i
                 + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
@@ -284,7 +282,6 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     exit_node_dispatcher = linear.ExitNodeDispatcher(
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
-    # expand_nonlinear_products = True
 
     def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
         super().__init__(subexpression_cache, var_recorder=var_recorder)
@@ -311,7 +308,6 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         try:
             body, lb, ub = self.expanded_templates[id(template_info)]
         except KeyError:
-            # create a new expanded template
             smap = self.symbolmap
             expr, indices = template_info
             args = [smap.getSymbol(i) for i in indices]

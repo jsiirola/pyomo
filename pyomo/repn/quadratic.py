@@ -30,14 +30,8 @@ from pyomo.core.expr.relational_expr import (
 )
 from pyomo.core.base.expression import Expression
 from . import linear
-from . import linear_template
 from . import util
 from .linear import _merge_dict, to_expression
-import pyomo.core.expr as expr
-from pyomo.core.expr import ExpressionType
-from pyomo.common.numeric_types import native_types
-
-code_type = copy.deepcopy.__class__
 
 _CONSTANT = linear.ExprType.CONSTANT
 _LINEAR = linear.ExprType.LINEAR
@@ -52,7 +46,7 @@ class QuadraticRepn(object):
         self.multiplier = 1
         self.constant = 0
         self.linear = {}
-        self.quadratic = {}
+        self.quadratic = None
         self.nonlinear = None
 
     def __str__(self):
@@ -166,11 +160,17 @@ class QuadraticRepn(object):
 
 def _mul_linear_linear(visitor, linear1, linear2):
     quadratic = {}
+    vo = visitor.var_recorder.var_order
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
-            key = (min(vid1, vid2), max(vid2, vid1))
-            quadratic[key] = quadratic.get(key, 0) + (coef1 * coef2)
-
+            if vo[vid1] < vo[vid2]:
+                key = vid1, vid2
+            else:
+                key = vid2, vid1
+            if key in quadratic:
+                quadratic[key] += coef1 * coef2
+            else:
+                quadratic[key] = coef1 * coef2
     return quadratic
 
 
@@ -325,14 +325,6 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     # RELATIONAL handlers
     #
     # (no changes needed)
-
-    _exit_node_handlers[expr.GetItemExpression] = {
-        None: linear_template._handle_getitem
-    }
-    _exit_node_handlers[expr.TemplateSumExpression] = {
-        None: linear_template._handle_templatesum
-    }
-
     return _exit_node_handlers
 
 
@@ -342,311 +334,3 @@ class QuadraticRepnVisitor(linear.LinearRepnVisitor):
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2
-
-    ## handle quadratics, then let LinearRepnVisitor handle the rest
-    def finalizeResult(self, result):
-        ans = result[1]
-        if (
-            ans.__class__ is self.Result
-            and ans.multiplier
-            and ans.multiplier != 1
-            and ans.quadratic
-        ):
-            mult = ans.multiplier
-            quadratic = ans.quadratic
-            zeros = []
-            for vid, coef in quadratic.items():
-                if coef:
-                    quadratic[vid] = coef * mult
-                else:
-                    zeros.append(vid)
-            for vid in zeros:
-                del quadratic[vid]
-
-        return super().finalizeResult(result)
-
-
-class QuadraticTemplateRepn(QuadraticRepn):
-    # __slots__ = ("linear_sum",)
-
-    def __init__(self):
-        super().__init__()
-        self.linear_sum = []
-
-    @classmethod
-    def _resolve_symbols(
-        cls, k, ans, expr_cache, smap, remove_fixed_vars, check_duplicates, var_map
-    ):
-
-        if isinstance(k, tuple):
-            return (
-                "("
-                + ",".join(
-                    [
-                        cls._resolve_symbols(
-                            _k,
-                            ans,
-                            expr_cache,
-                            smap,
-                            remove_fixed_vars,
-                            check_duplicates,
-                            var_map,
-                        )
-                        for _k in k
-                    ]
-                )
-                + ")"
-            )
-
-        if k in expr_cache or k in var_map:
-            if k in expr_cache:
-                k = expr_cache[k]
-            else:
-                symbol_obj_id = id(var_map[k]._component())
-                if symbol_obj_id in smap.byObject:
-                    k = f"{smap.byObject[symbol_obj_id]}[{var_map[k]._index}]"
-
-            if k.__class__ not in native_types and k.is_expression_type():
-                ans.append('v = ' + k.to_string(smap=smap))
-                k = 'v'
-                if remove_fixed_vars:
-                    ans.append('if v.__class__ is tuple:')
-                    ans.append('    const += v[0] * {coef}')
-                    ans.append('    v = None')
-                    ans.append('else:')
-                    indent = '    '  # FIX
-                elif not check_duplicates:
-                    k = ans.pop()[4:]
-
-        return k
-
-    def compile(
-        self,
-        env,
-        smap,
-        expr_cache,
-        args,
-        remove_fixed_vars=False,
-        check_duplicates=False,
-        *,
-        var_map={},
-    ):
-        ans, constant = self._build_evaluator(
-            smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates, var_map=var_map
-        )
-        if not ans:
-            return constant
-        indent = '\n    '
-        if not constant and ans and ans[0].startswith('const +='):
-            # Convert initial "const +=" to "const ="
-            ans[0] = ''.join(ans[0].split('+', 1))
-        else:
-            ans.insert(0, 'const = ' + repr(constant))
-        fcn_body = indent.join(ans[1:])
-        if 'const' not in fcn_body:
-            # No constants in the expression.  Move the initial const
-            # term to the return value and avoid declaring the local
-            # variable
-            ans = ['return ' + ans[0].split('=', 1)[1]]
-            if fcn_body:
-                ans.insert(0, fcn_body)
-        else:
-            ans = [ans[0], fcn_body, 'return const']
-        if check_duplicates:
-            ans.insert(0, f"def build_expr(linear, quadratic, {', '.join(args)}):")
-        else:
-            ans.insert(
-                0,
-                f"def build_expr(linear_indices, linear_data, quadratic_indices, quadratic_data, {', '.join(args)}):",
-            )
-        ans = indent.join(ans)
-        import textwrap
-
-        # build the function in the env namespace, then remove and
-        # return the compiled function.  The function's globals will
-        # still be bound to env
-        exec(ans, env)
-        return env.pop('build_expr')
-
-    def _build_evaluator(
-        self,
-        smap,
-        expr_cache,
-        multiplier,
-        repetitions,
-        remove_fixed_vars,
-        check_duplicates,
-        *,
-        var_map=None,
-    ):
-        ans = []
-        multiplier *= self.multiplier
-        constant = self.constant
-        if constant.__class__ not in native_types or constant:
-            constant *= multiplier
-            if not repetitions or (
-                constant.__class__ not in native_types and constant.is_expression_type()
-            ):
-                ans.append('const += ' + constant.to_string(smap=smap))
-                constant = 0
-            else:
-                constant *= repetitions
-
-        for term_type in ["linear", "quadratic"]:
-            for k, coef in list(getattr(self, term_type).items()):
-                coef *= multiplier
-                if coef.__class__ not in native_types and coef.is_expression_type():
-                    coef = coef.to_string(smap=smap)
-                elif coef:
-                    coef = repr(coef)
-                else:
-                    continue
-
-                indent = ''
-
-                k = self.__class__._resolve_symbols(
-                    k,
-                    ans,
-                    expr_cache,
-                    smap,
-                    remove_fixed_vars,
-                    check_duplicates,
-                    var_map,
-                )
-
-                if check_duplicates:
-                    ans.append(indent + f'if {k} in {term_type}:')
-                    ans.append(indent + f'    {term_type}[{k}] += {coef}')
-                    ans.append(indent + 'else:')
-                    ans.append(indent + f'    {term_type}[{k}] = {coef}')
-                else:
-                    ans.append(indent + f'{term_type}_indices.append({k})')
-                    ans.append(indent + f'{term_type}_data.append({coef})')
-
-        for subrepn, subindices, subsets in getattr(self, "linear_sum", []):
-            ans.extend(
-                '    ' * i
-                + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
-                + (
-                    _set.to_string(smap=smap)
-                    if _set.is_expression_type()
-                    else smap.getSymbol(_set)
-                )
-                + ":"
-                for i, (_idx, _set) in enumerate(zip(subindices, subsets))
-            )
-            try:
-                subrep = 1
-                for _set in subsets:
-                    subrep *= len(_set)
-            except:
-                subrep = 0
-            subans, subconst = subrepn._build_evaluator(
-                smap,
-                expr_cache,
-                multiplier,
-                repetitions * subrep,
-                remove_fixed_vars,
-                check_duplicates,
-            )
-            indent = '    ' * (len(subsets))
-            ans.extend(indent + line for line in subans)
-            constant += subconst
-        return ans, constant
-
-
-class QuadraticTemplateRepnVisitor(linear_template.LinearTemplateRepnVisitor):
-    Result = QuadraticTemplateRepn
-    max_exponential_expansion = 2
-    exit_node_dispatcher = linear.ExitNodeDispatcher(
-        util.initialize_exit_node_dispatcher(define_exit_node_handlers())
-    )
-
-    ## handle quadratics, then let LinearRepnVisitor handle the rest.
-    ## duplicate of QuadraticRepnVisitor, but not directly inheritable because of ambiguous
-    ## multi-class inheritance (QuadaraticRepnVisitor vs. LinearTemplateRepnVisitor)
-    def finalizeResult(self, result):
-        ans = result[1]
-        if (
-            ans.__class__ is self.Result
-            and ans.multiplier
-            and ans.multiplier != 1
-            and ans.quadratic
-        ):
-            mult = ans.multiplier
-            quadratic = ans.quadratic
-            zeros = []
-            for vid, coef in quadratic.items():
-                if coef:
-                    quadratic[vid] = coef * mult
-                else:
-                    zeros.append(vid)
-            for vid in zeros:
-                del quadratic[vid]
-
-        return super().finalizeResult(result)
-
-    def expand_expression(self, obj, template_info):
-        env = self.env
-        try:
-            # attempt to look up already-constructed template
-            body, lb, ub = self.expanded_templates[id(template_info)]
-        except KeyError:
-            # create a new expanded template
-            smap = self.symbolmap
-            expr, indices = template_info
-            args = [smap.getSymbol(i) for i in indices]
-            if expr.is_expression_type(ExpressionType.RELATIONAL):
-                lb, body, ub = obj.to_bounded_expression()
-                if body is not None:
-                    body = self.walk_expression(body).compile(
-                        env, smap, self.expr_cache, args, False, var_map=self.var_map
-                    )
-                if lb is not None:
-                    lb = self.walk_expression(lb).compile(
-                        env, smap, self.expr_cache, args, True, var_map=self.var_map
-                    )
-                if ub is not None:
-                    ub = self.walk_expression(ub).compile(
-                        env, smap, self.expr_cache, args, True, var_map=self.var_map
-                    )
-
-            elif expr is not None:
-                lb = ub = None
-                body = self.walk_expression(expr).compile(
-                    env, smap, self.expr_cache, args, False, var_map=self.var_map
-                )
-            else:
-                body = lb = ub = None
-            self.expanded_templates[id(template_info)] = body, lb, ub
-
-        linear_indices = []
-        linear_data = []
-        quadratic_indices = []
-        quadratic_data = []
-        call_args = (linear_indices, linear_data, quadratic_indices, quadratic_data)
-
-        index = obj.index()
-        if index.__class__ is not tuple:
-            if index is None and not obj.parent_component().is_indexed():
-                index = ()
-            else:
-                index = (index,)
-        if lb.__class__ is code_type:
-            lb = lb(*call_args, *index)
-            if linear_indices:
-                raise RuntimeError(f"Constraint {obj} has non-fixed lower bound")
-        if ub.__class__ is code_type:
-            ub = ub(*call_args, *index)
-            if linear_indices:
-                raise RuntimeError(f"Constraint {obj} has non-fixed upper bound")
-
-        return (
-            body(*call_args, *index),
-            linear_indices,
-            linear_data,
-            lb,
-            ub,
-            quadratic_indices,
-            quadratic_data,
-        )

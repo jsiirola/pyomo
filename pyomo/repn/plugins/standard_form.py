@@ -40,7 +40,6 @@ from pyomo.core.base import (
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.linear_template import LinearTemplateRepnVisitor
-from pyomo.repn.quadratic import QuadraticRepnVisitor, QuadraticTemplateRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
@@ -114,8 +113,6 @@ class LinearStandardFormInfo(object):
 
     """
 
-    is_quadratic = False
-
     def __init__(self, c, c_offset, A, rhs, rows, columns, objectives, eliminated_vars):
         self.c = c
         self.c_offset = c_offset
@@ -135,24 +132,6 @@ class LinearStandardFormInfo(object):
     def b(self):
         "Alias for :attr:`rhs`"
         return self.rhs
-
-
-class QuadraticStandardFormInfo(LinearStandardFormInfo):
-    """
-    Extension of LinearStandardFormInfo with list of Q (quadratic) matrices
-    """
-
-    def __init__(self, *args, Q_list: list = None, Q_obj: list = None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.Q_list = Q_list
-        self.Q_obj = Q_obj
-        for i, q in enumerate(Q_obj):
-            logger.debug(f"  Q objective[{i}]: {None if q is None else q.toarray()}")
-        for i, q in enumerate(Q_list):
-            logger.debug(f"  Q constraint[{i}]: {None if q is None else q.toarray()}")
-        for Q in [Q_list, Q_obj]:
-            if isinstance(Q, list) and any([q is not None and q is not [] for q in Q]):
-                self.is_quadratic = True
 
 
 @WriterFactory.register(
@@ -291,8 +270,7 @@ class LinearStandardFormCompiler(object):
 
 class _LinearStandardFormCompiler_impl(object):
     # Making these methods class attributes so that others can change the hooks
-    # _get_visitor = LinearRepnVisitor
-    _get_visitor = QuadraticRepnVisitor
+    _get_visitor = LinearRepnVisitor
     _to_vector = None
     _csc_matrix = None
     _csr_matrix = None
@@ -354,9 +332,7 @@ class _LinearStandardFormCompiler_impl(object):
 
         var_recorder = TemplateVarRecorder(var_map, None, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
-
-        # template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
-        template_visitor = QuadraticTemplateRepnVisitor({}, var_recorder=var_recorder)
+        template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -400,35 +376,15 @@ class _LinearStandardFormCompiler_impl(object):
         obj_data = []
         obj_index = []
         obj_index_ptr = [0]
-
-        obj_quadratic_nnz = 0
-        obj_quadratic_data = []
-        obj_quadratic_index = []
-        obj_quadratic_index_ptr = [0]
-
-        for _i, obj in enumerate(objectives):
+        for obj in objectives:
             if hasattr(obj, 'template_expr'):
-                expanded_expression_values = template_visitor.expand_expression(
-                    obj, obj.template_expr()
+                offset, linear_index, linear_data, _, _ = (
+                    template_visitor.expand_expression(obj, obj.template_expr())
                 )
-                offset, linear_index, linear_data, _, _ = expanded_expression_values[:5]
-
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
-
-                if len(expanded_expression_values) > 5:
-                    quadratic_index, quadratic_data = expanded_expression_values[5:]
-                else:
-                    quadratic_index, quadratic_data = [], []
-                N_quadratic = len(quadratic_data)
-                obj_quadratic_nnz += N_quadratic
-                obj_quadratic_data.append(quadratic_data)
-                if N_quadratic > 0:
-                    obj_quadratic_index.append(quadratic_index)
-                    obj_quadratic_index_ptr.append(obj_quadratic_nnz)
-
             else:
                 repn = visitor.walk_expression(obj.expr)
                 N = len(repn.linear)
@@ -463,11 +419,6 @@ class _LinearStandardFormCompiler_impl(object):
         con_data = []
         con_index = []
         con_index_ptr = [0]
-
-        con_quadratic_nnz = 0
-        con_quadratic_data = []
-        con_quadratic_index = []
-        con_quadratic_index_ptr = [0]
         last_parent = None
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con._component is not last_parent:
@@ -476,25 +427,10 @@ class _LinearStandardFormCompiler_impl(object):
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
-                expanded_expression_values = template_visitor.expand_expression(
-                    con, con.template_expr()
+                offset, linear_index, linear_data, lb, ub = (
+                    template_visitor.expand_expression(con, con.template_expr())
                 )
-                offset, linear_index, linear_data, lb, ub = expanded_expression_values[
-                    :5
-                ]
-
                 N = len(linear_data)
-                if len(expanded_expression_values) > 5:
-                    quadratic_index, quadratic_data = expanded_expression_values[5:]
-                else:
-                    quadratic_index, quadratic_data = [], []
-                N_quadratic = len(quadratic_data)
-                con_quadratic_nnz += N_quadratic
-                con_quadratic_data.append(quadratic_data)
-                if N_quadratic > 0:
-                    con_quadratic_index.append(quadratic_index)
-                    con_quadratic_index_ptr.append(con_quadratic_nnz)
-
             else:
                 # Note: lb and ub could be a number, expression, or None
                 lb, body, ub = con.to_bounded_expression()
@@ -512,28 +448,8 @@ class _LinearStandardFormCompiler_impl(object):
                 N = len(repn.linear)
                 # Pull out the constant: we will move it to the bounds
                 offset = repn.constant
-
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
-                if getattr(repn, "quadratic", None):
-                    N_quadratic = len(repn.quadratic)
-                    con_quadratic_nnz += N_quadratic
-                    quadratic_index = map(
-                        lambda k: (
-                            var_recorder.var_order[k[0]],
-                            var_recorder.var_order[k[1]],
-                        ),
-                        repn.quadratic,
-                    )
-
-                    quadratic_data = repn.quadratic.values()
-                    con_quadratic_data.append(quadratic_data)
-                    con_quadratic_index.append(quadratic_index)
-                    con_quadratic_index_ptr.append(con_quadratic_nnz)
-                else:
-                    con_quadratic_data.append([])
-
-                    N_quadratic = 0
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
@@ -541,7 +457,7 @@ class _LinearStandardFormCompiler_impl(object):
                 # slack variable, but that seems rather silly.
                 continue
 
-            if not N and not N_quadratic:
+            if not N:
                 # This is a constant constraint
                 # TODO: add a (configurable) feasibility tolerance
                 if (lb is None or lb <= offset) and (ub is None or ub >= offset):
@@ -632,115 +548,55 @@ class _LinearStandardFormCompiler_impl(object):
         n_cols = len(columns)
 
         # Convert the compiled data to scipy sparse matrices
-        c, Q_obj = self._create_csc_quadratic(
-            obj_data,
-            obj_index,
-            obj_index_ptr,
-            obj_nnz,
-            n_cols,
-            obj_quadratic_data,
-            obj_quadratic_index,
+        c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
+        A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
+
+        if with_debug_timing:
+            timer.toc('Formed matrices', level=logging.DEBUG)
+
+        # Some variables in the var_map may not actually appear in the
+        # objective or constraints (e.g., added from col_order, or
+        # multiplied by 0 in the expressions).  The easiest way to check
+        # for empty columns is to convert from CSR to CSC and then look
+        # at the index pointer list (an O(num_var) operation).
+        c_ip = c.indptr
+        A_ip = A.indptr
+        active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
+
+        # Masks on NumPy arrays are very fast.  Build the reduced A
+        # indptr and then check if we actually have to manipulate the
+        # columns
+        augmented_mask = np.concatenate((active_var_mask, [True]))
+        reduced_A_indptr = A.indptr[augmented_mask]
+        n_cols -= len(reduced_A_indptr) - 1
+        if n_cols > 0:
+            columns = [v for k, v in zip(active_var_mask, columns) if k]
+            c = self._csc_matrix(
+                (c.data, c.indices, c.indptr[augmented_mask]),
+                [c.shape[0], len(columns)],
+            )
+            # active_var_idx[-1] = len(columns)
+            A = self._csc_matrix(
+                (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
+            )
+
+        if with_debug_timing:
+            timer.toc('Eliminated %s unused columns', n_cols, level=logging.DEBUG)
+
+        if self.config.nonnegative_vars:
+            c, A, columns, eliminated_vars = self._csc_to_nonnegative_vars(
+                c, A, columns
+            )
+        else:
+            eliminated_vars = []
+
+        info = LinearStandardFormInfo(
+            c, np.array(obj_offset), A, rhs, rows, columns, objectives, eliminated_vars
         )
-
-        is_quadratic = any([qd for qd in con_quadratic_data]) or any(
-            [qd for qd in obj_quadratic_data]
-        )
-
-        # if quadratic, create A (linear) and quadratic Q matrices
-        if is_quadratic:
-            A, Q_list = self._create_csc_quadratic(
-                con_data,
-                con_index,
-                con_index_ptr,
-                con_nnz,
-                n_cols,
-                con_quadratic_data,
-                con_quadratic_index,
-            )
-            if with_debug_timing:
-                timer.toc('Formed matrices', level=logging.DEBUG)
-            info = QuadraticStandardFormInfo(
-                c,
-                np.array(obj_offset),
-                A,
-                rhs,
-                rows,
-                columns,
-                objectives,
-                [],
-                Q_list=Q_list,
-                Q_obj=Q_obj,
-            )
-
-        else:  # linear: single A matrix
-            A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
-
-            if with_debug_timing:
-                timer.toc('Formed matrices', level=logging.DEBUG)
-
-            # Some variables in the var_map may not actually appear in the
-            # objective or constraints (e.g., added from col_order, or
-            # multiplied by 0 in the expressions).  The easiest way to check
-            # for empty columns is to convert from CSR to CSC and then look
-            # at the index pointer list (an O(num_var) operation).
-            c_ip = c.indptr
-            A_ip = A.indptr
-            active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
-
-            # Masks on NumPy arrays are very fast.  Build the reduced A
-            # indptr and then check if we actually have to manipulate the
-            # columns
-            augmented_mask = np.concatenate((active_var_mask, [True]))
-            reduced_A_indptr = A.indptr[augmented_mask]
-            n_cols -= len(reduced_A_indptr) - 1
-            if n_cols > 0:
-                columns = [v for k, v in zip(active_var_mask, columns) if k]
-                c = self._csc_matrix(
-                    (c.data, c.indices, c.indptr[augmented_mask]),
-                    [c.shape[0], len(columns)],
-                )
-                # active_var_idx[-1] = len(columns)
-                A = self._csc_matrix(
-                    (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
-                )
-
-            if with_debug_timing:
-                timer.toc('Eliminated %s unused columns', n_cols, level=logging.DEBUG)
-
-            if self.config.nonnegative_vars:
-                c, A, columns, eliminated_vars = self._csc_to_nonnegative_vars(
-                    c, A, columns
-                )
-            else:
-                eliminated_vars = []
-
-            info = LinearStandardFormInfo(
-                c,
-                np.array(obj_offset),
-                A,
-                rhs,
-                rows,
-                columns,
-                objectives,
-                eliminated_vars,
-            )
-
-        timer.toc("Generated standard form representation", delta=False)
+        timer.toc("Generated linear standard form representation", delta=False)
         return info
 
-    def _create_csc(
-        self,
-        data,
-        index,
-        index_ptr,
-        nnz,
-        n_cols,
-        *,
-        sum_duplicates=True,
-        eliminate_zeros=True,
-    ):
-        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
-        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
+    def _create_csc(self, data, index, index_ptr, nnz, n_cols):
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
@@ -752,59 +608,14 @@ class _LinearStandardFormCompiler_impl(object):
                 (data, index, index_ptr), [len(index_ptr) - 1, n_cols]
             ).tocsc()
 
+        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
+        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
         index_ptr = np.array(index_ptr, dtype=np.int32)
         A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, n_cols])
         A = A.tocsc()
-        if sum_duplicates:
-            A.sum_duplicates()
-        if eliminate_zeros:
-            A.eliminate_zeros()
+        A.sum_duplicates()
+        A.eliminate_zeros()
         return A
-
-    # For quadratic programs, create A (linear) matrix and list of Q (quadratic) matrices
-    def _create_csc_quadratic(
-        self,
-        linear_data,
-        linear_index,
-        linear_indez_ptr,
-        linear_nnz,
-        n_cols,
-        quadratic_data,
-        quadratic_index,
-    ) -> tuple:
-
-        # Create A (linear) matrix, but do not reduce; need to keep rows in order to correspond with
-        # Q matrices
-        A = self._create_csc(
-            linear_data,
-            linear_index,
-            linear_indez_ptr,
-            linear_nnz,
-            n_cols,
-            sum_duplicates=False,
-            eliminate_zeros=False,
-        )
-
-        qi = iter(quadratic_index)
-        Q_list = []
-        for i, coefficients in enumerate(quadratic_data):
-
-            if coefficients:
-                index = list(next(qi))
-                row_ind, col_ind = zip(*index)
-
-                Q = self._csr_matrix(
-                    (np.array(list(coefficients)), (row_ind, col_ind)),
-                    shape=[n_cols, n_cols],
-                )
-                Q = Q.tocsc()
-
-            else:
-                Q = None
-
-            Q_list.append(Q)
-
-        return A, Q_list
 
     def _csc_to_nonnegative_vars(self, c, A, columns):
         eliminated_vars = []
