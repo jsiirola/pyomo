@@ -309,9 +309,11 @@ class NLWriter(object):
             _open = lambda fname: open(fname, 'w')
         else:
             _open = nullcontext
-        with open(filename, 'w', newline='') as FILE, _open(
-            row_fname
-        ) as ROWFILE, _open(col_fname) as COLFILE:
+        with (
+            open(filename, 'w', newline='') as FILE,
+            _open(row_fname) as ROWFILE,
+            _open(col_fname) as COLFILE,
+        ):
             info = self.write(model, FILE, ROWFILE, COLFILE, config=config)
         if not info.variables:
             # This exception is included for compatibility with the
@@ -1903,7 +1905,7 @@ class _NLWriter_impl(object):
 
         # Note: the ASL will (silently) produce incorrect answers if the
         # nonlinear portion of a defined variable is a constant
-        # expression.  This may not be the case if all the variables in
+        # expression.  This may now be the case if all the variables in
         # the original nonlinear expression have been fixed.
         for _id, (expr, info, sub) in self.subexpression_cache.items():
             if info.nonlinear:
