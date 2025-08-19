@@ -180,6 +180,13 @@ class TemplateDataMixin(object):
         return self._args_
 
     def set_value(self, expr):
+        # Setting a value will convert this instance from a templatized
+        # type to the original Data type (and call the original set_value()).
+        #
+        # Note: We assume that the templatized type is created by
+        # inheriting (TemplateDataMixin, <original data class>), and
+        # that this instance doesn't have additional multiple
+        # inheritance that could re-order the MRO.
         self.__class__ = self.__class__.__mro__[
             self.__class__.__mro__.index(TemplateDataMixin) + 1
         ]
@@ -201,20 +208,6 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
         self._index = index
         self._args_ = template_info
         self._sense = sense
-
-    @property
-    def args(self):
-        # Note that it is faster to just generate the expression from
-        # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component()._rule(self.parent_block(), self.index()))
-        return self._args_
-
-    def template_expr(self):
-        return self._args_
-
-    def set_value(self, expr):
-        self.__class__ = ObjectiveData
-        return self.set_value(expr)
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
@@ -355,7 +348,7 @@ class Objective(ActiveIndexedComponent):
                         else:
                             assert self.__class__ is ScalarObjective
                             self.__class__ = TemplateScalarObjective
-                            self._expr = template_info
+                            self._args_ = template_info
                             self._data = {None: self}
                             self.set_sense(self._init_sense(self, self.index()))
                         return
@@ -413,7 +406,7 @@ class Objective(ActiveIndexedComponent):
     @deprecated(
         f"The 'Objective.rule' attribute will be made "
         "read-only in a future Pyomo release.",
-        version='6.9.3.dev0',
+        version='6.9.3',
         remove_in='6.11',
     )
     def rule(self, rule):
