@@ -78,6 +78,25 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1)])
         self.assertEqual(repn.columns, [m.x, m.y[1], m.y[3]])
 
+    def test_param_defaults(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(4))
+        m.p = pyo.Param(
+            pyo.Integers, mutable=True, default=1, initialize={1: 10, 3: 30}
+        )
+
+        @m.Objective()
+        def obj(m):
+            return sum(m.x[i] * m.p[i] for i in range(4))
+
+        repn = LinearStandardFormCompiler().write(m)
+        print(repn.c)
+        self.assertTrue(np.all(repn.c == np.array([1, 10, 1, 30])))
+        self.assertEqual(repn.A.shape, (0, 4))
+        self.assertTrue(np.all(repn.rhs == np.array([])))
+        self.assertEqual(repn.rows, [])
+        self.assertEqual(repn.columns, [m.x[0], m.x[1], m.x[2], m.x[3]])
+
     def test_linear_model_row_col_order(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()

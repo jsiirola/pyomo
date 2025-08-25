@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from collections import defaultdict
 from copy import deepcopy
 from itertools import chain
 
@@ -286,7 +287,12 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         if child not in visitor.indexed_params:
             visitor.indexed_params.add(child)
             name = visitor.symbolmap.getSymbol(child)
-            visitor.env[name] = child.extract_values()
+            default = child.default()
+            if default is not None:
+                param_data = defaultdict(lambda: default, child.extract_values())
+            else:
+                param_data = child.extract_values()
+            visitor.env[name] = param_data
         return False, (_CONSTANT, child)
 
     @staticmethod
