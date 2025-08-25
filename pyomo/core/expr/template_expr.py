@@ -1035,7 +1035,8 @@ class _set_iterator_template_generator(object):
             idx = (IndexTemplate(_set, None, context.next_id(), grp),)
         else:
             idx = tuple(
-                IndexTemplate(_set, i, context.next_id(), grp) for i in range(d)
+                IndexTemplate(_set, i, context.next_id(), grp)
+                for i in context.builtin_range(d)
             )
         context.cache.append(idx)
         if len(idx) == 1:
@@ -1082,6 +1083,7 @@ class _template_iter_context(object):
         init_cache = len(self.cache)
         expr = next(generator)
         final_cache = len(self.cache)
+        assert final_cache > init_cache
         return TemplateSumExpression((expr,), self.npop_cache(final_cache - init_cache))
 
 
@@ -1121,16 +1123,19 @@ class _template_iter_manager(object):
         self.context = None
         self.iters = None
         self.builtin_sum = builtins.sum
+        self.builtin_range = builtins.range
 
     def init(self, context, *iter_fcns):
         assert self.context is None
         self.context = context
+        context.builtin_range = self.builtin_range
         self.iters = [self._iter_wrapper(it, context) for it in iter_fcns]
         return self
 
     def acquire(self):
         assert self.paused
         self.paused = False
+        builtins.range = self.range_template
         builtins.sum = self.context.sum_template
         for it in self.iters:
             it.acquire()
@@ -1138,9 +1143,17 @@ class _template_iter_manager(object):
     def release(self):
         assert not self.paused
         self.paused = True
+        builtins.range = self.builtin_range
         builtins.sum = self.builtin_sum
         for it in self.iters:
             it.release()
+
+    def range_template(self, *args, **kwargs):
+        # Map range(...) to a Pyomo Set that er can then iterate over to
+        # get an IndexTemplate
+        I = pyomo_core_base_set.Set(initialize=self.builtin_range(*args, **kwargs))
+        I.construct()
+        return I
 
     def __enter__(self):
         assert self.context
