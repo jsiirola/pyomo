@@ -43,11 +43,26 @@ class LinearTemplateRepn(LinearRepn):
             + ", ".join(f"{val2str(k)}: {val2str(v)}" for k, v in self.linear.items())
             + "}"
         )
+        linear_sum = []
+        for subrepn, subind, subsets in self.linear_sum:
+            linear_sum.append(
+                val2str(subrepn)
+                + ", ["
+                + ', '.join(
+                    ("(" + ', '.join(val2str(j) for j in i) + ")") for i in subind
+                )
+                + "], ["
+                + ', '.join(
+                    ("(" + ', '.join(val2str(j) for j in i) + ")") for i in subsets
+                )
+                + "]"
+            )
+        linear_sum = '[' + ', '.join(linear_sum) + ']'
         return (
             f"{self.__class__.__name__}(mult={val2str(self.multiplier)}, "
             f"const={val2str(self.constant)}, "
             f"linear={linear}, "
-            f"linear_sum={self.linear_sum}, "
+            f"linear_sum={linear_sum}, "
             f"nonlinear={self.nonlinear})"
         )
 
