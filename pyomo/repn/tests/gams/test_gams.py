@@ -13,17 +13,20 @@
 #
 
 import os
-
+import subprocess
+from filecmp import cmp
 from io import StringIO
 
-from filecmp import cmp
 import pyomo.common.unittest as unittest
+from pyomo.common.fileutils import Executable
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (
     Block,
     ConcreteModel,
     Constraint,
     Objective,
+    SolverFactory,
     TransformationFactory,
     Var,
     exp,
@@ -45,6 +48,7 @@ from pyomo.repn.plugins.gams_writer import (
     StorageTreeChecker,
     expression_to_string,
     split_long_line,
+    valid_solvers,
 )
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
@@ -516,6 +520,39 @@ class TestGams_writer(unittest.TestCase):
         self._cleanup(test_fname)
         self.assertRaises(RuntimeError, model.write, test_fname, format='gams')
         self._cleanup(test_fname)
+
+    @unittest.skipUnless(
+        SolverFactory('gams').available(exception_flag=False), "GAMS not available"
+    )
+    def test_solver_problem_types(self):
+        with TempfileManager.new_context() as tempfile:
+            dname = tempfile.mkdtemp()
+            with open(os.path.join(dname, 'temp.gms'), 'w') as F:
+                F.write('option subsystems;\n')
+            subprocess.run(
+                [Executable('gams').path(), 'temp.gms'],
+                cwd=dname,
+                stdout=subprocess.DEVNULL,
+            )
+            with open(os.path.join(dname, 'temp.lst'), 'r') as F:
+                while not F.readline().startswith('SUBSYSTEM SUMMARY'):
+                    continue
+                assert not F.readline().strip()
+                line = F.readline().strip()
+                data = {}
+                while line:
+                    line = line.split()
+                    data[line[1].upper()] = line[2:]
+                    line = F.readline().strip()
+        del data['NAME']
+        # print(data)
+        self.assertEqual(valid_solvers.keys(), data.keys())
+        for solver in valid_solvers:
+            self.assertEqual(
+                valid_solvers[solver],
+                set(data[solver]),
+                (solver, valid_solvers[solver], data[solver]),
+            )
 
 
 if __name__ == "__main__":
