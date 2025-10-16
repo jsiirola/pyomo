@@ -13,6 +13,7 @@
 #
 import math
 import pickle
+import platform
 
 from pyomo.common.errors import PyomoException
 import pyomo.common.unittest as unittest
@@ -65,6 +66,8 @@ from pyomo.core.base.units_container import (
     _PyomoUnit,
 )
 from io import StringIO
+
+is_pypy = platform.python_implementation().lower().startswith('pypy')
 
 
 def python_callback_function(arg1, arg2):
@@ -836,6 +839,7 @@ class TestPyomoUnit(unittest.TestCase):
         )
         self._get_check_units_fail(linex2, uc, EXPR.LinearExpression)
 
+    @unittest.skipIf(is_pypy, "Test raises exception under PyPy")
     def test_bad_units(self):
         uc = units
         with self.assertRaisesRegex(
