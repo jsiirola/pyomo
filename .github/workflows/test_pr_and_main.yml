@@ -128,7 +128,7 @@ jobs:
           mpi: 3
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
+          PACKAGES: mpich mpi4py
 
         - os: ubuntu-latest
           python: 3.12
