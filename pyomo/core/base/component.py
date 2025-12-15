@@ -26,11 +26,15 @@ from pyomo.common.deprecation import (
     relocated_module_attribute,
 )
 from pyomo.common.factory import Factory
-from pyomo.common.formatting import tabular_writer, StreamIndenter
+from pyomo.common.formatting import (
+    tabular_writer,
+    StreamIndenter,
+    name_repr,
+    index_repr,
+)
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
-from pyomo.core.base.component_namer import name_repr, index_repr
 from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import PartialInitializer
@@ -71,7 +75,7 @@ def name(component, index=NOTSET, fully_qualified=False, relative_to=None):
             raise KeyError(
                 "Index %s is not valid for component %s" % (index, component.name)
             )
-        return base + index_repr(index)
+        return base + '[' + index_repr(index) + ']'
 
 
 @deprecated(msg="The cname() function has been renamed to name()", version='5.6.9')
@@ -925,7 +929,7 @@ class ComponentData(ComponentBase):
             # Iterate through the dictionary and generate all names in
             # the buffer
             for idx, obj in c.items():
-                name_buffer[id(obj)] = base + index_repr(idx)
+                name_buffer[id(obj)] = base + '[' + index_repr(idx) + ']'
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer
                 return name_buffer[id(self)]
@@ -934,7 +938,7 @@ class ComponentData(ComponentBase):
             # No buffer, we can do what we are going to do all the time after we
             # deprecate the buffer.
             #
-            return base + index_repr(self.index())
+            return base + '[' + index_repr(self.index()) + ']'
         #
         raise RuntimeError(
             "Fatal error: cannot find the component data in "
