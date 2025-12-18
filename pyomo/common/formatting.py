@@ -19,7 +19,12 @@
 """
 
 import re
+import sys
 import types
+
+from collections import defaultdict
+from itertools import chain
+
 from pyomo.common.sorting import sorted_robust
 
 
@@ -184,6 +189,13 @@ _repr_map = {
 }
 
 
+def _pad_row(row, n):
+    l = len(row)
+    if l < n:
+        return row + ('',) * (n - l)
+    return row
+
+
 def tabular_writer(ostream, prefix, data, header, row_generator):
     """Output data in tabular form
 
@@ -208,75 +220,74 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
     prefix = tostr(prefix)
 
-    _rows = {}
-    # NB: _width is a list because we will change these values
+    rows = []
+    columns = set()
     if header:
         header = (u"Key",) + tuple(tostr(x) for x in header)
-        _width = [len(x) for x in header]
-    else:
-        _width = None
-    _minWidth = 0
+        columns.add(len(header))
 
+    keyfield = ()
     for _key, _val in data:
+        if header:
+            keyfield = (_key,)
         try:
-            _rowSet = row_generator(_key, _val)
-            if isinstance(_rowSet, types.GeneratorType):
-                _rowSet = list(_rowSet)
+            rowset = row_generator(_key, _val)
+            if isinstance(rowset, types.GeneratorType):
+                for i, r in enumerate(rowset):
+                    r = tuple(tostr(_) for _ in chain(keyfield, r))
+                    rows.append(r)
+                    columns.add(len(r))
+                    if not i and keyfield:
+                        keyfield = ('',)
+                if keyfield and keyfield != ('',):
+                    rows.append(keyfield)
+                    columns.add(len(keyfield))
             else:
-                _rowSet = [_rowSet]
-        except ValueError:
+                r = tuple(tostr(_) for _ in chain(keyfield, rowset))
+                rows.append(r)
+                columns.add(len(r))
+        except:
             # A ValueError can be raised when row_generator is called
             # (if it is a function), or when it is exhausted generating
             # the list (if it is a generator)
-            _minWidth = 4  # Ensure columns are wide enough to output "None"
-            _rows[_key] = None
+            r = keyfield + (sys.exc_info()[0].__name__,)
+            rows.append(r)
+            columns.add(len(r))
             continue
 
-        # Include the key for only the first line in a rowset, and only
-        # if we printed out a header (if there is no header, then then
-        # key is not included)
-        _rows[_key] = [
-            (("" if i else tostr(_key),) if header else ())
-            + tuple(tostr(x) for x in _r)
-            for i, _r in enumerate(_rowSet)
-        ]
+    nCols = max(columns)
+    if len(columns) > 1:
+        header = _pad_row(header, nCols)
+        rows = [_pad_row(r, nCols) for r in rows]
 
-        if not _rows[_key]:
-            _minWidth = 4
-        elif not _width:
-            _width = [len(x) for x in _rows[_key][0]]
-        else:
-            for _row in _rows[_key]:
-                for col, x in enumerate(_row):
-                    _width[col] = max(_width[col], len(x))
-
-    if _minWidth:
-        for i in range(1, len(_width)):
-            _width[i] = max(_minWidth, _width[i])
+    if rows:
+        _row_width = [max(len(r[i]) for r in rows) for i in range(nCols)]
+    else:
+        _row_width = defaultdict(int)
+    if header:
+        _width = [max(_row_width[i], len(header[i])) for i in range(nCols)]
+    else:
+        _width = _row_width
 
     # NB: left-justify header entries
     if header:
         # Note: do not right-pad the last header with unnecessary spaces
-        line_fmt = " : ".join(f"%-{w}s" for w in _width[:-1]) + " : %s\n"
-        ostream.write(prefix + (line_fmt % header))
+        line_fmt = " : ".join(f"%-{w}s" for w in _width[:-1]) + " : %s"
+        ostream.write(f"{prefix}{(line_fmt % header).rstrip()}\n")
 
     # If there is no data, we are done...
-    if not _rows:
+    if not rows:
         return
 
     # right-justify data, except for the last column if there are spaces
     # in the data (probably an expression or vector)
     _width = [f"%{w}s" for w in _width]
-    if any(' ' in r[-1] for x in _rows.values() if x is not None for r in x):
+    if any(' ' in r[-1] for r in rows):
         _width[-1] = '%s'
     line_fmt = " : ".join(_width) + "\n"
 
-    for _key in _rows:
-        _rowSet = _rows[_key]
-        if not _rowSet:
-            _rowSet = [(_key,) + (None,) * (len(_width) - 1)]
-        for _data in _rowSet:
-            ostream.write(prefix + (line_fmt % _data))
+    for r in rows:
+        ostream.write(f"{prefix}{(line_fmt % r).rstrip()}\n")
 
 
 class StreamIndenter:

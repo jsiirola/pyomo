@@ -120,12 +120,12 @@ Key : s : val
 
         tabular_writer(os, "", data.items(), ['i', 'j'], _data_gen)
         ref = u"""
-Key : i    : j
-  a : None : None
-  b :    0 :    a
-  c :    0 :  aaa
-    :    1 :  bbb
-    :    2 :  ccc
+Key : i : j
+  a :   :
+  b : 0 :   a
+  c : 0 : aaa
+    : 1 : bbb
+    : 2 : ccc
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 
@@ -141,12 +141,12 @@ Key : i    : j
 
         tabular_writer(os, "", data.items(), ['i', 'j'], _data_gen)
         ref = u"""
-Key : i    : j
-  a : None : None
-  b : None : None
-  c :    0 :  aaa
-    :    1 :  bbb
-    :    2 :  ccc
+Key : i          : j
+  a :            :
+  b : ValueError :
+  c :          0 : aaa
+    :          1 : bbb
+    :          2 : ccc
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 
@@ -161,10 +161,10 @@ Key : i    : j
 
         tabular_writer(os, "", data.items(), ['i', 'j'], _data_gen)
         ref = u"""
-Key : i    : j
-  a :    0 :    a
-  b : None : None
-  c :    3 : cccc
+Key : i          : j
+  a :          0 :    a
+  b : ValueError :
+  c :          3 : cccc
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 
