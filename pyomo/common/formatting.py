@@ -134,13 +134,12 @@ def name_repr(x, unknown_handler=str):
     interpreted as a number.
 
     """
-    if x.__class__ is not str:
-        _repr = _repr_map.get(x.__class__, None)
-        if _repr is None:
-            if not isinstance(x, str):
-                return unknown_handler(x)
-        else:
-            return _repr(x)
+    _repr = _repr_map.get(x.__class__, None)
+    if _repr is not None:
+        return _repr(x)
+    elif not isinstance(x, str):
+        return unknown_handler(x)
+
     # Special handling for strings: only quote the string if it contains
     # "special" characters or looks like a number
     quoted = repr(x)
@@ -178,13 +177,13 @@ def index_repr(idx, unknown_handler=str):
     return name_repr(idx, unknown_handler)
 
 
+# Note: do not add str to this map: it gets special handling in
+# name_repr (and that logic relies on it not being in this map)
 _repr_map = {
     slice: lambda x: '*',
     Ellipsis.__class__: lambda x: '**',
     int: repr,
     float: repr,
-    str: repr,
-    # Note: the function is unbound at this point; extract with __func__
     tuple: tuple_repr,
 }
 
