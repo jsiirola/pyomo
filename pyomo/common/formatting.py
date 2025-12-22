@@ -209,9 +209,9 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
     data: iterable
         an iterable object that returns (key, value) pairs
         (e.g., from items()) defining each row in the table
-    header: List[str]
+    header: list[str]
         list of column headers
-    row_generator: function
+    row_generator: Callable[Any, Any]
         a function that accepts the `key` and `value` from `data` and
         returns either a tuple defining the entries for a single row, or
         a generator that returns a sequence of table rows to be output
@@ -219,7 +219,8 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
     """
 
-    prefix = tostr(prefix)
+    if prefix:
+        ostream = StreamIndenter(ostream, prefix)
 
     rows = []
     columns = set()
@@ -274,7 +275,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
     if header:
         # Note: do not right-pad the last header with unnecessary spaces
         line_fmt = " : ".join(f"%-{w}s" for w in _width[:-1]) + " : %s"
-        ostream.write(f"{prefix}{(line_fmt % header).rstrip()}\n")
+        ostream.write((line_fmt % header).rstrip() + "\n")
 
     # If there is no data, we are done...
     if not rows:
@@ -288,7 +289,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
     line_fmt = " : ".join(_width) + "\n"
 
     for r in rows:
-        ostream.write(f"{prefix}{(line_fmt % r).rstrip()}\n")
+        ostream.write((line_fmt % r).rstrip() + "\n")
 
 
 class StreamIndenter:
