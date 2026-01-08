@@ -468,7 +468,7 @@ jobs:
             done
         fi
         conda install -q -y --force-reinstall pip libffi python python_abi \
-            `conda list | grep -E 'zlib|^vc|^vs' | cut -d\  -f1`
+            `conda list | grep -E '\S+(\s+\S+){2}' | cut -d\  -f1`
         conda list
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
