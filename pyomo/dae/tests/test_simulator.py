@@ -1164,9 +1164,9 @@ class TestExpressionCheckers(unittest.TestCase):
 
 
 @unittest.skipIf(not casadi_available, "Casadi is not available")
-class TestCasadiSubstituters(unittest.TestCase):
+class TestCasadiSubstitution(unittest.TestCase):
     """
-    Class for testing the Expression substituters for creating valid CasADi
+    Class for testing the Expression substitution for creating valid CasADi
     expressions
     """
 
