@@ -77,4 +77,6 @@ gam = "gam"
 ond = "ond"
 # GAMS_writer
 PATHC = "PATHC"
+# community_map_object from community_detection
+cmo = "cmo"
 # AS NEEDED: Add More Words Below
