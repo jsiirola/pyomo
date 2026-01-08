@@ -368,7 +368,6 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Set up environment
-        python -c "import ctypes; print('CTYPES', ctypes.__file__)"
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --set channel_priority strict
@@ -430,7 +429,7 @@ jobs:
         # For windows, cannot use newer setuptools because of APPSI compilation issues
         # There seems to be some specific problem with platformdirs 4.5.0
         # on win 3.13/3.14 as of 2025-10-23 and platformdirs 4.5.1 on win/3.13
-        # as of 2025-12-12. pip 25.3 now packages the problematic platformdirs
+        # as of 2025-12-12, pip 25.3 now packages the problematic platformdirs
         # version so excluding that also.
         if test "${{matrix.TARGET}}" == 'win'; then
             CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0,!=4.5.1"
@@ -440,7 +439,6 @@ jobs:
         # Note: remove '--update-deps' to prevent update that breaks ctypes
         # Note: removed 'python="${{matrix.python}}"'... is it not necessary?
         conda install -q -y --no-update-deps $CONDA_DEPENDENCIES
-        python -c "import ctypes; print('CTYPES', ctypes.__file__)"
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
@@ -507,11 +505,11 @@ jobs:
                 fi
             done
         fi
+        conda install -q -y --force-reinstall pip libffi python python_abi \
+            `conda list | grep -E 'zlib|^vc|^vs' | cut -d\  -f1`
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
-        conda install -q -y --force-reinstall pip libffi python python_abi \
-            `conda list | grep -E 'zlib|^vc|^vs' | cut -d\  -f1`
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi

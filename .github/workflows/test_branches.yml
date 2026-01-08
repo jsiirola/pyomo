@@ -105,6 +105,20 @@ jobs:
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
+        - os: windows-latest
+          python: 3.13
+          test_docs: 1
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
+        - os: windows-latest
+          python: 3.14
+          test_docs: 1
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk pytest-qt filelock
+
         # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
           python: 3.12
@@ -380,11 +394,13 @@ jobs:
         # as of 2025-12-12, pip 25.3 now packages the problematic platformdirs
         # version so excluding that also.
         if test "${{matrix.TARGET}}" == 'win'; then
-            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0,!=4.5.1 pip<25.0"
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0,!=4.5.1"
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
+        # Note: remove '--update-deps' to prevent update that breaks ctypes
+        # Note: removed 'python="${{matrix.python}}"'... is it not necessary?
+        conda install -q -y --no-update-deps $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
@@ -451,12 +467,12 @@ jobs:
                 fi
             done
         fi
+        conda install -q -y --force-reinstall pip libffi python python_abi \
+            `conda list | grep -E 'zlib|^vc|^vs' | cut -d\  -f1`
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
-            python -c "import pip; print(pip.__version__, pip.__file__)"
-            python -c "import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
         # remember this python interpreter
