@@ -366,18 +366,19 @@ _bullet_re = re.compile(
     r'|(\(?[a-zA-Z][\)\.] +)'  # enumerated lists (letters)
     r'|(\(?\#[\)\.] +)'  # auto enumerated lists
     r'|([a-zA-Z0-9_ ]+ +: +)'  # definitions
-    r'|(:[a-zA-Z0-9_ ]+: +)'  # field name
     r'|(?:\[\s*[A-Za-z0-9\.]+\s*\] +)'  # [PASS]|[FAIL]|[ OK ]
 )
-_verbatim_line_start = re.compile(
-    r'(\| )'  # line blocks
+_literal_start = re.compile(
+    r'(>>> )'  # implicit doctest
+    r'|(\| )'  # line blocks
+    r'|(={3,}[ =]+)'  # simple tables, ======== sections
     r'|(\+((-{3,})|(={3,}))\+)'  # grid table
 )
-_verbatim_line = re.compile(
-    r'(={3,}[ =]+)'  # simple tables, ======== sections
+_literal_line = re.compile(
     # sections
-    + ''.join(r'|(\%s{3,})' % c for c in r'!"#$%&\'()*+,-./:;<>?@[\\]^_`{|}~')
+    '|'.join(r'(\%s{3,})' % c for c in r'!"#$%&\'()*+,-./:;<>?@[\\]^_`{|}~')
 )
+_field_list = re.compile(r':((\:)|(\\(?!:))|[^:\\])+: ')
 
 
 def wrap_reStructuredText(docstr, wrapper):
@@ -406,15 +407,14 @@ def wrap_reStructuredText(docstr, wrapper):
     paragraphs = [(None, None, None)]
     literal_block = False
     verbatim = False
-    for line in docstr.rstrip().splitlines():
+    docstr = docstr.rstrip(' \t')
+    for line in docstr.splitlines():
         leading = _indentation_re.match(line).group()
         content = line.strip()
         if not content:
             if literal_block:
                 if literal_block[0] == 2:
                     literal_block = False
-            elif paragraphs[-1][2] and ''.join(paragraphs[-1][2]).endswith('::'):
-                literal_block = (0, paragraphs[-1][1])
             paragraphs.append((None, None, None))
             continue
         if literal_block:
@@ -433,62 +433,100 @@ def wrap_reStructuredText(docstr, wrapper):
                     paragraphs.append((None, None, line))
                     continue
                 else:
-                    # invalid literal block
+                    # Invalid literal block.  This is technically a
+                    # formatting error, but "that is not our problem":
+                    # reset the context and move on.
                     literal_block = False
             elif leading.startswith(literal_block[1]):
                 paragraphs.append((None, None, line))
                 continue
             else:
-                # fall back on normal line processing
+                # It looks like we have exited the literal block.  Reset
+                # the context and fall back on normal line processing
                 literal_block = False
         if content == '```':
-            # Not part of ReST, but we have supported this in Pyomo for a long time
+            # Not part of ReST, but we have supported this in Pyomo for
+            # a long time.  Note that this implementation strips the
+            # "```" lines from the output.
             verbatim ^= True
         elif verbatim:
             paragraphs.append((None, None, line))
-        elif _verbatim_line_start.match(content):
-            # This catches lines that start with patterns that indicate
-            # that the line should not be wrapped (line blocks, grid
-            # tables)
+        elif content.startswith('..') and content[2:3] in (' ', ''):
+            # An explicit marker (directive)
             paragraphs.append((None, None, line))
-        elif _verbatim_line.match(content):
-            # This catches whole line patterns that should not be
-            # wrapped with previous/subsequent lines (e.g., simple table
-            # headers, section headers)
-            paragraphs.append((None, None, line))
-        else:
-            matchBullet = _bullet_re.match(content)
-            if matchBullet:
-                # Handle things that look like bullet lists specially
-                hang = matchBullet.group()
-                paragraphs.append((leading, leading + ' ' * len(hang), [content]))
-            elif paragraphs[-1][1] == leading:
-                # Continuing a text block
+            literal_block = (0, leading)
+        elif content.endswith('::'):
+            # If the literal block looks like it was the end of a
+            # paragraph, support re-wrapping.  Note that things that
+            # look like directives (explicit markers) have already been
+            # caught.
+            if paragraphs[-1][1] == leading:
                 paragraphs[-1][2].append(content)
             else:
-                # Beginning a new text block
-                paragraphs.append((leading, leading, [content]))
+                paragraphs.append((None, None, line))
+            literal_block = (0, leading)
+        elif _literal_start.match(content):
+            # This catches lines that start with patterns that indicate
+            # the start of a literal block that should continue until
+            # the first blank line (line blocks, doctest blocks, grid
+            # tables, simple tables)
+            paragraphs.append((None, None, line))
+            literal_block = (2, leading)
+        elif _literal_line.match(content):
+            # This catches single line patterns that should not be
+            # wrapped with previous/subsequent lines (e.g., section
+            # headers)
+            paragraphs.append((None, None, line))
+        elif matchBullet := _bullet_re.match(content):
+            # Handle things that look like bullet lists specially
+            hang = matchBullet.group()
+            paragraphs.append((leading, leading + ' ' * len(hang), [content]))
+        elif _field_list.match(content):
+            paragraphs.append((leading, None, [content]))
+        elif paragraphs[-1][1] == leading:
+            # Continuing a text block
+            paragraphs[-1][2].append(content)
+        elif paragraphs[-1][1] is None and paragraphs[-1][0] is not None:
+            # The first line after something that supports "arbitrary"
+            # hanging indentation (e.g., field lists, definition lists)
+            indent, subseq, par = paragraphs.pop()
+            par.append(content)
+            paragraphs.append((indent, leading, par))
+        else:
+            # Beginning a new text block
+            paragraphs.append((leading, leading, [content]))
 
+    # Strip off any leading newlines...
     while paragraphs and paragraphs[0][2] is None:
         paragraphs.pop(0)
-
-    wrapper_init = wrapper.initial_indent, wrapper.subsequent_indent
+    orig_indent = wrapper.initial_indent
+    orig_subsequent = wrapper.subsequent_indent
     try:
         for i, (indent, subseq, par) in enumerate(paragraphs):
-            base_indent = wrapper_init[1] if i else wrapper_init[0]
-
             if indent is None:
                 if par is None:
-                    paragraphs[i] = ''
+                    # The subsequent_indent *could* have printable
+                    # information.  If it does, we need to ensure it's
+                    # printed; but we don't want to add whitespace to
+                    # the end of a line.
+                    paragraphs[i] = wrapper.initial_indent.rstrip()
                 else:
-                    paragraphs[i] = base_indent + par
-                continue
-
-            wrapper.initial_indent = base_indent + indent
-            wrapper.subsequent_indent = base_indent + subseq
-            paragraphs[i] = wrapper.fill(' '.join(par))
+                    paragraphs[i] = wrapper.initial_indent + par
+            else:
+                # Update the wrapper with this paragraph's indentation
+                wrapper.initial_indent += indent
+                wrapper.subsequent_indent += subseq
+                paragraphs[i] = wrapper.fill(' '.join(par))
+            # Restore the wrapper, but note that the next iteration is
+            # no longer the first line, so the initial and subsequent
+            # indent should be the original subsequent indent
+            wrapper.initial_indent = wrapper.subsequent_indent = orig_subsequent
     finally:
         # Avoid side-effects and restore the initial wrapper state
-        wrapper.initial_indent, wrapper.subsequent_indent = wrapper_init
+        wrapper.initial_indent = orig_indent
+        wrapper.subsequent_indent = orig_subsequent
 
-    return '\n'.join(paragraphs)
+    ans = '\n'.join(paragraphs)
+    if ans and docstr.endswith('\n') and not paragraphs[-1].endswith('\n'):
+        ans += '\n'
+    return ans
