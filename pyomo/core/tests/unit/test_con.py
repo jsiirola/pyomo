@@ -15,6 +15,7 @@
 # TestArrayCon                Class for testing array of constraint
 #
 
+import io
 import sys
 import os
 from os.path import abspath, dirname
@@ -2037,6 +2038,229 @@ class MiscConTests(unittest.TestCase):
             r"non-finite lower bound \(inf\)",
         ):
             m.c.lb
+
+    def test_display(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=3)
+        m.y = Var(initialize=2)
+        m.z = Var()
+        m.p = Param(mutable=True, initialize=10)
+        m.q = Param(mutable=True)
+
+        m.b = Constraint(
+            range(4),
+            rule=[
+                Constraint.Feasible,
+                Constraint.Infeasible,
+                Constraint.Skip,
+                m.x == 1,
+            ],
+        )
+
+        ref = """\
+b : Size=3
+    Key : Lower : Body : Upper
+      0 :  None :  0.0 :   0.0
+      1 :  None :  1.0 :   0.0
+      3 :   1.0 :    3 :   1.0
+"""
+        OUT = io.StringIO()
+        m.b.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
+
+        m.b[1].deactivate()
+
+        ref = """\
+b : Size=3
+    Key : Lower : Body : Upper
+      0 :  None :  0.0 :   0.0
+      3 :   1.0 :    3 :   1.0
+"""
+        OUT = io.StringIO()
+        m.b.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
+
+        m.b.deactivate()
+
+        OUT = io.StringIO()
+        m.b.display(ostream=OUT)
+        self.assertEqual("", OUT.getvalue())
+
+        m.c = Constraint(
+            range(15),
+            rule=[
+                m.x <= 1,
+                m.x >= 1,
+                m.x == 1,
+                m.x <= m.p,
+                m.x >= m.p,
+                m.x == m.p,
+                m.x <= m.p + 1,
+                m.x >= m.p + 1,
+                m.x == m.p + 1,
+                m.x <= m.q,
+                m.x >= m.q,
+                m.x == m.q,
+                m.x <= m.q + 1,
+                m.x >= m.q + 1,
+                m.x == m.q + 1,
+            ],
+        )
+
+        ref = """\
+c : Size=15
+    Key : Lower : Body : Upper
+      0 :  None :    3 :   1.0
+      1 :   1.0 :    3 :  None
+      2 :   1.0 :    3 :   1.0
+      3 :  None :    3 :    10
+      4 :    10 :    3 :  None
+      5 :    10 :    3 :    10
+      6 :  None :    3 :    11
+      7 :    11 :    3 :  None
+      8 :    11 :    3 :    11
+      9 :  None :    3 :  None
+     10 :  None :    3 :  None
+     11 :  None :    3 :  None
+     12 :  None :    3 :  None
+     13 :  None :    3 :  None
+     14 :  None :    3 :  None
+"""
+        OUT = io.StringIO()
+        m.c.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
+
+        m.d = Constraint(
+            range(15),
+            rule=[
+                m.x + m.y <= 1,
+                m.x + m.y >= 1,
+                m.x + m.y == 1,
+                m.x + m.y <= m.p,
+                m.x + m.y >= m.p,
+                m.x + m.y == m.p,
+                m.x + m.y <= m.p + 1,
+                m.x + m.y >= m.p + 1,
+                m.x + m.y == m.p + 1,
+                m.x + m.y <= m.q,
+                m.x + m.y >= m.q,
+                m.x + m.y == m.q,
+                m.x + m.y <= m.q + 1,
+                m.x + m.y >= m.q + 1,
+                m.x + m.y == m.q + 1,
+            ],
+        )
+
+        ref = """\
+d : Size=15
+    Key : Lower : Body : Upper
+      0 :  None :    5 :   1.0
+      1 :   1.0 :    5 :  None
+      2 :   1.0 :    5 :   1.0
+      3 :  None :    5 :    10
+      4 :    10 :    5 :  None
+      5 :    10 :    5 :    10
+      6 :  None :    5 :    11
+      7 :    11 :    5 :  None
+      8 :    11 :    5 :    11
+      9 :  None :    5 :  None
+     10 :  None :    5 :  None
+     11 :  None :    5 :  None
+     12 :  None :    5 :  None
+     13 :  None :    5 :  None
+     14 :  None :    5 :  None
+"""
+        OUT = io.StringIO()
+        m.d.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
+
+        m.e = Constraint(
+            range(15),
+            rule=[
+                m.z <= 1,
+                m.z >= 1,
+                m.z == 1,
+                m.z <= m.p,
+                m.z >= m.p,
+                m.z == m.p,
+                m.z <= m.p + 1,
+                m.z >= m.p + 1,
+                m.z == m.p + 1,
+                m.z <= m.q,
+                m.z >= m.q,
+                m.z == m.q,
+                m.z <= m.q + 1,
+                m.z >= m.q + 1,
+                m.z == m.q + 1,
+            ],
+        )
+
+        ref = """\
+e : Size=15
+    Key : Lower : Body : Upper
+      0 :  None : None :   1.0
+      1 :   1.0 : None :  None
+      2 :   1.0 : None :   1.0
+      3 :  None : None :    10
+      4 :    10 : None :  None
+      5 :    10 : None :    10
+      6 :  None : None :    11
+      7 :    11 : None :  None
+      8 :    11 : None :    11
+      9 :  None : None :  None
+     10 :  None : None :  None
+     11 :  None : None :  None
+     12 :  None : None :  None
+     13 :  None : None :  None
+     14 :  None : None :  None
+"""
+        OUT = io.StringIO()
+        m.e.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
+
+        m.f = Constraint(
+            range(15),
+            rule=[
+                m.z + m.y <= 1,
+                m.z + m.y >= 1,
+                m.z + m.y == 1,
+                m.z + m.y <= m.p,
+                m.z + m.y >= m.p,
+                m.z + m.y == m.p,
+                m.z + m.y <= m.p + 1,
+                m.z + m.y >= m.p + 1,
+                m.z + m.y == m.p + 1,
+                m.z + m.y <= m.q,
+                m.z + m.y >= m.q,
+                m.z + m.y == m.q,
+                m.z + m.y <= m.q + 1,
+                m.z + m.y >= m.q + 1,
+                m.z + m.y == m.q + 1,
+            ],
+        )
+
+        ref = """\
+f : Size=15
+    Key : Lower : Body : Upper
+      0 :  None : None :   1.0
+      1 :   1.0 : None :  None
+      2 :   1.0 : None :   1.0
+      3 :  None : None :    10
+      4 :    10 : None :  None
+      5 :    10 : None :    10
+      6 :  None : None :    11
+      7 :    11 : None :  None
+      8 :    11 : None :    11
+      9 :  None : None :  None
+     10 :  None : None :  None
+     11 :  None : None :  None
+     12 :  None : None :  None
+     13 :  None : None :  None
+     14 :  None : None :  None
+"""
+        OUT = io.StringIO()
+        m.f.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
 
 
 if __name__ == "__main__":

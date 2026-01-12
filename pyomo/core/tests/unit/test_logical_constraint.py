@@ -179,6 +179,22 @@ Constructing component 'q' from data=None failed:
             OUT.getvalue(),
         )
 
+        m.p[3].deactivate()
+        m.p[4].deactivate()
+
+        OUT = io.StringIO()
+        m.p.display(ostream=OUT)
+        self.assertEqual(
+            """p : Size=6
+    Key : Body
+      0 :  True
+      1 : False
+      5 :  True
+      6 : False
+""",
+            OUT.getvalue(),
+        )
+
         m.p.deactivate()
 
         OUT = io.StringIO()

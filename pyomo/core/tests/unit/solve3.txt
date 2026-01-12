@@ -10,8 +10,8 @@ Model unknown
 
   Objectives:
     obj : Size=1, Index=None, Active=True
-        Key : Active : Value
-        None :   None :  None
+        Key  : Active : Value
+        None :   True :  None
 
   Constraints:
     None

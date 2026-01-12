@@ -15,6 +15,7 @@
 # TestArrayObj                Class for testing array of objective
 #
 
+import io
 import os
 from os.path import abspath, dirname
 
@@ -845,6 +846,44 @@ class MiscObjTests(unittest.TestCase):
         model.B = Set()
         model.C = model.A | model.B
         model.x = Objective(model.C)
+
+    def test_display(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=2)
+        m.y = Var(initialize=3)
+        m.z = Var()
+        m.o = Objective(range(5), rule=[m.x, Objective.Skip, m.x + m.y, m.z, m.z + m.y])
+
+        ref = """\
+o : Size=4, Index={0, 1, 2, 3, 4}, Active=True
+    Key : Active : Value
+      0 :   True :     2
+      2 :   True :     5
+      3 :   True :  None
+      4 :   True :  None
+"""
+        OUT = io.StringIO()
+        m.o.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
+
+        m.o[2].deactivate()
+        m.o[3].deactivate()
+
+        ref = """\
+o : Size=4, Index={0, 1, 2, 3, 4}, Active=True
+    Key : Active : Value
+      0 :   True :     2
+      4 :   True :  None
+"""
+        OUT = io.StringIO()
+        m.o.display(ostream=OUT)
+        self.assertEqual(ref, OUT.getvalue())
+
+        m.o.deactivate()
+
+        OUT = io.StringIO()
+        m.o.display(ostream=OUT)
+        self.assertEqual("", OUT.getvalue())
 
 
 if __name__ == "__main__":
