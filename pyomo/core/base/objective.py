@@ -437,7 +437,7 @@ class Objective(ActiveIndexedComponent):
             prefix + tab,
             ((k, v) for k, v in self._data.items() if v.active),
             ("Active", "Value"),
-            lambda k, v: [v.active, value(v)],
+            lambda k, v: [v.active, value(v, exception=False)],
         )
 
 

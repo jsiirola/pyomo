@@ -341,13 +341,31 @@ class LogicalConstraint(ActiveIndexedComponent):
         ostream.write(prefix + self.local_name + " : ")
         ostream.write("Size=" + str(len(self)))
 
+        # [JDS 1/2026]: FIXME: we should change this behavior and expose
+        # "InvalidNumber" instead of mapping errors to None.
+        #
+        # We are not changing that (yet) because that would require
+        # significantly changing how expressions are evaluated.  Note
+        # that until we change things, we *must* let the exceptions
+        # propagate: if we just return None, it will be interpreted by
+        # operators as False.  This actually can have the unintended
+        # side effect of incorrectly mapping a valid expression to None:
+        # consider x --> y, where x is False and y is invalid.  This
+        # expression actually has a valid value (True!), but by raising
+        # the exception ends up mapping it to None.
+        def _exc2None(expr):
+            try:
+                return expr()
+            except ValueError:
+                return None
+
         ostream.write("\n")
         tabular_writer(
             ostream,
             prefix + tab,
             ((k, v) for k, v in self._data.items() if v.active),
             ("Body",),
-            lambda k, v: [v.body()],
+            lambda k, v: [_exc2None(v.body)],
         )
 
 

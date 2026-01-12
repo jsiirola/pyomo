@@ -804,6 +804,10 @@ class Constraint(ActiveIndexedComponent):
         ostream.write(prefix + self.local_name + " : ")
         ostream.write("Size=" + str(len(self)))
 
+        # [JDS 1/2026]: FIXME: we should change this behavior and expose
+        # "InvalidNumber" instead of mapping errors to None (which is
+        # ambiguous: None could be either an error, or unbounded!)
+
         ostream.write("\n")
         tabular_writer(
             ostream,
