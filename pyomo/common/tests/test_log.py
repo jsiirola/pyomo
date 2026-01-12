@@ -278,8 +278,8 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             )
         )
 
-        msg = """This is a long multi-line message that in normal circumstances \
-would be line-wrapped
+        msg = """\
+This is a long multi-line message that in normal circumstances would be line-wrapped
         with additional information
         that normally would be combined."""
 
@@ -292,11 +292,11 @@ would be line-wrapped
         self.assertEqual(ans, self.stream.getvalue())
 
         logger.warning(msg)
-        ans += (
-            "WARNING: This is a long multi-line message that in normal "
-            "circumstances would\n"
-            "be line-wrapped with additional information that normally would be combined.\n"
-        )
+        ans += """\
+WARNING: This is a long multi-line message that in normal circumstances would
+    be line-wrapped with additional information that normally would be
+    combined.
+"""
         self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
@@ -311,11 +311,10 @@ would be line-wrapped
             os.path.sep,
             lineno,
         )
-        ans += (
-            "    This is a long multi-line message that in normal "
-            "circumstances would be\n"
-            "    line-wrapped with additional information that normally would be combined.\n"
-        )
+        ans += """\
+    This is a long multi-line message that in normal circumstances would be
+    line-wrapped with additional information that normally would be combined.
+"""
         self.assertEqual(ans, self.stream.getvalue())
 
     def test_long_messages(self):

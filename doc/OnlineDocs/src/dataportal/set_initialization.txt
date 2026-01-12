@@ -1,5 +1,6 @@
 WARNING: Initializing ordered Set B with a fundamentally unordered data source
-(type: set).  This WILL potentially lead to nondeterministic behavior in Pyomo
+    (type: set).  This WILL potentially lead to nondeterministic behavior in
+    Pyomo
 8 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
