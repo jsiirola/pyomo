@@ -245,14 +245,14 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
                     rows.append(keyfield)
                     columns.add(len(keyfield))
             else:
-                r = tuple(tostr(_) for _ in chain(keyfield, rowset))
+                r = tuple(map(tostr, chain(keyfield, rowset)))
                 rows.append(r)
                 columns.add(len(r))
         except:
             # A ValueError can be raised when row_generator is called
             # (if it is a function), or when it is exhausted generating
             # the list (if it is a generator)
-            r = keyfield + (sys.exc_info()[0].__name__,)
+            r = tuple(map(tostr, chain(keyfield, (sys.exc_info()[0].__name__,))))
             rows.append(r)
             columns.add(len(r))
             continue
