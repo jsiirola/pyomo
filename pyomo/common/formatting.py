@@ -191,9 +191,8 @@ _repr_map = {
 
 
 def _pad_row(row, n):
-    l = len(row)
-    if l < n:
-        return row + ('',) * (n - l)
+    if len(row) < n:
+        return row + ('',) * (n - len(row))
     return row
 
 
