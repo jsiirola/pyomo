@@ -118,7 +118,14 @@ class WrappingFormatter(logging.Formatter):
     def format(self, record):
         msg = record.getMessage()
         if record.msg.__class__ is not str and isinstance(record.msg, Preformatted):
-            return msg
+            # Note that the assumption is that the message will not end
+            # with a newline (so one will be added later).  If the
+            # preformatted message ended with a newline, we will remove
+            # it to avoid adding the extra blank line
+            if msg.endswith("\n"):
+                return msg[:-1]
+            else:
+                return msg
 
         _orig = {
             k: getattr(record, k) for k in ('msg', 'args', 'pathname', 'levelname')
