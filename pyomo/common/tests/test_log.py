@@ -278,20 +278,27 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             )
         )
 
+        # Note the leading backslash: We do not want the message to
+        #     start with a blank line.
+        # Note: we are also testing that the incoming hanging indent
+        #     will be cleaned up (removed) before line wrapping in the
+        #     log formatter.
         msg = """\
 This is a long multi-line message that in normal circumstances would be line-wrapped
         with additional information
-        that normally would be combined."""
+        that normally would be combined.
+"""
 
         logger.setLevel(logging.WARNING)
         logger.info(msg)
         self.assertEqual("", self.stream.getvalue())
 
         logger.warning(Preformatted(msg))
-        ans = msg + "\n"
+        ans = msg
         self.assertEqual(ans, self.stream.getvalue())
 
         logger.warning(msg)
+        # Note the leading backslash: We do not want to add an extra blank line
         ans += """\
 WARNING: This is a long multi-line message that in normal circumstances would
     be line-wrapped with additional information that normally would be
@@ -302,19 +309,26 @@ WARNING: This is a long multi-line message that in normal circumstances would
         logger.setLevel(logging.DEBUG)
 
         logger.warning(Preformatted(msg))
-        ans += msg + "\n"
+        ans += msg
         self.assertEqual(ans, self.stream.getvalue())
 
         logger.warning(msg)
         lineno = getframeinfo(currentframe()).lineno - 1
-        ans += 'WARNING: "[base]%stest_log.py", %d, test_preformatted\n' % (
+        ans += 'WARNING: "[base]%stest_log.py", %d, test_preformatted' % (
             os.path.sep,
             lineno,
         )
-        ans += """\
+        ans += """
     This is a long multi-line message that in normal circumstances would be
     line-wrapped with additional information that normally would be combined.
 """
+        self.assertEqual(ans, self.stream.getvalue())
+
+        # Note that we eill add a "\n" to the end of a preformatted
+        # message if it doesn't have one.
+        msg2 = "Hello\nWorld"
+        logger.warning(Preformatted(msg2))
+        ans += msg2 + "\n"
         self.assertEqual(ans, self.stream.getvalue())
 
     def test_long_messages(self):

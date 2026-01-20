@@ -9,12 +9,22 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+import textwrap
+
 from collections import namedtuple
 from io import StringIO
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.formatting import tostr, tabular_writer, StreamIndenter
+from pyomo.common.formatting import (
+    tostr,
+    name_repr,
+    index_repr,
+    tabular_writer,
+    StreamIndenter,
+    wrap_reStructuredText,
+)
 
 
 class DerivedList(list):
@@ -66,7 +76,62 @@ class TestToStr(unittest.TestCase):
         self.assertIs(tostr.handlers[NamedTuple], tostr.handlers[None])
 
 
+class TestNameRepr(unittest.TestCase):
+    def test_string(self):
+        self.assertEqual("foo", name_repr("foo"))
+
+    def test_string_with_spaces(self):
+        self.assertEqual("foo bar", name_repr("foo bar"))
+
+    def test_string_float(self):
+        self.assertEqual("'1.1e-3'", name_repr("1.1e-3"))
+
+    def test_string_int(self):
+        self.assertEqual("'1'", name_repr("1"))
+
+    def test_string_componentuid_pickle(self):
+        self.assertEqual("'|foo bar'", name_repr("|foo bar"))
+
+    def test_float(self):
+        self.assertEqual("1.1", name_repr(1.1))
+
+    def test_float(self):
+        self.assertEqual("1", name_repr(1))
+
+    def test_list(self):
+        self.assertEqual("[1, (2, 3)]", name_repr([1, (2, 3)]))
+
+
+class TestIndexRepr(unittest.TestCase):
+    def test_string(self):
+        self.assertEqual("foo", index_repr("foo"))
+
+    def test_int(self):
+        self.assertEqual("1", index_repr(1))
+
+    def test_empty_tuple(self):
+        self.assertEqual("()", index_repr(()))
+
+    def test_1_tuple(self):
+        self.assertEqual("(1,)", index_repr((1,)))
+
+    def test_2_tuple(self):
+        self.assertEqual("2,3", index_repr((2, 3)))
+
+
 class TestTabularWriter(unittest.TestCase):
+    def test_prefix(self):
+        # Test that an embedded unicode character does not foul up the
+        # table alignment
+        os = StringIO()
+        data = {1: ("a", 10), 2: ("b", 20)}
+        tabular_writer(os, "foo: ", data.items(), ["s", "val"], lambda k, v: v)
+        ref = u"""foo: Key : s : val
+foo:   1 : a :  10
+foo:   2 : b :  20
+"""
+        self.assertEqual(ref, os.getvalue())
+
     def test_unicode_table(self):
         # Test that an embedded unicode character does not foul up the
         # table alignment
@@ -264,3 +329,328 @@ class TestStreamIndenter(unittest.TestCase):
             '        Hello?\n\n        Text\n    Hi\n        Hello, world!',
             OUT1.getvalue(),
         )
+
+
+class TestWrapReStructuredText(unittest.TestCase):
+    def setUp(self):
+        self.wrap = textwrap.TextWrapper(
+            width=50, initial_indent=" * ", subsequent_indent=" | "
+        )
+
+    def test_string(self):
+        self.assertEqual(" * foo", wrap_reStructuredText("foo", self.wrap))
+
+    def test_long_string(self):
+        data = """Here is a single long line that the formatter should wrap
+
+        With a very long paragraph
+        containing wrappable text in
+        a long, silly paragraph
+        with little actual information.
+        #) but a bulleted list
+        #) with two bullets
+        """
+        ref = """ * Here is a single long line that the formatter
+ | should wrap
+ |
+ |         With a very long paragraph containing
+ |         wrappable text in a long, silly
+ |         paragraph with little actual
+ |         information.
+ |         #) but a bulleted list
+ |         #) with two bullets
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_field_with_argument(self):
+        data = """
+.. doctest::
+   :hide:
+
+   import pyomo
+   import unittest
+"""
+        ref = """ * .. doctest::
+ |    :hide:
+ |
+ |    import pyomo
+ |    import unittest
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_field(self):
+        data = """
+.. doctest::
+
+   import pyomo
+   import unittest
+"""
+        ref = """ * .. doctest::
+ |
+ |    import pyomo
+ |    import unittest
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_implicit_doctest_block(self):
+        data = """
+This is
+a simple paragraph
+
+>>> print("this is a doctest with a long line that should not be wrapped")
+this is a doctest with a long line that should not be wrapped
+>>> # with
+>>> # no
+>>> # wrapping
+
+This is
+a simple paragraph
+"""
+        ref = """ * This is a simple paragraph
+ |
+ | >>> print("this is a doctest with a long line that should not be wrapped")
+ | this is a doctest with a long line that should not be wrapped
+ | >>> # with
+ | >>> # no
+ | >>> # wrapping
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_line_block(self):
+        data = """
+This is
+a simple paragraph
+
+| This
+| is a
+| simple
+| paragraph
+
+This is
+a simple paragraph
+"""
+        ref = """ * This is a simple paragraph
+ |
+ | | This
+ | | is a
+ | | simple
+ | | paragraph
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_simple_table(self):
+        data = """
+This is
+a simple paragraph
+
+===== ===== =====
+A     B     A ^ B
+===== ===== =====
+True  True  False
+True  False True
+False True  True
+False False False
+===== ===== =====
+
+This is
+a simple paragraph
+"""
+        ref = """ * This is a simple paragraph
+ |
+ | ===== ===== =====
+ | A     B     A ^ B
+ | ===== ===== =====
+ | True  True  False
+ | True  False True
+ | False True  True
+ | False False False
+ | ===== ===== =====
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_field_list(self):
+        data = r"""
+This is
+a simple paragraph
+
+:field: This is
+    a simple paragraph
+
+:field\: But this is
+    not a simple paragraph
+
+This is
+a simple paragraph
+"""
+        ref = r""" * This is a simple paragraph
+ |
+ | :field: This is a simple paragraph
+ |
+ | :field\: But this is
+ |     not a simple paragraph
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_verbatim(self):
+        data = r"""
+This is
+a simple paragraph
+
+```
+This is
+a simple paragraph
+```
+
+This is
+a simple paragraph
+"""
+        ref = r""" * This is a simple paragraph
+ |
+ | This is
+ | a simple paragraph
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_literal_block(self):
+        data = r"""
+This is
+a simple paragraph
+
+Here is a literal block::
+
+  This is
+  a simple paragraph
+
+This is
+a simple paragraph
+"""
+        ref = r""" * This is a simple paragraph
+ |
+ | Here is a literal block::
+ |
+ |   This is
+ |   a simple paragraph
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_invalid_literal_block(self):
+        data = r"""
+This is
+a simple paragraph
+
+Here is a literal block::
+
+This is
+a simple paragraph
+"""
+        ref = r""" * This is a simple paragraph
+ |
+ | Here is a literal block::
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_indented_literal_block(self):
+        data = r"""
+This is
+a simple paragraph
+
+Here is
+a literal block::
+
+  This is
+  a simple paragraph
+
+  This is
+  a simple paragraph
+
+This is
+a simple paragraph
+"""
+        ref = r""" * This is a simple paragraph
+ |
+ | Here is a literal block::
+ |
+ |   This is
+ |   a simple paragraph
+ |
+ |   This is
+ |   a simple paragraph
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_quoted_literal_block(self):
+        # Notes: the paragraph introducing the literal block is wrapped,
+        # the quoted literal block is not, but the indented block quote
+        # is.
+        data = r"""
+This is
+a simple paragraph
+
+Here is
+a literal block::
+
+> This is
+> a simple paragraph
+
+  This is
+  a simple paragraph
+
+This is
+a simple paragraph
+"""
+        ref = r""" * This is a simple paragraph
+ |
+ | Here is a literal block::
+ |
+ | > This is
+ | > a simple paragraph
+ |
+ |   This is a simple paragraph
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_section_headers(self):
+        data = r"""
+This is
+a simple paragraph
+
+========
+ Section
+========
+
+Subsection
+^^^^^^^^^^
+
+This is
+a simple paragraph
+"""
+        ref = r""" * This is a simple paragraph
+ |
+ | ========
+ |  Section
+ | ========
+ |
+ | Subsection
+ | ^^^^^^^^^^
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
