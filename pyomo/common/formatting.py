@@ -364,8 +364,7 @@ _bullet_re = re.compile(
     r'|(\(?[IVXLCDM]+[\)\.] +)'  # enumerated lists (roman numerals)
     r'|(\(?[a-zA-Z][\)\.] +)'  # enumerated lists (letters)
     r'|(\(?\#[\)\.] +)'  # auto enumerated lists
-    r'|([a-zA-Z0-9_ ]+ +: +)'  # definitions
-    r'|(?:\[\s*[A-Za-z0-9\.]+\s*\] +)'  # [PASS]|[FAIL]|[ OK ]
+    r'|(?:\[\s*[A-Za-z0-9\.]+\s*\] +)'  # [PASS]|[FAIL]|[ OK ] (not part of ReST)
 )
 _literal_start = re.compile(
     r'(>>> )'  # implicit doctest
@@ -378,9 +377,38 @@ _literal_line = re.compile(
     '|'.join(r'(\%s{3,})' % c for c in r'!"#$%&\'()*+,-./:;<>?@[\\]^_`{|}~')
 )
 _field_list = re.compile(r':((\:)|(\\(?!:))|[^:\\])+: ')
+_directive_re = re.compile(r'\.\. +([\[_]|.*::)')
+_wrappable_directives = {
+    "admonition::",
+    "attention::",
+    "caution::",
+    "danger::",
+    "error::",
+    "hint::",
+    "important::",
+    "note::",
+    "tip::",
+    "warning::",
+    "contents::",
+    "replace::",
+}
+_literal_directives = {
+    "code::",
+    "line-block::",
+    "parsed-literal::",
+    "math::",
+    "table::",
+    "csv-lable::",
+    "list-table::",
+    "raw::",
+    "doctest::",
+    "testsetup::",
+    "testcode::",
+    "testoutput::",
+}
 
 
-def wrap_reStructuredText(docstr, wrapper):
+def wrap_reStructuredText(docstr, wrapper, tabsize=8, default_hang=3):
     """A text wrapper that honors paragraphs and basic reStructuredText markup
 
     This wraps `textwrap.fill()` to first separate the incoming text by
@@ -394,55 +422,77 @@ def wrap_reStructuredText(docstr, wrapper):
     docstr : str
         The incoming string to parse and wrap
 
-    wrapper : `textwrap.TextWrap`
-        The configured `TextWrap` object to use for wrapping paragraphs.
-        While the object will be reconfigured within this function, it
-        will be restored to its original state upon exit.
+    wrapper : textwrap.TextWrap
+        The configured :class:`TextWrap` object to use for wrapping
+        paragraphs.  While the object will be reconfigured within this
+        function, it will be restored to its original state upon exit.
+
+    tabsize : int
+        tab characters in `docstr` will be converted to this many spaces
+
+    default_hang : int
+        Long paragraphs that are part of terms that support wrapping
+        using hanging indentation (e.g., admonitions) will use hanging
+        indents of this many spaces if we cannot infer the hanging
+        indent (e.g., from a subsequent line or the enumeration marker).
 
     """
     # As textwrap only works on single paragraphs, we need to break
     # up the incoming message into paragraphs before we pass it to
     # textwrap.
-    paragraphs = [(None, None, None)]
+
+    # indent is the indentation level for the current paragraph
+    indent: int = 0
+    # hang is the hanging indent level for the current paragraph - that
+    # is, the indentation level for all lines other than the first.  If
+    # it is "None", then the hanging level is yet to be determined.  In
+    # that case, hang must be greater than indent, unless we are in a
+    # literal block (where they are allowed to be at the same level as
+    # the main paragraph indentation)
+    hang: int | None = 0
+    paragraphs = [(0, 0, None)]
     literal_block = False
     verbatim = False
-    docstr = docstr.rstrip(' \t')
+    docstr = docstr.replace('\t', ' ' * tabsize).rstrip(' ')
     for line in docstr.splitlines():
-        leading = _indentation_re.match(line).group()
+        leading = len(_indentation_re.match(line).group())
         content = line.strip()
         if not content:
-            if literal_block:
-                if literal_block[0] == 2:
-                    literal_block = False
-            paragraphs.append((None, None, None))
+            if not (literal_block and hang != indent):
+                # Unless this is an "indented literal block", then we
+                # want to clear the literal flag
+                literal_block = False
+            paragraphs.append((indent, hang, None))
             continue
+        if hang is None and (leading > indent or (literal_block and leading == indent)):
+            hang = leading
+            paragraphs[-1] = (indent, hang, paragraphs[-1][2])
+
         if literal_block:
-            if literal_block[0] == 0:
-                if len(literal_block[1]) < len(leading):
-                    # indented literal block
-                    literal_block = 1, leading
-                    paragraphs.append((None, None, line))
-                    continue
-                elif (
-                    len(literal_block[1]) == len(leading)
-                    and content[0] in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
-                ):
-                    # quoted literal block
-                    literal_block = 2, leading
-                    paragraphs.append((None, None, line))
-                    continue
-                else:
-                    # Invalid literal block.  This is technically a
-                    # formatting error, but "that is not our problem":
-                    # reset the context and move on.
-                    literal_block = False
-            elif leading.startswith(literal_block[1]):
+            if leading > indent and hang > indent:
+                # Indented literal block
                 paragraphs.append((None, None, line))
                 continue
-            else:
-                # It looks like we have exited the literal block.  Reset
-                # the context and fall back on normal line processing
-                literal_block = False
+            elif leading == hang:
+                if literal_block == True:
+                    # Arbitrary blank-line-terminated literal
+                    paragraphs.append((None, None, line))
+                    continue
+                elif literal_block == 'literal':
+                    if content[0] in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~':
+                        literal_block = content[0]
+                        paragraphs.append((None, None, line))
+                        continue
+                elif content[0] in literal_block:
+                    # we are still in a quoted literal block (and the
+                    # leading character matches)
+                    paragraphs.append((None, None, line))
+                    continue
+            # It looks like we have exited the literal block.  Reset
+            # the context and fall back on normal line processing
+            literal_block = False
+
+        indent = leading
         if content == '```':
             # Not part of ReST, but we have supported this in Pyomo for
             # a long time.  Note that this implementation strips the
@@ -451,71 +501,101 @@ def wrap_reStructuredText(docstr, wrapper):
         elif verbatim:
             paragraphs.append((None, None, line))
         elif content.startswith('..') and content[2:3] in (' ', ''):
-            # An explicit marker (directive)
-            paragraphs.append((None, None, line))
-            literal_block = (0, leading)
-        elif content.endswith('::'):
-            # If the literal block looks like it was the end of a
-            # paragraph, support re-wrapping.  Note that things that
-            # look like directives (explicit markers) have already been
-            # caught.
-            if paragraphs[-1][1] == leading:
-                paragraphs[-1][2].append(content)
-            else:
+            if content == '..':
+                # blank comment
                 paragraphs.append((None, None, line))
-            literal_block = (0, leading)
+                continue
+            cmd = _directive_re.match(content)
+            if cmd:
+                cmd = cmd.group(1)
+                if cmd in '_[':
+                    # footnote / citation / hyperlink
+                    hang = None
+                    paragraphs.append((indent, None, [content]))
+                    # An explicit marker (directive)
+                    pass
+                elif cmd in _wrappable_directives:
+                    hang = None
+                    paragraphs.append((indent, None, [content]))
+                elif cmd in _literal_directives:
+                    literal_block = True
+                    hang = None
+                    paragraphs.append((None, None, line))
+                else:
+                    paragraphs.append((None, None, line))
+            else:
+                # This is a comment
+                hang = None
+                paragraphs.append((indent, None, [content]))
+        elif content.startswith('__ '):
+            # anonymous hyperlinks
+            hang = None
+            paragraphs.append((indent, None, [content]))
         elif _literal_start.match(content):
             # This catches lines that start with patterns that indicate
             # the start of a literal block that should continue until
             # the first blank line (line blocks, doctest blocks, grid
             # tables, simple tables)
+            hang = leading
+            literal_block = True
             paragraphs.append((None, None, line))
-            literal_block = (2, leading)
         elif _literal_line.match(content):
             # This catches single line patterns that should not be
             # wrapped with previous/subsequent lines (e.g., section
             # headers)
             paragraphs.append((None, None, line))
+        elif paragraphs[-1][2] is None and ' : ' in line:
+            # definition list: don't wrap this line
+            paragraphs.append((None, None, line))
         elif matchBullet := _bullet_re.match(content):
             # Handle things that look like bullet lists specially
-            hang = matchBullet.group()
-            paragraphs.append((leading, leading + ' ' * len(hang), [content]))
+            hang = leading + len(matchBullet.group())
+            paragraphs.append((indent, hang, [content]))
         elif _field_list.match(content):
-            paragraphs.append((leading, None, [content]))
-        elif paragraphs[-1][1] == leading:
-            # Continuing a text block
-            paragraphs[-1][2].append(content)
-        elif paragraphs[-1][1] is None and paragraphs[-1][0] is not None:
-            # The first line after something that supports "arbitrary"
-            # hanging indentation (e.g., field lists, definition lists)
-            indent, subseq, par = paragraphs.pop()
-            par.append(content)
-            paragraphs.append((indent, leading, par))
+            hang = None
+            paragraphs.append((indent, hang, [content]))
         else:
-            # Beginning a new text block
-            paragraphs.append((leading, leading, [content]))
+            if leading == hang:
+                # Continuing a text block
+                try:
+                    paragraphs[-1][2].append(content)
+                except AttributeError:
+                    paragraphs.append((indent, hang, [content]))
+            else:
+                # Beginning a new text block
+                hang = indent
+                paragraphs.append((indent, hang, [content]))
+
+            if content.endswith('::'):
+                # If the literal block looks like it was the end of a
+                # paragraph, support re-wrapping.  Note that things that
+                # look like directives (explicit markers) have already
+                # been caught.
+                hang = None
+                literal_block = 'literal'
 
     # Strip off any leading newlines...
-    while paragraphs and paragraphs[0][2] is None:
-        paragraphs.pop(0)
+    # while paragraphs and paragraphs[0][2] is None:
+    #    paragraphs.pop(0)
+    paragraphs = paragraphs[1:]
     orig_indent = wrapper.initial_indent
     orig_subsequent = wrapper.subsequent_indent
     try:
         for i, (indent, subseq, par) in enumerate(paragraphs):
-            if indent is None:
-                if par is None:
-                    # The subsequent_indent *could* have printable
-                    # information.  If it does, we need to ensure it's
-                    # printed; but we don't want to add whitespace to
-                    # the end of a line.
-                    paragraphs[i] = wrapper.initial_indent.rstrip()
-                else:
-                    paragraphs[i] = wrapper.initial_indent + par
-            else:
+            if par.__class__ is list:
+                if subseq is None:
+                    # This paragraph is allowed to be wrapped with a
+                    # hanging indent, but the source data only had a
+                    # single line.
+                    subseq = default_hang
                 # Update the wrapper with this paragraph's indentation
-                wrapper.initial_indent += indent
-                wrapper.subsequent_indent += subseq
+                wrapper.initial_indent += ' ' * indent
+                wrapper.subsequent_indent += ' ' * subseq
                 paragraphs[i] = wrapper.fill(' '.join(par))
+            elif par is None:
+                paragraphs[i] = wrapper.initial_indent.rstrip()
+            else:
+                paragraphs[i] = wrapper.initial_indent + par
             # Restore the wrapper, but note that the next iteration is
             # no longer the first line, so the initial and subsequent
             # indent should be the original subsequent indent
