@@ -340,37 +340,106 @@ class TestWrapReStructuredText(unittest.TestCase):
     def test_string(self):
         self.assertEqual(" * foo", wrap_reStructuredText("foo", self.wrap))
 
+    def test_preserve_initial_trailing_newlines(self):
+        self.assertEqual(
+            " *\n | foo\n |\n", wrap_reStructuredText("\nfoo\n\n", self.wrap)
+        )
+
     def test_long_string(self):
-        data = """Here is a single long line that the formatter should wrap
+        data = """\
+Here is a single long line that the formatter should wrap
 
         With a very long paragraph
         containing wrappable text in
         a long, silly paragraph
         with little actual information.
         #) but a bulleted list
-        #) with two bullets
+           that wraps
+        #) with two bullets, the second of which is very, very long
         """
-        ref = """ * Here is a single long line that the formatter
+        ref = """\
+ * Here is a single long line that the formatter
  | should wrap
  |
  |         With a very long paragraph containing
  |         wrappable text in a long, silly
  |         paragraph with little actual
  |         information.
- |         #) but a bulleted list
- |         #) with two bullets
+ |         #) but a bulleted list that wraps
+ |         #) with two bullets, the second of
+ |            which is very, very long
 """
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
-    def test_field_with_argument(self):
-        data = """
+    def test_directive(self):
+        data = """\
+This is
+a simple paragraph
+
+.. figure:: myfig.png
+.. figure:: myfig.png
+   :class: something
+.. figure:: myfig.png
+This is
+a simple paragraph
+"""
+        ref = """\
+ * This is a simple paragraph
+ |
+ | .. figure:: myfig.png
+ | .. figure:: myfig.png
+ |    :class: something
+ | .. figure:: myfig.png
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_admonition(self):
+        data = """\
+This is
+a simple paragraph
+
+.. note:: here is a simple note
+This is
+a simple paragraph
+.. note:: here is a simple note that is long enough that is should wrap
+
+.. note:: here is a simple note that is long enough
+    that the user actually wrapped it
+
+.. note::
+    here is a simple note that is long enough
+    that the user actually wrapped it
+This is
+a simple paragraph
+"""
+        ref = """\
+ * This is a simple paragraph
+ |
+ | .. note:: here is a simple note
+ | This is a simple paragraph
+ | .. note:: here is a simple note that is long
+ |    enough that is should wrap
+ |
+ | .. note:: here is a simple note that is long
+ |     enough that the user actually wrapped it
+ |
+ | .. note:: here is a simple note that is long
+ |     enough that the user actually wrapped it
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_literal_directive_with_argument(self):
+        data = """\
 .. doctest::
    :hide:
 
    import pyomo
    import unittest
 """
-        ref = """ * .. doctest::
+        ref = """\
+ * .. doctest::
  |    :hide:
  |
  |    import pyomo
@@ -378,14 +447,15 @@ class TestWrapReStructuredText(unittest.TestCase):
 """
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
-    def test_field(self):
-        data = """
+    def test_literal_directive(self):
+        data = """\
 .. doctest::
 
    import pyomo
    import unittest
 """
-        ref = """ * .. doctest::
+        ref = """\
+ * .. doctest::
  |
  |    import pyomo
  |    import unittest
@@ -393,7 +463,7 @@ class TestWrapReStructuredText(unittest.TestCase):
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_implicit_doctest_block(self):
-        data = """
+        data = """\
 This is
 a simple paragraph
 
@@ -406,7 +476,8 @@ this is a doctest with a long line that should not be wrapped
 This is
 a simple paragraph
 """
-        ref = """ * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | >>> print("this is a doctest with a long line that should not be wrapped")
  | this is a doctest with a long line that should not be wrapped
@@ -419,7 +490,7 @@ a simple paragraph
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_line_block(self):
-        data = """
+        data = """\
 This is
 a simple paragraph
 
@@ -431,7 +502,8 @@ a simple paragraph
 This is
 a simple paragraph
 """
-        ref = """ * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | | This
  | | is a
@@ -443,7 +515,7 @@ a simple paragraph
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_simple_table(self):
-        data = """
+        data = """\
 This is
 a simple paragraph
 
@@ -459,7 +531,8 @@ False False False
 This is
 a simple paragraph
 """
-        ref = """ * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | ===== ===== =====
  | A     B     A ^ B
@@ -475,32 +548,69 @@ a simple paragraph
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_field_list(self):
-        data = r"""
+        data = """\
 This is
 a simple paragraph
 
 :field: This is
     a simple paragraph
 
-:field\: But this is
+:field\\: But this is
     not a simple paragraph
 
 This is
 a simple paragraph
 """
-        ref = r""" * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | :field: This is a simple paragraph
  |
- | :field\: But this is
+ | :field\\: But this is
  |     not a simple paragraph
  |
  | This is a simple paragraph
 """
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
+    def test_definition_list(self):
+        data = """\
+This is
+a simple paragraph
+
+term
+   This is
+   a simple paragraph
+
+term : with classifier
+   This is
+   a simple paragraph
+
+term : with a very, very long classifier that shouldn't wrap
+   This is
+   a simple paragraph
+
+This is
+a simple paragraph
+"""
+        ref = """\
+ * This is a simple paragraph
+ |
+ | term
+ |    This is a simple paragraph
+ |
+ | term : with classifier
+ |    This is a simple paragraph
+ |
+ | term : with a very, very long classifier that shouldn't wrap
+ |    This is a simple paragraph
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
     def test_verbatim(self):
-        data = r"""
+        data = """\
 This is
 a simple paragraph
 
@@ -512,7 +622,8 @@ a simple paragraph
 This is
 a simple paragraph
 """
-        ref = r""" * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | This is
  | a simple paragraph
@@ -522,7 +633,7 @@ a simple paragraph
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_literal_block(self):
-        data = r"""
+        data = """\
 This is
 a simple paragraph
 
@@ -531,22 +642,35 @@ Here is a literal block::
   This is
   a simple paragraph
 
+    with deeper
+    indentation
+
+ and shallow
+ indentation
+
 This is
 a simple paragraph
 """
-        ref = r""" * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | Here is a literal block::
  |
  |   This is
  |   a simple paragraph
  |
+ |     with deeper
+ |     indentation
+ |
+ |  and shallow
+ |  indentation
+ |
  | This is a simple paragraph
 """
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_invalid_literal_block(self):
-        data = r"""
+        data = """\
 This is
 a simple paragraph
 
@@ -555,7 +679,8 @@ Here is a literal block::
 This is
 a simple paragraph
 """
-        ref = r""" * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | Here is a literal block::
  |
@@ -564,7 +689,7 @@ a simple paragraph
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_indented_literal_block(self):
-        data = r"""
+        data = """\
 This is
 a simple paragraph
 
@@ -580,7 +705,8 @@ a literal block::
 This is
 a simple paragraph
 """
-        ref = r""" * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | Here is a literal block::
  |
@@ -598,7 +724,7 @@ a simple paragraph
         # Notes: the paragraph introducing the literal block is wrapped,
         # the quoted literal block is not, but the indented block quote
         # is.
-        data = r"""
+        data = """\
 This is
 a simple paragraph
 
@@ -614,7 +740,8 @@ a literal block::
 This is
 a simple paragraph
 """
-        ref = r""" * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | Here is a literal block::
  |
@@ -628,7 +755,7 @@ a simple paragraph
         self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
 
     def test_section_headers(self):
-        data = r"""
+        data = """\
 This is
 a simple paragraph
 
@@ -642,7 +769,8 @@ Subsection
 This is
 a simple paragraph
 """
-        ref = r""" * This is a simple paragraph
+        ref = """\
+ * This is a simple paragraph
  |
  | ========
  |  Section
@@ -650,6 +778,111 @@ a simple paragraph
  |
  | Subsection
  | ^^^^^^^^^^
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_comment(self):
+        data = """\
+This is
+a simple paragraph
+
+..
+
+  This is
+  a simple paragraph
+
+..
+  This is
+  a simple paragraph
+
+.. This is
+  a simple paragraph
+
+.. This is a simple paragraph that is really long and should be wrapped
+
+This is
+a simple paragraph
+"""
+        ref = """\
+ * This is a simple paragraph
+ |
+ | ..
+ |
+ |   This is a simple paragraph
+ |
+ | ..
+ |   This is a simple paragraph
+ |
+ | .. This is a simple paragraph
+ |
+ | .. This is a simple paragraph that is really
+ |    long and should be wrapped
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_footnote(self):
+        data = """\
+This is
+a simple paragraph
+
+.. [*] This is
+  a simple footnote
+
+.. [FN] This is a simple footnote that is really long and should be wrapped
+
+This is
+a simple paragraph
+"""
+        ref = """\
+ * This is a simple paragraph
+ |
+ | .. [*] This is a simple footnote
+ |
+ | .. [FN] This is a simple footnote that is
+ |    really long and should be wrapped
+ |
+ | This is a simple paragraph
+"""
+        self.assertEqual(ref, wrap_reStructuredText(data, self.wrap))
+
+    def test_link(self):
+        data = """\
+This is
+a simple paragraph
+
+.. _three:
+.. _consecutive:
+.. _links:
+
+.. _This link:
+   is written on multiple
+   lines
+
+.. _this link: is really, really long and should be wrapped
+
+__ this link: is also really, really long and should still be wrapped
+
+This is
+a simple paragraph
+"""
+        ref = """\
+ * This is a simple paragraph
+ |
+ | .. _three:
+ | .. _consecutive:
+ | .. _links:
+ |
+ | .. _This link: is written on multiple lines
+ |
+ | .. _this link: is really, really long and
+ |    should be wrapped
+ |
+ | __ this link: is also really, really long and
+ |    should still be wrapped
  |
  | This is a simple paragraph
 """
