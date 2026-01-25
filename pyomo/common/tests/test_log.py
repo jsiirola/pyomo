@@ -324,7 +324,7 @@ WARNING: This is a long multi-line message that in normal circumstances would
 """
         self.assertEqual(ans, self.stream.getvalue())
 
-        # Note that we eill add a "\n" to the end of a preformatted
+        # Note that we will add a "\n" to the end of a preformatted
         # message if it doesn't have one.
         msg2 = "Hello\nWorld"
         logger.warning(Preformatted(msg2))

@@ -398,7 +398,7 @@ _literal_directives = {
     "parsed-literal::",
     "math::",
     "table::",
-    "csv-lable::",
+    "csv-table::",
     "list-table::",
     "raw::",
     "doctest::",
