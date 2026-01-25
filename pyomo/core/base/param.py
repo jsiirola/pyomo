@@ -311,15 +311,15 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         pass
 
     @overload
-    def __new__(
-        cls: Type[Param], *args, **kwds
-    ) -> Union[ScalarParam, IndexedParam]: ...
-
-    @overload
     def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
 
     @overload
     def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
+
+    @overload
+    def __new__(
+        cls: Type[Param], *args, **kwds
+    ) -> Union[ScalarParam, IndexedParam]: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:
@@ -513,9 +513,9 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return {key: param_data() for key, param_data in self.items()}
         elif not self.is_indexed():
             # The scalar could be defined (in which case items() will
-            # return the ScalarParam, OR it could be defined by a
+            # return the ScalarParam), OR it could be defined by a
             # default value (in which case items() will return the
-            # actual numeric value.  to cover both cases we will use
+            # actual numeric value).  To cover both cases we will use
             # value():
             return {key: expr_value(param_data) for key, param_data in self.items()}
         else:
