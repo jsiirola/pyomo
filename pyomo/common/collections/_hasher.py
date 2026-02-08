@@ -108,6 +108,10 @@ class HashDispatcher(defaultdict):
             return fcn is self._hashable
         self[cls] = self._hashable if hashable else HashKey
 
+    def __call__(self, obj):
+        # Make the dispatcher callable so that it can be used in place of id()
+        return self[obj.__class__](obj)
+
 
 #: The global 'hasher' instance for managing "universal" hashing.
 #:
