@@ -62,6 +62,8 @@ class HashDispatcher(defaultdict):
     appropriate hashing strategy to each element within the tuple.
     """
 
+    __slots__ = ()
+
     def __init__(self, *args, **kwargs):
         super().__init__(lambda: self._missing_impl, *args, **kwargs)
         self[tuple] = self._tuple
@@ -82,10 +84,6 @@ class HashDispatcher(defaultdict):
     @staticmethod
     def _hashable(val):
         return val
-
-    @staticmethod
-    def _unhashable(val):
-        return id(val)
 
     def _tuple(self, val):
         try:
