@@ -12,6 +12,41 @@
 from collections import defaultdict
 
 
+class HashKey:
+    """Utility class to support hashing by object id()
+
+    This class supports hashing unhashable objects using their id().  It
+    can be used as a key in a mixed-class :py:`dict` to prevent key
+    collisions between :py:`int` keys and an unhashable objects whose
+    id() is the same value.
+
+    .. note::
+
+       This class is slotized for efficiency, but does not provide
+       special handling for updating the internal ``_hash`` (`id()`)
+       after deepcopying or pickling.  As such, containers that use this
+       class (e.g., :py:`ComponentMap` and :py:`ComponentSet`) should
+       not pickle these objects and instead regenerate them when
+       restoring the container.
+
+    """
+
+    __slots__ = ('_hash', '_val')
+
+    def __init__(self, val):
+        self._hash = id(val)
+        self._val = val
+
+    def __hash__(self):
+        return self._hash
+
+    def __eq__(self, other):
+        return other.__class__ is HashKey and other._hash == self._hash
+
+    def __repr__(self):
+        return f"{self._val} (key={self._hash})"
+
+
 class HashDispatcher(defaultdict):
     """Dispatch table for generating "universal" hashing of all Python objects.
 
@@ -36,7 +71,7 @@ class HashDispatcher(defaultdict):
             hash(val)
             self[val.__class__] = self._hashable
         except:
-            self[val.__class__] = self._unhashable
+            self[val.__class__] = HashKey
         return self[val.__class__](val)
 
     @staticmethod
@@ -60,7 +95,7 @@ class HashDispatcher(defaultdict):
             if fcn is None:
                 raise KeyError(obj)
             return fcn is self._hashable
-        self[cls] = self._hashable if hashable else self._unhashable
+        self[cls] = self._hashable if hashable else HashKey
 
 
 #: The global 'hasher' instance for managing "universal" hashing.
