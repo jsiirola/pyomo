@@ -67,6 +67,11 @@ class HashDispatcher(defaultdict):
         self[tuple] = self._tuple
 
     def _missing_impl(self, val):
+        # Inherit the hasher from a base class, if found
+        for _type in val.__class__.__mro__[1:]:
+            if _type in self:
+                self[val.__class__] = ans = self[_type]
+                return ans(val)
         try:
             hash(val)
             self[val.__class__] = self._hashable
@@ -83,7 +88,15 @@ class HashDispatcher(defaultdict):
         return id(val)
 
     def _tuple(self, val):
-        return tuple(self[i.__class__](i) for i in val)
+        try:
+            # if *this tuple* is hashable, then use it as the key
+            hash(val)
+            return val
+        except:
+            # duplicate the tuple, recursively processing all fields.
+            # The use of val.__class__ ensures that derived things (like
+            # namedtuples) have their class preserved.
+            return val.__class__(self[i.__class__](i) for i in val)
 
     def hashable(self, obj, hashable=None):
         if isinstance(obj, type):
