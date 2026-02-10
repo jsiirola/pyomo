@@ -10,13 +10,14 @@
 #  ___________________________________________________________________________
 
 from collections.abc import MutableSet, Set
+from functools import partial
 
 from pyomo.common.autoslots import AutoSlots
 
 from ._hasher import hasher
 
 
-def _rehash_keys(encode, val):
+def _rehash_keys(keygen, encode, val):
     if encode:
         # TBD [JDS 2/2024]: if we
         #
@@ -28,11 +29,11 @@ def _rehash_keys(encode, val):
         # autoslots.fast_deepcopy, but couldn't find an obvious bug.
         # There is no error if we just return the original dict, or if
         # we return a tuple(val.values)
-        return val
+        return tuple(val.values())
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {hasher[obj.__class__](obj): obj for obj in val.values()}
+        return {keygen(obj): obj for obj in val}
 
 
 class ComponentSet(AutoSlots.Mixin, MutableSet):
@@ -60,7 +61,7 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
     """
 
     __slots__ = ("_data",)
-    __autoslot_mappers__ = {"_data": _rehash_keys}
+    __autoslot_mappers__ = {"_data": partial(_rehash_keys, hasher.__call__)}
     # Expose a "public" interface to the global _hasher dict
     hasher = hasher
 
@@ -80,7 +81,8 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
         if isinstance(iterable, ComponentSet):
             self._data.update(iterable._data)
         else:
-            self._data.update((hasher[val.__class__](val), val) for val in iterable)
+            for val in iterable:
+                self.add(val)
 
     #
     # Implement MutableSet abstract methods
@@ -101,9 +103,10 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
 
     def discard(self, val):
         """Remove an element. Do not raise an exception if absent."""
-        _id = hasher[val.__class__](val)
-        if _id in self._data:
-            del self._data[_id]
+        try:
+            del self._data[hasher[val.__class__](val)]
+        except KeyError:
+            pass
 
     #
     # Overload MutableSet default implementations
@@ -112,11 +115,12 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
     def __eq__(self, other):
         if self is other:
             return True
-        if not isinstance(other, Set):
+        if not isinstance(other, Set) or len(self._data) != len(other):
             return False
-        return len(self) == len(other) and all(
-            hasher[val.__class__](val) in self._data for val in other
-        )
+        if other.__class__ is self.__class__:
+            return all(key in self._data for key in other._data)
+        else:
+            return all(map(self.__contains__, other))
 
     def __ne__(self, other):
         return not (self == other)

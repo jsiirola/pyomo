@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Mapping, MutableMapping
+from functools import partial
 from operator import itemgetter
 
 from pyomo.common.autoslots import AutoSlots
@@ -17,13 +18,13 @@ from pyomo.common.autoslots import AutoSlots
 from ._hasher import hasher
 
 
-def _rehash_keys(encode, val):
+def _rehash_keys(keygen, encode, val):
     if encode:
-        return val
+        return list(val.values())
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {hasher[obj.__class__](obj): (obj, v) for obj, v in val.values()}
+        return {keygen(v[0]): v for v in val}
 
 
 class ComponentMap(AutoSlots.Mixin, MutableMapping):
@@ -52,7 +53,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     """
 
     __slots__ = ("_dict",)
-    __autoslot_mappers__ = {"_dict": _rehash_keys}
+    __autoslot_mappers__ = {"_dict": partial(_rehash_keys, hasher.__call__)}
     # Expose a "public" interface to the global _hasher dict
     hasher = hasher
 
@@ -102,9 +103,13 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     # We want a specialization of update() to avoid unnecessary calls to
     # id() when copying / merging ComponentMaps
     def update(self, *args, **kwargs):
-        if len(args) == 1 and not kwargs and isinstance(args[0], ComponentMap):
+        if len(args) == 1 and not kwargs and args[0].__class__ is self.__class__:
             return self._dict.update(args[0]._dict)
         return super().update(*args, **kwargs)
+
+    def _rekey_items(self, items):
+        """Utility method for mapping key-value pairs into local hash keys"""
+        return ((hasher[key.__class__](key), val) for key, val in items)
 
     # We want to avoid generating Pyomo expressions due to comparing the
     # keys, so look up each entry from other in this dict.
@@ -114,11 +119,18 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         if not isinstance(other, Mapping) or len(self) != len(other):
             return False
         # Note we have already verified the dicts are the same size
-        for key, val in other.items():
-            other_id = hasher[key.__class__](key)
-            if other_id not in self._dict:
+        if other.__class__ is self.__class__:
+            # shortcut for comparing ComponentMaps to each other: avoid
+            # regenerating any keys
+            other_items = ((key, val[1]) for key, val in other._dict.items())
+        else:
+            other_items = self._rekey_items(other.items())
+
+        _dict = self._dict
+        for key, val in other_items:
+            if key not in _dict:
                 return False
-            self_val = self._dict[other_id][1]
+            self_val = _dict[key][1]
             # Note: check "is" first to help avoid creation of Pyomo
             # expressions (for the case that the values contain the same
             # Pyomo component)
