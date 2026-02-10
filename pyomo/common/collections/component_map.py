@@ -57,7 +57,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     # Expose a "public" interface to the global _hasher dict
     hasher = hasher
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, *args, **kwargs):
         # maps id_hash(obj) -> (obj,val)
         self._dict = {}
         # handle the dict-style initialization scenarios
@@ -137,7 +137,8 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         return True
 
     def __ne__(self, other):
-        return not (self == other)
+        """Return self!=other."""
+        return not self.__eq__(other)
 
     #
     # The remaining methods have slow default
