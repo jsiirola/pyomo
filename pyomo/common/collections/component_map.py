@@ -205,3 +205,58 @@ class DefaultComponentMap(ComponentMap):
             return self._dict[_key][1]
         else:
             return self.__missing__(obj)
+
+
+class ObjectIdMap(ComponentMap):
+    """A faster version of :py:class:`ComponentMap`
+
+    :py:class:`ObjectIdMap` is a lighter-weight version of
+    :py:class:`ComponentMap`.  By unconditionally using :py:`id()` to
+    generate all keys, this class performs approximately 25% faster than
+    :py:class:`ComponentMap` at the expense of being slightly more
+    fragile.
+
+    It is _strongly_ recommended to only use Pyomo components as
+    :py:class:`ObjectIdMap` keys.
+
+    .. warning::
+
+       Do not store keys that do not return persistent :py:func:`id()`
+       values.  In particular, avoid certain immutable data types like
+       :py:`tuple` objects, strings, and long integers.  Doing so may
+       result in failed lookups or duplicate entries.
+
+       If you want to mix these keys with other unhashable objects (like
+       Pyomo :py:class:`Var` or :py:class:`Param` components), please
+       use :py:class:`ComponentMap`.
+
+    """
+
+    __slots__ = ()
+    __autoslot_mappers__ = {"_dict": partial(_rehash_keys, id)}
+
+    def __getitem__(self, obj):
+        try:
+            return self._dict[id(obj)][1]
+        except KeyError:
+            raise KeyError(obj) from None
+
+    def __setitem__(self, obj, val):
+        self._dict[id(obj)] = (obj, val)
+
+    def __delitem__(self, obj):
+        try:
+            del self._dict[id(obj)]
+        except KeyError:
+            raise KeyError(obj) from None
+
+    def __contains__(self, obj):
+        return id(obj) in self._dict
+
+    def _rekey_items(self, items):
+        return ((id(key), val) for key, val in items)
+
+    def __str__(self):
+        """String representation of the mapping."""
+        tmp = [f"{v[0]} (key={k}): {v[1]}" for k, v in self._dict.items()]
+        return f"{self.__class__.__name__}({', '.join(tmp)})"

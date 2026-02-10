@@ -140,3 +140,45 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
             del self._data[hasher[val.__class__](val)]
         except KeyError:
             raise KeyError(val)
+
+
+class ObjectIdSet(ComponentSet):
+    """A faster version of :py:class:`ComponentSet`
+
+    :py:class:`ObjectIdSet` is a lighter-weight version of
+    :py:class:`ComponentSet`.  By unconditionally using :py:`id()` to
+    generate all keys, this class performs approximately 25% faster than
+    :py:class:`ComponentSet` at the expense of being slightly more
+    fragile.  In particular, :py:`tuple` keys may unexpectedly generate
+    cache misses or result in multiple entries in the set.
+
+    .. warning::
+
+       Do not store :py:`tuple` objects as keys in this data structure.
+       Doing so may result in failed lookups or duplicate entries.
+
+    """
+
+    __slots__ = ()
+    __autoslot_mappers__ = {"_data": partial(_rehash_keys, id)}
+
+    def __contains__(self, val):
+        return id(val) in self._data
+
+    def add(self, val):
+        """Add an element."""
+        self._data[id(val)] = val
+
+    def discard(self, val):
+        """Remove an element. Do not raise an exception if absent."""
+        try:
+            del self._data[id(val)]
+        except KeyError:
+            pass
+
+    def remove(self, val):
+        """Remove an element. If not a member, raise a KeyError."""
+        try:
+            del self._data[id(val)]
+        except KeyError:
+            raise KeyError(val) from None
