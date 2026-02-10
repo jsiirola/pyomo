@@ -16,6 +16,7 @@ from pyomo.common.collections._hasher import HashKey
 from pyomo.common.collections.component_set import ComponentSet, ObjectIdSet
 from pyomo.environ import ConcreteModel, Var, Constraint
 
+
 class ComponentSetBaseTests:
 
     def test_str(self):
@@ -26,11 +27,7 @@ class ComponentSetBaseTests:
         _id = id(m.x)
         cs.add(_id)
         cs.add((5, m.x))
-        self.assertEqual(
-            f"{self.CS.__name__}"
-            f"(x, {_id}, (5, {repr(m.x)}))",
-            str(cs),
-        )
+        self.assertEqual(f"{self.CS.__name__}" f"(x, {_id}, (5, {repr(m.x)}))", str(cs))
 
     def test_add_remove_discard(self):
         m = ConcreteModel()
@@ -111,7 +108,7 @@ class ComponentSetBaseTests:
         cs1.clear()
         self.assertNotEqual(cs1, cs2)
         self.assertEqual(cs1, set())
-        
+
     def test_init_update(self):
         m = ConcreteModel()
         m.x = Var()
@@ -131,7 +128,7 @@ class ComponentSetBaseTests:
         cs3.update(cs1)
         self.assertNotEqual(cs2, cs3)
         self.assertEqual(cs1, cs3)
-    
+
 
 class TestComponentSet(ComponentSetBaseTests, unittest.TestCase):
     def setUp(self):
