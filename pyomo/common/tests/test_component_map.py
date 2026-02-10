@@ -35,7 +35,7 @@ class ComponentMapBaseTests:
         cm[(5, m.x)] = 7
         self.assertEqual(
             f"{self.CM.__name__}"
-            f"(x (key={_id}): y[1], {_id}: 42, (5, x (key={_id})): 7)",
+            f"(x: y[1], {_id}: 42, (5, x): 7)",
             str(cm),
         )
 

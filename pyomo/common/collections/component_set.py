@@ -13,6 +13,7 @@ from collections.abc import MutableSet, Set
 from functools import partial
 
 from pyomo.common.autoslots import AutoSlots
+from pyomo.common.formatting import tostr
 
 from ._hasher import hasher
 
@@ -74,7 +75,7 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = (str(k) for k in self._data.values())
+        tmp = (tostr(k) for k in self._data.values())
         return f"{self.__class__.__name__}({', '.join(tmp)})"
 
     def update(self, iterable):

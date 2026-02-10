@@ -14,6 +14,7 @@ from functools import partial
 from operator import itemgetter
 
 from pyomo.common.autoslots import AutoSlots
+from pyomo.common.formatting import tostr
 
 from ._hasher import hasher
 
@@ -67,7 +68,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = ', '.join(f"{v[0]}: {v[1]}" for v in self._dict.values())
+        tmp = ', '.join(f"{tostr(v[0])}: {tostr(v[1])}" for v in self._dict.values())
         return f"{self.__class__.__name__}({tmp})"
 
     #

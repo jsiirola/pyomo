@@ -27,7 +27,7 @@ class ComponentSetBaseTests:
         _id = id(m.x)
         cs.add(_id)
         cs.add((5, m.x))
-        self.assertEqual(f"{self.CS.__name__}" f"(x, {_id}, (5, {repr(m.x)}))", str(cs))
+        self.assertEqual(f"{self.CS.__name__}" f"(x, {_id}, (5, x))", str(cs))
 
     def test_add_remove_discard(self):
         m = ConcreteModel()
