@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Mapping, MutableMapping
+from operator import itemgetter
 
 from pyomo.common.autoslots import AutoSlots
 
@@ -59,7 +60,8 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         # maps id_hash(obj) -> (obj,val)
         self._dict = {}
         # handle the dict-style initialization scenarios
-        self.update(*args, **kwds)
+        if args or kwargs:
+            self.update(*args, **kwargs)
 
     def __str__(self):
         """String representation of the mapping."""
@@ -88,7 +90,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
             raise KeyError(f"{obj} (key={_id})") from None
 
     def __iter__(self):
-        return (obj for obj, val in self._dict.values())
+        return iter(self.keys())
 
     def __len__(self):
         return self._dict.__len__()
@@ -134,6 +136,15 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     # class because KeyError messages use fully qualified
     # names.
     #
+
+    def keys(self):
+        return map(itemgetter(0), self._dict.values())
+
+    def values(self):
+        return map(itemgetter(1), self._dict.values())
+
+    def items(self):
+        return self._dict.values()
 
     def __contains__(self, obj):
         return hasher[obj.__class__](obj) in self._dict
