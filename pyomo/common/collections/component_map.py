@@ -28,33 +28,34 @@ def _rehash_keys(keygen, encode, val):
 
 
 class ComponentMap(AutoSlots.Mixin, MutableMapping):
-    """
-    This class is a replacement for dict that allows Pyomo
-    modeling components to be used as entry keys. The
-    underlying mapping is based on the Python id() of the
-    object, which gets around the problem of hashing
-    subclasses of NumericValue. This class is meant for
-    creating mappings from Pyomo components to values. The
-    use of non-Pyomo components as entry keys should be
-    avoided.
+    """Mapping that admits unhashable objects as keys
+
+    This class is a replacement for :py:`dict` that allows Pyomo
+    modeling components to be used as keys. The underlying mapping is
+    based on the Python :py:`id()` of the object, which gets around the
+    problem of hashing subclasses of :py:class:`NumericValue`. This
+    class is meant for creating mappings from Pyomo components to
+    values.
 
     A reference to the object is kept around as long as it
     has a corresponding entry in the container, so there is
-    no need to worry about id() clashes.
+    no need to worry about id() collisions.
 
-    We also override __setstate__ so that we can rebuild the
-    container based on possibly updated object ids after
-    a deepcopy or pickle.
+    This class leverages :py:class:`AutoSlots` to update any id() keys
+    during pickling, restoration, or deepcopying.
 
-    *** An instance of this class should never be
-    deepcopied/pickled unless it is done so along with the
-    components for which it contains map entries (e.g., as
-    part of a block). ***
+    .. warning::
+
+       An instance of this class should never be deepcopied/pickled
+       unless it is done so along with its component entries (e.g., as
+       part of a block).
+
     """
 
     __slots__ = ("_dict",)
     __autoslot_mappers__ = {"_dict": partial(_rehash_keys, hasher.__call__)}
-    # Expose a "public" interface to the global _hasher dict
+    # Expose a "public" interface to the global hasher dict (for
+    # backwards compatibility)
     hasher = hasher
 
     def __init__(self, *args, **kwargs):
@@ -99,7 +100,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     #
 
     # We want a specialization of update() to avoid unnecessary calls to
-    # id() when copying / merging ComponentMaps
+    # the hasher when copying / merging ComponentMaps
     def update(self, *args, **kwargs):
         if len(args) == 1 and not kwargs and args[0].__class__ is self.__class__:
             return self._dict.update(args[0]._dict)
@@ -112,6 +113,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     # We want to avoid generating Pyomo expressions due to comparing the
     # keys, so look up each entry from other in this dict.
     def __eq__(self, other):
+        """Return self==other."""
         if self is other:
             return True
         if not isinstance(other, Mapping) or len(self) != len(other):
@@ -141,11 +143,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         return not self.__eq__(other)
 
     #
-    # The remaining methods have slow default
-    # implementations for MutableMapping. In particular,
-    # they rely KeyError catching, which is slow for this
-    # class because KeyError messages use fully qualified
-    # names.
+    # The remaining methods have slow default implementations
     #
 
     def keys(self):

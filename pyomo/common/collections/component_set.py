@@ -37,32 +37,33 @@ def _rehash_keys(keygen, encode, val):
 
 
 class ComponentSet(AutoSlots.Mixin, MutableSet):
-    """
-    This class is a replacement for set that allows Pyomo
-    modeling components to be used as entries. The
-    underlying hash is based on the Python id() of the
-    object, which gets around the problem of hashing
-    subclasses of NumericValue. This class is meant for
-    creating sets of Pyomo components. The use of non-Pyomo
-    components as entries should be avoided (as the behavior
-    is undefined).
+    """Set that admits unhashable objects.
+
+    This class is a replacement for :py:`set` that allows Pyomo modeling
+    components to be used as entries. The underlying hash is based on
+    the Python :py:`id()` of the object, which gets around the problem
+    of hashing subclasses of :py:class:`NumericValue`. This class is
+    meant for creating sets of Pyomo components.
 
     References to objects are kept around as long as they
     are entries in the container, so there is no need to
-    worry about id() clashes.
+    worry about id() collisions.
 
-    We also override __setstate__ so that we can rebuild the
-    container based on possibly updated object ids after
-    a deepcopy or pickle.
+    This class leverages :py:class:`AutoSlots` to update any id() keys
+    during pickling, restoration, or deepcopying.
 
-    *** An instance of this class should never be
-    deepcopied/pickled unless it is done so along with
-    its component entries (e.g., as part of a block). ***
+    .. warning::
+
+       An instance of this class should never be deepcopied/pickled
+       unless it is done so along with its component entries (e.g., as
+       part of a block).
+
     """
 
     __slots__ = ("_data",)
     __autoslot_mappers__ = {"_data": partial(_rehash_keys, hasher.__call__)}
-    # Expose a "public" interface to the global _hasher dict
+    # Expose a "public" interface to the global hasher dict (for
+    # backwards compatibility)
     hasher = hasher
 
     def __init__(self, iterable=None):
