@@ -66,8 +66,8 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = {f"{v[0]} (key={k})": v[1] for k, v in self._dict.items()}
-        return f"ComponentMap({tmp})"
+        tmp = ', '.join(f"{v[0]}: {v[1]}" for v in self._dict.values())
+        return f"{self.__class__.__name__}({tmp})"
 
     #
     # Implement MutableMapping abstract methods
@@ -77,8 +77,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         try:
             return self._dict[hasher[obj.__class__](obj)][1]
         except KeyError:
-            _id = hasher[obj.__class__](obj)
-            raise KeyError(f"{obj} (key={_id})") from None
+            raise KeyError(obj) from None
 
     def __setitem__(self, obj, val):
         self._dict[hasher[obj.__class__](obj)] = (obj, val)
@@ -87,8 +86,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         try:
             del self._dict[hasher[obj.__class__](obj)]
         except KeyError:
-            _id = hasher[obj.__class__](obj)
-            raise KeyError(f"{obj} (key={_id})") from None
+            raise KeyError(obj) from None
 
     def __iter__(self):
         return iter(self.keys())

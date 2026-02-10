@@ -73,8 +73,8 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = [f"{v} (key={k})" for k, v in self._data.items()]
-        return f"ComponentSet({tmp})"
+        tmp = (str(k) for k in self._data.values())
+        return f"{self.__class__.__name__}({', '.join(tmp)})"
 
     def update(self, iterable):
         """Update a set with the union of itself and others."""
@@ -139,5 +139,4 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
         try:
             del self._data[hasher[val.__class__](val)]
         except KeyError:
-            _id = hasher[val.__class__](val)
-            raise KeyError(f"{val} (key={_id})") from None
+            raise KeyError(val)
