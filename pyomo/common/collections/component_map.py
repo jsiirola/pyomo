@@ -189,6 +189,9 @@ class DefaultComponentMap(ComponentMap):
     __slots__ = ("default_factory",)
 
     def __init__(self, default_factory=None, *args, **kwargs):
+        if default_factory is not None and not callable(default_factory):
+            args = (default_factory,) + args
+            default_factory = None
         super().__init__(*args, **kwargs)
         self.default_factory = default_factory
 
