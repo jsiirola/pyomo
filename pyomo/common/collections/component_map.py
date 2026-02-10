@@ -134,8 +134,10 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
             # Note: check "is" first to help avoid creation of Pyomo
             # expressions (for the case that the values contain the same
             # Pyomo component)
-            if self_val is not val and self_val != val:
-                return False
+            if self_val is not val:
+                val_diff = self_val != val
+                if val_diff.__class__ is not bool or val_diff:
+                    return False
         return True
 
     def __ne__(self, other):
