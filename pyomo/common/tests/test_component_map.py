@@ -34,9 +34,7 @@ class ComponentMapBaseTests:
         cm[_id] = 42
         cm[(5, m.x)] = 7
         self.assertEqual(
-            f"{self.CM.__name__}"
-            f"(x: y[1], {_id}: 42, (5, x): 7)",
-            str(cm),
+            f"{self.CM.__name__}" f"(x: y[1], {_id}: 42, (5, x): 7)", str(cm)
         )
 
     def test_get_del_item(self):
@@ -74,19 +72,68 @@ class ComponentMapBaseTests:
         self.assertEqual(cm[m], 10)
         self.assertEqual(cm[3], 30)
 
-    def test_iter(self):
+    def test_iters(self):
         m = ConcreteModel()
         m.x = Var()
 
         cm = self.CM()
         cm[m] = 10
         cm[m.x] = 20
-        cm[3] = 30
+        cm[3] = 10
 
         self.assertEqual([m, m.x, 3], list(cm))
-        self.assertEqual([m, m.x, 3], list(cm.keys()))
-        self.assertEqual([10, 20, 30], list(cm.values()))
-        self.assertEqual([(m, 10), (m.x, 20), (3, 30)], list(cm.items()))
+
+        k = cm.keys()
+        self.assertEqual([m, m.x, 3], list(k))
+        self.assertEqual(3, len(k))
+        self.assertIn(m, k)
+        self.assertIn(m.x, k)
+        self.assertNotIn(4, k)
+
+        v = cm.values()
+        self.assertEqual([10, 20, 10], list(v))
+        self.assertEqual(3, len(v))
+        self.assertIn(10, v)
+        self.assertIn(20, v)
+        self.assertNotIn(30, v)
+
+        i = cm.items()
+        self.assertEqual([(m, 10), (m.x, 20), (3, 10)], list(i))
+        self.assertEqual(3, len(i))
+        self.assertIn((m, 10), i)
+        self.assertIn((m.x, 20), i)
+        self.assertIn((3, 10), i)
+        self.assertNotIn((3, 30), i)
+        self.assertNotIn((4, 10), i)
+        self.assertNotIn('hi', i)
+        self.assertNotIn(50, i)
+        self.assertNotIn((1, 2, 3), i)
+
+        # These are views... and should update to reflect the current state
+        del cm[m]
+
+        self.assertEqual([m.x, 3], list(k))
+        self.assertEqual(2, len(k))
+        self.assertNotIn(m, k)
+        self.assertIn(m.x, k)
+        self.assertNotIn(4, k)
+
+        self.assertEqual([20, 10], list(v))
+        self.assertEqual(2, len(v))
+        self.assertIn(10, v)
+        self.assertIn(20, v)
+        self.assertNotIn(30, v)
+
+        self.assertEqual([(m.x, 20), (3, 10)], list(i))
+        self.assertEqual(2, len(i))
+        self.assertNotIn((m, 10), i)
+        self.assertIn((m.x, 20), i)
+        self.assertIn((3, 10), i)
+        self.assertNotIn((3, 30), i)
+        self.assertNotIn((4, 10), i)
+        self.assertNotIn('hi', i)
+        self.assertNotIn(50, i)
+        self.assertNotIn((1, 2, 3), i)
 
     def test_eq(self):
         m = ConcreteModel()

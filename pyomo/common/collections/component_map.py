@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Set, Mapping, MutableMapping
 from functools import partial
 from operator import itemgetter
 
@@ -26,6 +26,68 @@ def _rehash_keys(keygen, encode, val):
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
         return {keygen(v[0]): v for v in val}
+
+
+class ComponentMap_keys(Set):
+    __slots__ = ('_cm',)
+
+    def __init__(self, cm):
+        self._cm = cm
+
+    def __iter__(self):
+        return iter(map(itemgetter(0), self._cm._dict.values()))
+
+    def __contains__(self, key):
+        return self._cm.__contains__(key)
+
+    def __len__(self):
+        return self._cm.__len__()
+
+
+class ComponentMap_items(Set):
+    __slots__ = ('_cm',)
+
+    def __init__(self, cm):
+        self._cm = cm
+
+    def __iter__(self):
+        return iter(self._cm._dict.values())
+
+    def __contains__(self, item):
+        try:
+            key, val = item
+        except (TypeError, ValueError):
+            return False
+        return key in self._cm and self._cm._value_eq(val, self._cm[key])
+
+    def __len__(self):
+        return self._cm.__len__()
+
+
+class ComponentMap_values(Set):
+    __slots__ = ('_cm',)
+
+    def __init__(self, cm):
+        self._cm = cm
+
+    def __iter__(self):
+        return iter(map(itemgetter(1), self._cm._dict.values()))
+
+    def __contains__(self, val):
+        """Returns True if `val` appears as a value in this ComponentMap
+
+        .. warining::
+
+           This method is provided for API compatibility and is NOT
+           efficient (it is a linear scan through the underlying
+           `dict`).  We *do not* recommend using it in large
+           applications of when performance matters.
+
+        """
+        return any(self._cm._value_eq(v, val) for v in self.__iter__())
+
+    def __len__(self):
+        return self._cm.__len__()
 
 
 class ComponentMap(AutoSlots.Mixin, MutableMapping):
@@ -111,6 +173,16 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         """Utility method for mapping key-value pairs into local hash keys"""
         return ((hasher[key.__class__](key), val) for key, val in items)
 
+    @staticmethod
+    def _value_eq(a, b):
+        # Note: check "is" first to help avoid creation of Pyomo
+        # expressions (for the case that the values contain the same
+        # Pyomo component)
+        if a is b:
+            return True
+        diff = a != b
+        return not diff if diff.__class__ is bool else False
+
     # We want to avoid generating Pyomo expressions due to comparing the
     # keys, so look up each entry from other in this dict.
     def __eq__(self, other):
@@ -128,18 +200,8 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
             other_items = self._rekey_items(other.items())
 
         _dict = self._dict
-        for key, val in other_items:
-            if key not in _dict:
-                return False
-            self_val = _dict[key][1]
-            # Note: check "is" first to help avoid creation of Pyomo
-            # expressions (for the case that the values contain the same
-            # Pyomo component)
-            if self_val is not val:
-                val_diff = self_val != val
-                if val_diff.__class__ is not bool or val_diff:
-                    return False
-        return True
+        _eq = self._value_eq
+        return all(key in _dict and _eq(val, _dict[key][1]) for key, val in other_items)
 
     def __ne__(self, other):
         """Return self!=other."""
@@ -150,13 +212,13 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     #
 
     def keys(self):
-        return map(itemgetter(0), self._dict.values())
+        return ComponentMap_keys(self)
 
     def values(self):
-        return map(itemgetter(1), self._dict.values())
+        return ComponentMap_values(self)
 
     def items(self):
-        return self._dict.values()
+        return ComponentMap_items(self)
 
     def __contains__(self, obj):
         return hasher[obj.__class__](obj) in self._dict
