@@ -542,9 +542,6 @@ def wrap_reStructuredText(docstr, wrapper, tabsize=8, default_hang=3):
             # wrapped with previous/subsequent lines (e.g., section
             # headers)
             paragraphs.append((None, None, line))
-        elif paragraphs[-1][2] is None and ' : ' in line:
-            # definition list: don't wrap this line
-            paragraphs.append((None, None, line))
         elif matchBullet := _bullet_re.match(content):
             # Handle things that look like bullet lists specially
             hang = leading + len(matchBullet.group())
@@ -560,6 +557,15 @@ def wrap_reStructuredText(docstr, wrapper, tabsize=8, default_hang=3):
                 except AttributeError:
                     paragraphs.append((indent, hang, [content]))
             else:
+                if hang is not None and leading > hang:
+                    # Definitions: a single line term (that may or may
+                    # not have a ":" followed by one or more
+                    # classifiers) followed immediately by an indented
+                    # block.  Do not wrap the single line
+                    i, h, c = paragraphs[-1]
+                    if i == h and type(c) is list and len(c) == 1:
+                        paragraphs[-1] = (i, h, c[0])
+
                 # Beginning a new text block
                 hang = indent
                 paragraphs.append((indent, hang, [content]))

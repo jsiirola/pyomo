@@ -588,6 +588,10 @@ term : with a very, very long classifier that shouldn't wrap
    This is
    a simple paragraph
 
+a very, very long term that must be kept as a single line and shouldn't wrap
+   This is
+   a simple paragraph
+
 This is
 a simple paragraph
 """
@@ -601,6 +605,9 @@ a simple paragraph
  |    This is a simple paragraph
  |
  | term : with a very, very long classifier that shouldn't wrap
+ |    This is a simple paragraph
+ |
+ | a very, very long term that must be kept as a single line and shouldn't wrap
  |    This is a simple paragraph
  |
  | This is a simple paragraph
