@@ -31,7 +31,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v251017.0
+  CACHE_VER: v260223.0
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: |
@@ -613,11 +613,14 @@ jobs:
         GAMS_DIR="$TPL_DIR/gams"
         NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
         echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
-        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
-            ;print(v if v != "_27" else "")')
-        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
+        pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
+        WHL=$(find $GAMS_DIR/api/python/bdist -name "*cp$pyver*.whl")
+        if test -n "$WHL"; then
+            # Starting in 51.2.1 < GAMS <= 53.1, GAMS bundles wheels
+            echo "$WHL" | xargs $PYTHON_EXE -m pip install
+        elif test -e $GAMS_DIR/apifiles/Python/api_$pyver; then
             echo "Installing GAMS Python bindings"
-            pushd $GAMS_DIR/apifiles/Python/api$py_ver
+            pushd $GAMS_DIR/apifiles/Python/api_$pyver
             $PYTHON_EXE setup.py install
             popd
         fi
