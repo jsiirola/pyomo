@@ -583,7 +583,12 @@ jobs:
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
-            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            $osxarch = (uname -m).Trim()
+            if ( "$osxarch" -eq "arm64" ) {
+                $URL = "$URL/macosx/osx_arm64_sfx.exe"
+            } else {
+                $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            }
         } else {
             $URL = "$URL/linux/linux_x64_64_sfx.exe"
         }
