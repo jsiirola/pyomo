@@ -23,7 +23,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v260223.2
+  CACHE_VER: v260223.3
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: branch
@@ -527,15 +527,17 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/51.4.0"
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/latest"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
             $osxarch = (uname -m).Trim()
             if ( "$osxarch" -eq "arm64" ) {
-                $URL = "$URL/macosx/osx_arm64_sfx.exe"
+                # $URL = "$URL/macosx/osx_arm64_sfx.exe"
+                $URL = "$URL/macosx/osx_arm64.pkg"
             } else {
-                $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+                # $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+                $URL = "$URL/macosx/osx_x64_64.pkg"
             }
         } else {
             $URL = "$URL/linux/linux_x64_64_sfx.exe"
@@ -550,6 +552,11 @@ jobs:
             Start-Process -FilePath "$INSTALLER" -ArgumentList `
                 "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
                 -Wait
+        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            Start-Process -FilePath "installer" -ArgumentList `
+                "-pkg", "$INSTALLER", "-target", "$GAMS_DIR" -Wait
+            ls $GAMS_DIR
+            mv $GAMS_DIR/*/* $GAMS_DIR/.
         } else {
             chmod 777 $INSTALLER
             Start-Process -FilePath "$INSTALLER" -ArgumentList `
