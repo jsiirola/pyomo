@@ -23,7 +23,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v260223.4
+  CACHE_VER: v260223.5
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: branch
@@ -513,7 +513,7 @@ jobs:
         ls -l $IPOPT_DIR
 
     - name: Install GAMS
-      if: ${{ ! matrix.slim }}
+      if: ${{ ! matrix.slim && 0 }}
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
       shell: pwsh
@@ -572,7 +572,7 @@ jobs:
         ls -l $GAMS_DIR
 
     - name: Install GAMS Python bindings
-      if: ${{ ! matrix.slim }}
+      if: ${{ ! matrix.slim && 0 }}
       run: |
         GAMS_DIR="$TPL_DIR/gams"
         NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
@@ -588,6 +588,11 @@ jobs:
             $PYTHON_EXE setup.py install
             popd
         fi
+
+    - name: Install GAMS Python bindings
+      if: ${{ ! matrix.slim }}
+      run: |
+        $PYTHON_EXE -m pip install gamspy gamspy-highs gamspy-ipopt
 
     - name: Install BARON
       if: ${{ ! matrix.slim }}
