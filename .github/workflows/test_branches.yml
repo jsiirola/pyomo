@@ -556,6 +556,7 @@ jobs:
                 "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
                 -Wait
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            mkdir -p $GAMS_DIR
             Start-Process -FilePath "installer" -ArgumentList `
                 "-pkg", "$INSTALLER", "-target", "$GAMS_DIR" -Wait
             ls $GAMS_DIR
