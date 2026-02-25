@@ -534,10 +534,12 @@ jobs:
             $osxarch = (uname -m).Trim()
             if ( "$osxarch" -eq "arm64" ) {
                 # $URL = "$URL/macosx/osx_arm64_sfx.exe"
-                $URL = "$URL/macosx/osx_arm64.pkg"
+                # $URL = "$URL/macosx/osx_arm64.pkg"
+                $URL = "$URL/macosx_arm64/GAMS52.5.0.pkg"
             } else {
                 # $URL = "$URL/macosx/osx_x64_64_sfx.exe"
-                $URL = "$URL/macosx/osx_x64_64.pkg"
+                # $URL = "$URL/macosx/osx_x64_64.pkg"
+                $URL = "$URL/macosx/GAMS52.5.0.pkg"
             }
             $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.pkg"
         } else {
