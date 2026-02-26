@@ -513,9 +513,12 @@ jobs:
         ls -l $IPOPT_DIR
 
     - name: Install GAMS
-      if: ${{ ! matrix.slim }}
-      # We install using Powershell because the GAMS installer hangs
-      # when launched from bash on Windows
+      if: ${{ ! matrix.slim && matrix.TARGET != 'osx' }}
+      # - We install using Powershell because the GAMS installer hangs
+      #   when launched from bash on Windows
+      # - We no longer install on OSX because GAMS no longer distributes
+      #   self extracting ZIP for OSX and the package is difficult [for JDS]
+      #   to install in GHA
       shell: pwsh
       run: |
         $GAMS_DIR = "${env:TPL_DIR}/gams"
@@ -531,7 +534,12 @@ jobs:
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
-            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            $osxarch = (uname -m).Trim()
+            if ( "$osxarch" -eq "arm64" ) {
+                $URL = "$URL/macosx/osx_arm64_sfx.exe"
+            } else {
+                $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            }
         } else {
             $URL = "$URL/linux/linux_x64_64_sfx.exe"
         }
@@ -561,13 +569,18 @@ jobs:
         GAMS_DIR="$TPL_DIR/gams"
         NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
         echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
-        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
-            ;print(v if v != "_27" else "")')
-        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
+        pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
+        WHL=$(find "$GAMS_DIR/api/python/bdist" -name "*cp$pyver*.whl")
+        if test -n "$WHL"; then
+            # Starting in 51.2.1 < GAMS <= 53.1, GAMS bundles wheels
+            $PYTHON_EXE -m pip install "$WHL"
+        elif test -e "$GAMS_DIR/apifiles/Python/api_$pyver"; then
             echo "Installing GAMS Python bindings"
-            pushd $GAMS_DIR/apifiles/Python/api$py_ver
+            pushd "$GAMS_DIR/apifiles/Python/api_$pyver"
             $PYTHON_EXE setup.py install
             popd
+        else
+            $PYTHON_EXE -m pip install gamspy gamspy-highs gamspy-ipopt
         fi
 
     - name: Install BARON
