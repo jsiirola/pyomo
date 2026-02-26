@@ -350,6 +350,8 @@ class BARONSHELL(SystemCallSolver):
         # Process model and solver status from the Baron tim file
         #
         line = TimFile.readline().split()
+        print(line)
+        print(TimFile.read())
         try:
             # The list of information in the tim file depends on the
             # BARON version.  As we extract things in order, older
