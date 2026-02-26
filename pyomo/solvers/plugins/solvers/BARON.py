@@ -445,6 +445,8 @@ class BARONSHELL(SystemCallSolver):
             results.solver.termination_message = (
                 'Run terminated because of a licensing error.'
             )
+        else:
+            raise DeveloperError("Unexpected BARON solver status: {solver_status}")
 
         if model_status == '1':
             soln.status = SolutionStatus.optimal
@@ -459,6 +461,8 @@ class BARONSHELL(SystemCallSolver):
             soln.status = SolutionStatus.feasible
         elif model_status == '5':
             soln.status = SolutionStatus.unknown
+        else:
+            raise DeveloperError("Unexpected BARON model status: {model_status}")
 
         #
         # Process BARON results file
