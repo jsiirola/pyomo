@@ -569,7 +569,7 @@ jobs:
     - name: Install GAMS Python bindings
       if: ${{ ! matrix.slim }}
       run: |
-        GAMS_DIR="${env:TPL_DIR}/gams"
+        GAMS_DIR="$TPL_DIR/gams"
         pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
         WHL=$(find "$GAMS_DIR/api/python/bdist" -name "*cp$pyver*.whl")
         if test -n "$WHL"; then
