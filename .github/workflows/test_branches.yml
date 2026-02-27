@@ -524,9 +524,9 @@ jobs:
         $GAMS_DIR = "${env:TPL_DIR}/gams"
         echo "$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" `
+        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
+        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
@@ -566,7 +566,7 @@ jobs:
     - name: Install GAMS Python bindings
       if: ${{ ! matrix.slim }}
       run: |
-        GAMS_DIR="$TPL_DIR/gams"
+        GAMS_DIR="${env:TPL_DIR}/gams"
         NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
         echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
