@@ -477,8 +477,7 @@ jobs:
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
-        NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
+        echo "PYOMO_PATH=$IPOPT_DIR:$PYOMO_PATH" >> $GITHUB_ENV
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
@@ -528,6 +527,10 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        # Note: we put GAMS_DIR at the *end* of PYOMO_PATH so explicitly
+        #    installed solvers will be found first.
+        echo "PYOMO_PATH=${env:PYOMO_PATH}:$GAMS_DIR" | `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
         $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/52.5.0"
@@ -567,19 +570,19 @@ jobs:
       if: ${{ ! matrix.slim }}
       run: |
         GAMS_DIR="${env:TPL_DIR}/gams"
-        NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
         WHL=$(find "$GAMS_DIR/api/python/bdist" -name "*cp$pyver*.whl")
         if test -n "$WHL"; then
             # Starting in 51.2.1 < GAMS <= 53.1, GAMS bundles wheels
+            echo "Installing GAMS Python bindings from wheel"
             $PYTHON_EXE -m pip install "$WHL"
         elif test -e "$GAMS_DIR/apifiles/Python/api_$pyver"; then
-            echo "Installing GAMS Python bindings"
+            echo "Installing GAMS Python bindings using setup.py"
             pushd "$GAMS_DIR/apifiles/Python/api_$pyver"
             $PYTHON_EXE setup.py install
             popd
         else
+            echo "Installing GAMS Python bindings from PyPI"
             $PYTHON_EXE -m pip install gamspy gamspy-highs gamspy-ipopt
         fi
 
@@ -590,16 +593,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $CURRENT_PYOMO_PATH="${env:PYOMO_PATH}"
-        # Prepend BARON_DIR with appropriate path separator
-        if ( "${{matrix.TARGET}}" -eq "win" ) {
-            $PATH_SEPARATOR = ";"
-        } else {
-            $PATH_SEPARATOR = ":"
-        }
-        $NEW_PYOMO_PATH = "$BARON_DIR$PATH_SEPARATOR$CURRENT_PYOMO_PATH"
-        echo "New PYOMO_PATH: $NEW_PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" | `
+        echo "PYOMO_PATH=$BARON_DIR:${env:PYOMO_PATH}" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -635,8 +629,7 @@ jobs:
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
-        NEW_PYOMO_PATH="$GJH_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
+        echo "PYOMO_PATH=$GJH_DIR:$PYOMO_PATH" >> $GITHUB_ENV
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
