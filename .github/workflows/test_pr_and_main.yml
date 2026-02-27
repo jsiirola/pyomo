@@ -689,6 +689,8 @@ jobs:
             cd $INSTALL_DIR
             unzip -q $INSTALLER
             cd gjh_asl_json-master/Thirdparty
+            # Patch get.ASL to use curl
+            sed -i 's/wget \(.*\)/curl \1 > solvers.tgz/' get.ASL
             ./get.ASL
             cd ..
             make
