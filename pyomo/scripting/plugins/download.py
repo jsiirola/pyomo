@@ -49,10 +49,18 @@ class GroupDownloader:
             while attempt <= args.retry:
                 try:
                     ext = DownloadFactory(target, downloader=self.downloader)
-                    if hasattr(ext, "skip") and ext.skip():
+                    if getattr(ext, "skip", bool)():
+                        # If the extension has a "skip" attribute, and
+                        # calling it returns Truth, then mark this as a
+                        # skipped download and move on.
                         result = "SKIP"
                     else:
-                        ext()
+                        # If the extension has a __cell__(), then call
+                        # it.  Otherwise, assume all went well (e.g.,
+                        # the registered extension was actually a
+                        # function not a type -- and it was called when
+                        # we "created" it in the Factory call above).
+                        getattr(ext, '__call__', bool)()
                         result = " OK "
 
                     # Normal completion: SKIP or OK.  Either way, break
