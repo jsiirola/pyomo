@@ -95,13 +95,13 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: 3.13
+          python: 3.12
           test_docs: 1
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.14
+          python: 3.13
           test_docs: 1
           TARGET: win
           PYENV: conda
