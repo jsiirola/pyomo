@@ -70,16 +70,17 @@ class GroupDownloader:
 
                 except SystemExit:
                     _info = sys.exc_info()
-                    _cls = 'NoneType' if _info[0] is None else _info[0].__name__
-                    logger.error(f"{_cls}: {_info[1]}")
                     rc = 2
                 except Exception:
                     _info = sys.exc_info()
-                    _cls = 'NoneType' if _info[0] is None else _info[0].__name__
-                    logger.error(f"{_cls}: {_info[1]}")
                     rc = 1
 
                 # Note: we *only* get here if the downloader raised an exception
+                _cls = 'NoneType' if _info[0] is None else _info[0].__name__
+                logger.error(f"{_cls}: {_info[1]}")
+                # Release the stack frame...
+                _info = None
+
                 attempt += 1
                 if attempt <= args.retry:
                     logger.info(
