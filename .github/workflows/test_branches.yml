@@ -568,16 +568,21 @@ jobs:
         GAMS_DIR="$TPL_DIR/gams"
         pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
         WHL=$(find "$GAMS_DIR/api/python/bdist" -name "*cp$pyver*.whl")
+        TRY_PYPI=0
+        set +e
         if test -n "$WHL"; then
             # Starting in 51.2.1 < GAMS <= 53.1, GAMS bundles wheels
             echo "Installing GAMS Python bindings from wheel"
-            $PYTHON_EXE -m pip install "$WHL"
+            $PYTHON_EXE -m pip install "$WHL" || TRY_PYPI=1
         elif test -e "$GAMS_DIR/apifiles/Python/api_$pyver"; then
             echo "Installing GAMS Python bindings using setup.py"
             pushd "$GAMS_DIR/apifiles/Python/api_$pyver"
-            $PYTHON_EXE setup.py install
+            $PYTHON_EXE setup.py install || TRY_PYPI=1
             popd
         else
+            TRY_PYPI=1
+        fi
+        if test $TRY_PYPI -ne 0; then
             echo "Installing GAMS Python bindings from PyPI"
             $PYTHON_EXE -m pip install gamspy gamspy-highs gamspy-ipopt
         fi
