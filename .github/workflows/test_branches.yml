@@ -138,6 +138,11 @@ jobs:
           TARGET: win
           PYENV: pip
 
+        - os: ubuntu-latest
+          python: 'pypy-3.11'
+          TARGET: linux
+          PYENV: pip
+
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
