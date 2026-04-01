@@ -751,7 +751,6 @@ jobs:
         export PATH=$PYOMO_PATH
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
-            pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
