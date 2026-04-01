@@ -139,7 +139,8 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 'pypy-3.11'
+          # Disallow 7.3.21 due to https://github.com/pypy/pypy/issues/5388
+          python: 'pypy3.11 !=pypy-3.11-v7.3.21'
           TARGET: linux
           PYENV: pip
 
