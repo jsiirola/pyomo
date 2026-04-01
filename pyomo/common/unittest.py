@@ -1075,7 +1075,7 @@ class BaselineTestDriver:
             rc = subprocess.run(
                 ['bash', bname],
                 stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
                 cwd=_dir,
                 env=_env,
             )
