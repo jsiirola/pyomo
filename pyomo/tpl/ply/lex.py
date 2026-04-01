@@ -1089,7 +1089,7 @@ def lex(module=None, debug=False, optimize=False, lextab='lextab',
 # This runs the lexer as a main program
 # -----------------------------------------------------------------------------
 
-def runmain(lexer=None, data=None):
+def _run_lexer_to_stdout(lexer=None, data=None):
     if not data:
         try:
             filename = sys.argv[1]
