@@ -103,7 +103,6 @@ def main_console_script():
     try:
         return ans.errorcode
     except AttributeError:
-        raise
         return ans
 
 
