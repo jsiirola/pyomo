@@ -67,6 +67,7 @@ jobs:
         sudo resolvectl dns eth0 1.1.1.1 1.0.0.1 $DNS
         echo "## resolvectl status (updated)"
         sudo resolvectl status
+        sudo resolvectl flush
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
