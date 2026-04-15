@@ -81,7 +81,10 @@ jobs:
         config: ./.github/workflows/typos.toml
     - name: Install and run urlchecker
       run: |
+        # Install fake-useragent, per urlchecker README
+        pip install git+https://github.com/danger89/fake-useragent.git
         pip install --upgrade urlchecker
+        sudo resolvectl status
         SOURCE_PATH=.
         # Exclude:
         #  - Jenkins because it's behind a firewall
@@ -95,9 +98,10 @@ jobs:
         EX_PAT="https://www.gnu.org"
         EX_PAT+=",https://lpsolve.sourceforge.net/"
         EX_PAT+=",https://www.mathworks.com/"
+        export URLCHECKER_WORKERS=9
         urlchecker check \
             --file-types ".md,.rst,.py" \
-            --no-print \
+            --no-check-certs \
             --verbose \
             --retry-count 3 \
             --timeout 60 \
