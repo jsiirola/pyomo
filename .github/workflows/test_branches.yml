@@ -82,8 +82,7 @@ jobs:
     - name: Install and run urlchecker
       run: |
         # Install fake-useragent, per urlchecker README
-        pip install git+https://github.com/danger89/fake-useragent.git
-        pip install --upgrade urlchecker
+        pip install fake-useragent urlchecker
         sudo resolvectl status
         SOURCE_PATH=.
         # Exclude:
@@ -98,7 +97,8 @@ jobs:
         EX_PAT="https://www.gnu.org"
         EX_PAT+=",https://lpsolve.sourceforge.net/"
         EX_PAT+=",https://www.mathworks.com/"
-        export URLCHECKER_WORKERS=9
+        export URLCHECKER_WORKERS=10
+        #export PYTHONWARNINGS=ignore:InsecureRequestWarning
         urlchecker check \
             --file-types ".md,.rst,.py" \
             --no-check-certs \
