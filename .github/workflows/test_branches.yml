@@ -98,16 +98,17 @@ jobs:
         EX_PAT+=",https://lpsolve.sourceforge.net/"
         EX_PAT+=",https://www.mathworks.com/"
         export URLCHECKER_WORKERS=10
-        #export PYTHONWARNINGS=ignore:InsecureRequestWarning
+        export PYTHONWARNINGS=ignore:InsecureRequestWarning
         urlchecker check \
             --file-types ".md,.rst,.py" \
             --no-check-certs \
+            --no-print \
             --verbose \
             --retry-count 3 \
             --timeout 60 \
             --exclude-urls "$EX_URL" \
             --exclude-patterns "$EX_PAT" \
-            $SOURCE_PATH || exit 1
+            $SOURCE_PATH
 
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
