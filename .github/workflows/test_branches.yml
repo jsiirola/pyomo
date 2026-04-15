@@ -67,6 +67,7 @@ jobs:
         sudo resolvectl dns eth0 1.1.1.1 1.0.0.1
         echo "## resolvectl status (updated)"
         sudo resolvectl flush-caches
+        sudo resolvectl query github.com
         sudo resolvectl status
     - name: Black Formatting Check
       run: |
