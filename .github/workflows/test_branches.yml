@@ -81,7 +81,7 @@ jobs:
         config: ./.github/workflows/typos.toml
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
-      uses: urlstechie/urlchecker-action@0.0.34
+      uses: urlstechie/urlchecker-action@0.0.35
       with:
         # A comma-separated list of file types to cover in the URL checks
         file_types: .md,.rst,.py
