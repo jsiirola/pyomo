@@ -101,7 +101,7 @@ jobs:
             --retry-count 3 \
             --timeout 60 \
             --exclude-urls "$EX_URL" \
-            --exclude-patterns "$EX_PAT"
+            --exclude-patterns "$EX_PAT" || exit 1
 
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
