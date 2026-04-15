@@ -52,6 +52,10 @@ jobs:
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
+    - Interrogate env
+      run: |
+        cat /etc/resolv.conf
+        route
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
       uses: urlstechie/urlchecker-action@0.0.34
