@@ -63,6 +63,10 @@ jobs:
         #sudo echo  "nameserver 1.0.0.1" >> /etc/resolv.conf
         echo "## resolvectl status"
         sudo resolvectl status
+        sudo resolvectl dns 1.1.1.1
+        sudo resolvectl dns 1.0.0.1
+        echo "## resolvectl status (updated)"
+        sudo resolvectl status
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
