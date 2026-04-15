@@ -79,9 +79,30 @@ jobs:
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
-    - name: Upgrade urlchecker
+    - name: Install and run urlchecker
       run: |
         pip upgrade urlchecker
+        # Exclude:
+        #  - Jenkins because it's behind a firewall
+        #  - RTD because a magically-generated string triggers failures
+        EX_URL="https://pyomo-jenkins.sandia.gov/"
+        EX_URL+=",https://pyomo.readthedocs.io/en/%s/errors.html"
+        # Exclude:
+        #  - All gnu.org links because they consistently fail the checker
+        #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
+        #  - All www.mathworks.com links because MathWorks appears to reject from GHA
+        EX_PAT="https://www.gnu.org"
+        EX_PAT+=",https://lpsolve.sourceforge.net/"
+        EX_PAT+=",https://www.mathworks.com/"
+        urlchecker check \
+            --file-types ".md,.rst,.py" \
+            --no-print \
+            --verbose \
+            --retry-count 3 \
+            --timeout 60 \
+            --exclude-urls "$EX_URL" \
+            --exclude-patterns "$EX_PAT"
+
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
       uses: urlstechie/urlchecker-action@0.0.34
