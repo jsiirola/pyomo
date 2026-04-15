@@ -81,7 +81,7 @@ jobs:
         config: ./.github/workflows/typos.toml
     - name: Install and run urlchecker
       run: |
-        pip upgrade urlchecker
+        pip install --upgrade urlchecker
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
