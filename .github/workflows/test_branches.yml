@@ -61,6 +61,8 @@ jobs:
         # Add cloudfare as backup nameservers
         #sudo echo  "nameserver 1.1.1.1" >> /etc/resolv.conf
         #sudo echo  "nameserver 1.0.0.1" >> /etc/resolv.conf
+        echo "## resolvectl status"
+        sudo resolvectl status
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
