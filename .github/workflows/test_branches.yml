@@ -82,6 +82,7 @@ jobs:
     - name: Install and run urlchecker
       run: |
         pip install --upgrade urlchecker
+        SOURCE_PATH=.
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
@@ -101,7 +102,8 @@ jobs:
             --retry-count 3 \
             --timeout 60 \
             --exclude-urls "$EX_URL" \
-            --exclude-patterns "$EX_PAT" || exit 1
+            --exclude-patterns "$EX_PAT" \
+            $SOURCE_PATH || exit 1
 
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
