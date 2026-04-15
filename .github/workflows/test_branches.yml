@@ -60,8 +60,8 @@ jobs:
         echo "## route"
         route
         echo "## /etc/systemd/resolved.conf.d/dns_servers.conf"
-        ls -l /etc/systemd/resolved.conf.d/dns_servers.conf
-        cat /etc/systemd/resolved.conf.d/dns_servers.conf
+        ls -l /etc/systemd/resolved.conf
+        cat /etc/systemd/resolved.conf
         echo "."
         # Recreate /etc/resolv.conf so we can append to it
         sudo cp /etc/resolv.conf /etc/resolv.conf.original
