@@ -64,7 +64,7 @@ jobs:
         echo "## resolvectl status"
         sudo resolvectl status
         DNS=`sudo resolvectl status | grep 'DNS Servers:' | cut -d: -f2`
-        sudo resolvectl dns all 1.1.1.1 1.0.0.1 $DNS
+        sudo resolvectl dns eth0 1.1.1.1 1.0.0.1 $DNS
         echo "## resolvectl status (updated)"
         sudo resolvectl status
     - name: Black Formatting Check
