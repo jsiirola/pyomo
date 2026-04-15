@@ -52,7 +52,7 @@ jobs:
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
-    - Interrogate env
+    - name: Interrogate env
       run: |
         cat /etc/resolv.conf
         route
