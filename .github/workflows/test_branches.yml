@@ -54,8 +54,15 @@ jobs:
         config: ./.github/workflows/typos.toml
     - name: Interrogate env
       run: |
+        echo "### resolv.conf"
+        ls -l /etc/resolvv.conf
         cat /etc/resolv.conf
+        echo "## route"
         route
+        echo "## /etc/systemd/resolved.conf.d/dns_servers.conf"
+        ls -l /etc/systemd/resolved.conf.d/dns_servers.conf
+        cat /etc/systemd/resolved.conf.d/dns_servers.conf
+        echo "."
         # Recreate /etc/resolv.conf so we can append to it
         sudo mv /etc/resolv.conf /etc/resolv.conf.original
         sudo cat /etc/resolv.conf.original > /etc/resolv.conf
