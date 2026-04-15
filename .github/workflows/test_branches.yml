@@ -56,8 +56,12 @@ jobs:
       run: |
         cat /etc/resolv.conf
         route
-        sudo echo  "nameserver 1.1.1.2" >> /etc/resolv.conf
-        sudo echo  "nameserver 1.0.0.2" >> /etc/resolv.conf
+        # Recreate /etc/resolv.conf so we can append to it
+        sudo mv /etc/resolv.conf /etc/resolv.conf.original
+        sudo cat /etc/resolv.conf.original > /etc/resolv.conf
+        # Add cloudfare as backup nameservers
+        sudo echo  "nameserver 1.1.1.1" >> /etc/resolv.conf
+        sudo echo  "nameserver 1.0.0.1" >> /etc/resolv.conf
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
       uses: urlstechie/urlchecker-action@0.0.34
