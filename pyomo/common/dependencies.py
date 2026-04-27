@@ -168,7 +168,18 @@ class DeferredImportModule:
         _mod = self._indicator_flag._module
         if self._submodule_name:
             for _sub in self._submodule_name[1:].split('.'):
-                _mod = getattr(_mod, _sub)
+                try:
+                    _mod = getattr(_mod, _sub)
+                except AttributeError:
+                    # It is possible that the submodule needs to be
+                    # explicitly imported.  Try that.
+                    try:
+                        _mod = importlib.import_module(_mod.__name__ + '.' + _sub)
+                        import_fail = False
+                    except ImportError:
+                        import_fail = True
+                    if import_fail:
+                        raise  # the original attribute error
         return getattr(_mod, attr)
 
     def __getstate__(self):
@@ -375,21 +386,29 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                 self._available = False
                 raise
 
-            # If this module was not found, then we need to check for
-            # deferred submodules and resolve them as well
-            if self._deferred_submodules and type(self._module) is ModuleUnavailable:
-                info = self._module._moduleunavailable_info_
+            # If this module had declared deferred submodules, then
+            # resolve them as well.
+            if self._deferred_submodules:
                 for submod in self._deferred_submodules:
                     refmod = self._module
                     for name in submod.split('.')[1:]:
                         try:
                             refmod = getattr(refmod, name)
                         except DeferredImportError:
+                            info = self._module._moduleunavailable_info_
                             setattr(
                                 refmod,
                                 name,
                                 ModuleUnavailable(refmod.__name__ + submod, *info),
                             )
+                            refmod = getattr(refmod, name)
+                        except AttributeError:
+                            # Some submodules must be explicitly
+                            # imported (i.e., they are not automatically
+                            # imported by the outer module's
+                            # __init__.py).  Try the import and then
+                            # re-attempt the getattr.
+                            importlib.import_module(refmod.__name__ + '.' + name)
                             refmod = getattr(refmod, name)
 
             # Replace myself in the original globals() where I was
@@ -955,36 +974,10 @@ def _finalize_yaml(module, available):
         yaml_load_args['Loader'] = module.SafeLoader
 
 
-def _finalize_ctypes(module, available):
-    # ctypes.util must be explicitly imported (and fileutils assumes
-    # this has already happened)
-    import ctypes.util
-
-
-def _finalize_scipy(module, available):
-    if available:
-        # Import key subpackages that we will want to assume are present
-        import scipy.stats
-
-        # As of scipy 1.6.0, importing scipy.stats causes the following
-        # to be automatically imported.  However, we will still
-        # explicitly import them here to guard against potential future
-        # changes in scipy.
-        import scipy.integrate
-        import scipy.sparse
-        import scipy.spatial
-
-
 def _finalize_pympler(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
         import pympler.muppy
-
-
-def _finalize_packaging(module, available):
-    if available:
-        # Import key subpackages that we will want to assume are present
-        import packaging.version
 
 
 def _finalize_matplotlib(module, available):
@@ -999,12 +992,6 @@ def _finalize_matplotlib(module, available):
     import matplotlib.pyplot
     import matplotlib.pylab
     import matplotlib.backends
-
-
-def _finalize_mpi4py(module, available):
-    if not available:
-        return
-    import mpi4py.MPI
 
 
 def _finalize_numpy(np, available):
@@ -1081,23 +1068,31 @@ def _pyutilib_importer():
 
 
 with declare_modules_as_importable(globals()):
+    # Standard libraries that we will unconditionally import.  We are
+    # importing it here so that import timing is better reported from
+    # pyomo.environ.tests.test_environ (hence the imports are not
+    # necessarily alphebetical)
+    #
+    # Pickle is used by Pyomo and by multiprocessing
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+    # multiprocessing is unconditionally needed by capture_output
+    import multiprocessing
+
     # Standard libraries that are slower to import and not strictly required
     # on all platforms / situations.
-    ctypes, _ = attempt_import(
-        'ctypes', deferred_submodules=['util'], callback=_finalize_ctypes
-    )
-    multiprocessing, _ = attempt_import('multiprocessing')
+    ctypes, _ = attempt_import('ctypes', deferred_submodules=['util', 'wintypes'])
     random, _ = attempt_import('random')
 
     # Necessary for minimum version checking for other optional dependencies
     packaging, packaging_available = attempt_import(
-        'packaging', deferred_submodules=['version'], callback=_finalize_packaging
+        'packaging', deferred_submodules=['version']
     )
     # Commonly-used optional dependencies
     dill, dill_available = attempt_import('dill')
-    mpi4py, mpi4py_available = attempt_import(
-        'mpi4py', deferred_submodules=['MPI'], callback=_finalize_mpi4py
-    )
+    mpi4py, mpi4py_available = attempt_import('mpi4py', deferred_submodules=['MPI'])
     networkx, networkx_available = attempt_import('networkx')
     numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
     pandas, pandas_available = attempt_import('pandas')
@@ -1113,9 +1108,7 @@ with declare_modules_as_importable(globals()):
         'pyutilib', importer=_pyutilib_importer
     )
     scipy, scipy_available = attempt_import(
-        'scipy',
-        callback=_finalize_scipy,
-        deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'],
+        'scipy', deferred_submodules=['stats', 'sparse', 'spatial', 'integrate']
     )
     yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 
@@ -1127,8 +1120,3 @@ with declare_modules_as_importable(globals()):
         deferred_submodules=['pyplot', 'pylab', 'backends'],
         catch_exceptions=(ImportError, RuntimeError),
     )
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
