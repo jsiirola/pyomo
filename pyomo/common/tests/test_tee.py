@@ -21,6 +21,7 @@ from io import StringIO, BytesIO
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 from pyomo.common.tempfiles import TempfileManager
+import pyomo.common.dependencies as deps
 import pyomo.common.tee as tee
 import pyomo.common.unittest as unittest
 
@@ -584,32 +585,35 @@ class TestCapture(unittest.TestCase):
         save_poll = tee._threading_deadlock
         tee._threading_deadlock = 0.01
 
+        # Ensure multiprocessing is loaded:
+        deps.multiprocessing.Lock
+
         co = tee.capture_output()
         try:
-            tee.capture_output.startup_shutdown.acquire()
+            deps.capture_output_lock.acquire()
             with self.assertRaisesRegex(
                 DeveloperError, "Deadlock starting capture_output"
             ):
                 with tee.capture_output():
                     pass
-            tee.capture_output.startup_shutdown.release()
+            deps.capture_output_lock.release()
 
             with self.assertRaisesRegex(
                 DeveloperError, "Deadlock closing capture_output"
             ):
                 with co:
-                    tee.capture_output.startup_shutdown.acquire()
+                    deps.capture_output_lock.acquire()
         finally:
             tee._threading_deadlock = save_poll
-            # We would like to just test if out Lock was aquired and
+            # We would like to just test if out Lock was acquired and
             # then release it if necessary.  Unfortunately,
             # multiprocessing.Lock doesn't support locked(), so we will
             # just catch and eat the error for releasing an unlocked
             # lock.
             #
-            ## if tee.capture_output.startup_shutdown.locked():
+            ## if deps.capture_output_lock.locked():
             try:
-                tee.capture_output.startup_shutdown.release()
+                deps.capture_output_lock.release()
             except ValueError:
                 pass
             co.reset()
@@ -718,6 +722,22 @@ class TestCapture(unittest.TestCase):
             self.assertEqual("", LOG.getvalue())
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
+
+    def test_capture_output_override(self):
+        capture1 = tee.capture_output(capture_fd=True)
+        self.assertTrue(capture1.capture_fd)
+        with capture1 as OUT1:
+            try:
+                orig = tee.OVERRIDE_CAPTURE_OUTPUT
+                tee.OVERRIDE_CAPTURE_OUTPUT = tee.CaptureOutputMode.DISABLE
+                capture2 = tee.capture_output(capture_fd=True)
+                with capture2 as OUT2:
+                    self.assertFalse(capture2.capture_fd)
+                    print("Hello, World")
+                self.assertEqual(OUT2.getvalue(), "")
+            finally:
+                tee.OVERRIDE_CAPTURE_OUTPUT = orig
+        self.assertEqual(OUT1.getvalue(), "Hello, World\n")
 
 
 class BufferTester:

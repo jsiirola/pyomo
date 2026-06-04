@@ -22,12 +22,8 @@ import sys
 import threading
 import time
 
-# Note: multiprocessing is very slow to import, but we need to make sure
-# that the startup_shutdown Lock is created *before* the user spawns any
-# subprocesses.  Therefore, we will bite the bullet and import it so
-# we can create the Lock immediately when we import this module.
-import multiprocessing
-
+import pyomo.common.dependencies as dependencies
+from pyomo.common.enums import CaptureOutputMode
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 from pyomo.common.shutdown import python_is_shutting_down
@@ -61,6 +57,8 @@ except ImportError:
     _peek_available = False
 
 logger = logging.getLogger(__name__)
+
+OVERRIDE_CAPTURE_OUTPUT = CaptureOutputMode.NORMAL
 
 
 class _SignalFlush:
@@ -305,14 +303,14 @@ class capture_output:
 
     """
 
-    startup_shutdown = multiprocessing.Lock()
-
     def __init__(self, output=None, capture_fd=False):
         self.output = output
         self.output_stream = None
         self.old = None
         self.tee = None
-        self.capture_fd = capture_fd
+        self.capture_fd = capture_fd and (
+            OVERRIDE_CAPTURE_OUTPUT & CaptureOutputMode.ENABLE_FD_CAPTURE
+        )
         self.context_stack = []
 
     def _enter_context(self, cm, prior_to=None):
@@ -352,7 +350,7 @@ class capture_output:
         return FAIL
 
     def __enter__(self):
-        if not capture_output.startup_shutdown.acquire(timeout=_threading_deadlock):
+        if not dependencies.capture_output_lock.acquire(timeout=_threading_deadlock):
             # This situation *shouldn't* happen.  If it does, it is
             # unlikely that the user can fix it (or even debug it).
             # Instead they should report it back to us.
@@ -370,17 +368,17 @@ class capture_output:
         try:
             return self._enter_impl()
         finally:
-            capture_output.startup_shutdown.release()
+            dependencies.capture_output_lock.release()
 
     def __exit__(self, et, ev, tb):
-        if not capture_output.startup_shutdown.acquire(timeout=_threading_deadlock):
+        if not dependencies.capture_output_lock.acquire(timeout=_threading_deadlock):
             # See comments & breadcrumbs in __enter__() above.
             if not python_is_shutting_down():
                 raise DeveloperError("Deadlock closing capture_output")
         try:
             return self._exit_impl(et, ev, tb)
         finally:
-            capture_output.startup_shutdown.release()
+            dependencies.capture_output_lock.release()
 
     def _enter_impl(self):
         self.old = (sys.stdout, sys.stderr)
@@ -495,8 +493,11 @@ class capture_output:
             # exception.
             self._exit_context_stack(*sys.exc_info())
             raise
-        sys.stdout = self.tee.STDOUT
-        sys.stderr = self.tee.STDERR
+        if OVERRIDE_CAPTURE_OUTPUT & CaptureOutputMode.ENABLE_STREAM_CAPTURE:
+            sys.stdout = self.tee.STDOUT
+            sys.stderr = self.tee.STDERR
+        else:
+            self.old = None
         buf = self.tee.ostreams
         if len(buf) == 1:
             buf = buf[0]

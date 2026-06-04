@@ -12,6 +12,7 @@ import importlib
 import importlib.util
 import logging
 import sys
+import threading
 import warnings
 
 from collections.abc import Mapping
@@ -964,6 +965,11 @@ class declare_modules_as_importable:
 # Common optional dependencies used throughout Pyomo
 #
 
+#: lock for deconflicting access to capturing the process file
+#: descriptors.  This starts as a threading.Lock, unless the environment
+#: imports multiprocessing, in which case, it is upgraded to a
+#: multiprocessing lock.
+capture_output_lock = threading.Lock()
 yaml_load_args = {}
 
 
@@ -972,6 +978,24 @@ def _finalize_yaml(module, available):
     # not set
     if available and hasattr(module, 'SafeLoader'):
         yaml_load_args['Loader'] = module.SafeLoader
+
+
+def _finalize_ctypes(module, available):
+    # ctypes.util must be explicitly imported (and fileutils assumes
+    # this has already happened)
+    import ctypes.util
+
+
+def _finalize_multiprocessing(module, available):
+    # Note: multiprocessing is very slow to import, but we need to make
+    # sure that the capture_output_lock Lock is created *before* the
+    # user spawns any subprocesses.  tee.capture_output will look here
+    # for the lock, which will start out as a "dummy" lock, and then
+    # will be updated to a multiprocessing.Lock when the first module
+    # triggers the multiprocessing import.
+
+    global capture_output_lock
+    capture_output_lock = module.Lock()
 
 
 def _finalize_pympler(module, available):
@@ -1078,12 +1102,15 @@ with declare_modules_as_importable(globals()):
         import cPickle as pickle
     except ImportError:
         import pickle
-    # multiprocessing is unconditionally needed by capture_output
-    import multiprocessing
 
     # Standard libraries that are slower to import and not strictly required
     # on all platforms / situations.
-    ctypes, _ = attempt_import('ctypes', deferred_submodules=['util', 'wintypes'])
+    ctypes, _ = attempt_import(
+        'ctypes', deferred_submodules=['util', 'wintypes'], callback=_finalize_ctypes
+    )
+    multiprocessing, _ = attempt_import(
+        'multiprocessing', callback=_finalize_multiprocessing
+    )
     random, _ = attempt_import('random')
 
     # Necessary for minimum version checking for other optional dependencies
