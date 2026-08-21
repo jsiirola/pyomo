@@ -680,35 +680,35 @@ class Constraint(ActiveIndexedComponent):
                 # The index is coming in externally; we need to validate it
                 for index in rule.indices():
                     self[index] = rule(block, index)
+                return
             elif not self.index_set().isfinite():
                 # If the index is not finite, then we cannot iterate
                 # over it.  Since the rule doesn't provide explicit
                 # indices, then there is nothing we can do (the
                 # assumption is that the user will trigger specific
                 # indices to be created at a later time).
-                pass
-            else:
-                if TEMPLATIZE_CONSTRAINTS:
-                    try:
-                        template_info = templatize_constraint(self)
-                        if self.is_indexed():
-                            comp = weakref_ref(self)
-                            self._data = {
-                                idx: TemplateConstraintData(template_info, comp, idx)
-                                for idx in self.index_set()
-                            }
-                        else:
-                            assert self.__class__ is ScalarConstraint
-                            self.__class__ = TemplateScalarConstraint
-                            self._expr = template_info
-                            self._data = {None: self}
-                        return
-                    except TemplateExpressionError:
-                        pass
+                return
+            elif TEMPLATIZE_CONSTRAINTS:
+                try:
+                    template_info = templatize_constraint(self)
+                    if self.is_indexed():
+                        comp = weakref_ref(self)
+                        self._data = {
+                            idx: TemplateConstraintData(template_info, comp, idx)
+                            for idx in self.index_set()
+                        }
+                    else:
+                        assert self.__class__ is ScalarConstraint
+                        self.__class__ = TemplateScalarConstraint
+                        self._expr = template_info
+                        self._data = {None: self}
+                    return
+                except TemplateExpressionError:
+                    pass
 
-                # Bypass the index validation and create the member directly
-                for index in self.index_set():
-                    self._setitem_when_not_present(index, rule(block, index))
+            # Bypass the index validation and create the member directly
+            for index in self.index_set():
+                self._setitem_when_not_present(index, rule(block, index))
         except Exception:
             err = sys.exc_info()[1]
             logger.error(
