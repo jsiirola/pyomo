@@ -1177,17 +1177,24 @@ class _template_iter_manager:
             self._class.__iter__ = self._old_iter
 
     class _pause_template_iter_manager:
-        __slots__ = ('iter_manager',)
+        __slots__ = ('iter_manager', 'state')
 
         def __init__(self, iter_manager):
             self.iter_manager = iter_manager
+            self.state = None
 
         def __enter__(self):
-            self.iter_manager.release()
+            im = self.iter_manager
+            self.state = im.context, im.iters
+            im.release()
+            im.context = None
+            im.iters = None
             return self
 
         def __exit__(self, et, ev, tb):
-            self.iter_manager.acquire()
+            im = self.iter_manager
+            im.context, im.iters = self.state
+            im.acquire()
 
     def __init__(self):
         self.paused = True
@@ -1225,8 +1232,16 @@ class _template_iter_manager:
         self.context = None
         self.iters = None
 
-    def pause(self):
-        if self.paused:
+    def pause(self, test=None):
+        """Pause the TemplateIterManager's overrides of set iteration
+
+        Parameters
+        ----------
+        test : bool
+            If false, then do not actually pause the TemplateIterManager
+
+        """
+        if self.paused or (test is not None and not test):
             return nullcontext()
         else:
             return self._pause_template_iter_manager(self)
