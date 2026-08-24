@@ -540,7 +540,7 @@ class BlockData(ActiveComponentData):
         super(BlockData, self).__setattr__('_ctypes', {})
         super(BlockData, self).__setattr__('_decl', {})
         super(BlockData, self).__setattr__('_decl_order', [])
-        self._private_data = None
+        super(BlockData, self).__setattr__('_private_data', None)
 
     def __getattr__(self, val) -> Union[Component, IndexedComponent, Any]:
         if val in ModelComponentFactory:
@@ -738,11 +738,10 @@ class BlockData(ActiveComponentData):
 
     def set_value(self, val):
         raise RuntimeError(textwrap.dedent("""
-                Block components do not support assignment or set_value().
-                Use the transfer_attributes_from() method to transfer the
-                components and public attributes from one block to another:
-                    model.b[1].transfer_attributes_from(other_block)
-                """).strip())
+            Block components do not support assignment or set_value().
+            Use the transfer_attributes_from() method to transfer the
+            components and public attributes from one block to another:
+            """).strip())
 
     def clear(self):
         for name in self.component_map().keys():
@@ -921,8 +920,8 @@ class BlockData(ActiveComponentData):
 
     @contextmanager
     def _declare_reserved_components(self):
-        # Temporarily mask the class reserved words like with a local
-        # instance attribute
+        # Temporarily mask the class reserved words list with a local
+        # (empty) instance attribute
         self._Block_reserved_words = ()
         yield
         del self._Block_reserved_words
@@ -2457,6 +2456,8 @@ def declare_custom_block(name, new_ctype=None, rule=None):
     >>> type(s)
     <class 'IndexedFooBlock'>
 
+    ## Initializing custom Blocks
+
     It is frequently desirable for the custom class to have a default
     ``rule`` for constructing and populating new instances.  The default
     rule can be provided either as an explicit function or a string.  If
@@ -2505,6 +2506,9 @@ def declare_custom_block(name, new_ctype=None, rule=None):
 
         # If the default rule is a string, then replace it with a
         # function that will look up the attribute on the data class.
+        #
+        # Note: we defer the attribute resolution so that
+        # further-derived data classes can override the method.
         if type(rule) is str:
             comp._default_rule = _custom_block_rule_redirect(block_data, rule)
 
