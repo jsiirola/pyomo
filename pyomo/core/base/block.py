@@ -101,10 +101,10 @@ class _component_decorator:
         return _generic_component_decorator(self._component, self._block, *args, **kwds)
 
 
-class SubclassOf:
-    """This mocks up a tuple-like interface based on subclass relationship.
+class SubclassOf(AutoSlots.Mixin):
+    """This mocks up a set-like interface based on subclass relationship.
 
-    Instances of this class present a somewhat tuple-like interface for
+    Instances of this class present a somewhat set-like interface for
     use in PseudoMap ctype / descend_into.  The constructor takes a
     single ctype argument.  When used with PseudoMap (through Block APIs
     like component_objects()), it will match any ctype that is a
@@ -115,6 +115,8 @@ class SubclassOf:
         model.component_data_objects(Var, descend_into=SubclassOf(Block))
     """
 
+    __slots__ = ('__name__', 'ctype')
+
     def __init__(self, *ctype):
         self.ctype = ctype
         self.__name__ = 'SubclassOf(%s)' % (','.join(x.__name__ for x in ctype),)
@@ -124,9 +126,6 @@ class SubclassOf:
 
     def __len__(self):
         return 1
-
-    def __getitem__(self, item):
-        return self
 
     def __iter__(self):
         return iter((self,))
@@ -277,6 +276,7 @@ class PseudoMap(AutoSlots.Mixin):
             self._ctypes = ctype
         else:
             self._ctypes = set(ctype)
+            assert not any(t.__class__ is SubclassOf for t in self._ctypes)
         self._active = active
         self._sorted = SortComponents.ALPHABETICAL in SortComponents(sort)
 
