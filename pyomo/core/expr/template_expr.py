@@ -150,6 +150,12 @@ class GetItemExpression(ExpressionBase):
             raise AttributeError()
         return GetAttrExpression((self, attr))
 
+    def __getitem__(self, *idx):
+        ans = GetItemExpression(self.args + idx)
+        if all(is_constant(x) for x in ans.args[1:]):
+            return ans()
+        return ans
+
     def __iter__(self):
         return iter(value(self))
 
