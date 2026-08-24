@@ -592,6 +592,31 @@ class PartialInitializer(InitializerBase):
         return self._fcn(parent, idx, *args, **kwargs)
 
 
+class BlockTemplateInitializer(InitializerBase):
+    """Wrap an InitializerBase that masks (removes) some arguments"""
+
+    __slots__ = ('_fcn', '_index_set', '_mask')
+
+    def __init__(self, _fcn: InitializerBase, index_set):
+        self._fcn = _fcn
+        self._index_set = index_set
+        self._mask = slice(self._index_set.dimen, None)
+
+    def constant(self):
+        return False
+
+    def contains_indices(self):
+        return self._fcn.contains_indices()
+
+    def indices(self):
+        return itertools.product(self._index_set, self._fcn.indices())
+
+    def __call__(self, parent, idx, *args, **kwargs):
+        if idx.__class__ is not tuple:
+            idx = (idx,)
+        return self._fcn(parent, idx[self._mask], *args, **kwargs)
+
+
 _bound_sequence_types = collections.defaultdict(None.__class__)
 
 
