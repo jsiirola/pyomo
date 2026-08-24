@@ -2195,16 +2195,9 @@ class Block(ActiveIndexedComponent):
         #  to handle component construction.
         if data is not None:
             _BlockConstruction.data[id(self)] = data
+
         try:
-            if self.is_indexed():
-                # We can only populate Blocks with finite indexing sets
-                if self.index_set().isfinite() and (
-                    self._dense or self._rule is not None
-                ):
-                    for _idx in self.index_set():
-                        # Trigger population & call the rule
-                        self._getitem_when_not_present(_idx)
-            else:
+            if not self.is_indexed():
                 # We must check that any pre-existing components are
                 # constructed.  This catches the case where someone is
                 # building a Concrete model by building (potentially
@@ -2226,7 +2219,22 @@ class Block(ActiveIndexedComponent):
                     for name, obj in _predefined_components.items():
                         if not obj._constructed:
                             obj.construct(data.get(name, None))
-                # Trigger the (normal) initialization of the block
+            elif self._rule is not None and self._rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for _idx in rule.indices():
+                    # Trigger population & call the rule
+                    self[_idx]
+                return
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is that the user will trigger specific
+                # indices to be created at a later time).
+                return
+
+            for _idx in self.index_set():
+                # Trigger population & call the rule
                 self._getitem_when_not_present(_idx)
         finally:
             # We must allow that id(self) may no longer be in
