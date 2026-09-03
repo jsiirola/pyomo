@@ -251,8 +251,17 @@ class TempfileContextError(PyomoException, IndexError):
 
     """
 
+class TemplateError(PyomoException):
+    """Raised when a templatized component is accessed in a way that
+    violates templatization.
 
-class TemplateExpressionError(ValueError):
+    This error is typically trapped by Pyomo and used to signify that
+    templatization is invalid and Pyomo should fall back on explicitly
+    calling the relevant rule(s) for each index.
+
+    """
+
+class TemplateExpressionError(TemplateError, ValueError):
     """Special ValueError raised by getitem for template arguments
 
     This exception is triggered by the Pyomo expression system when
@@ -265,4 +274,4 @@ class TemplateExpressionError(ValueError):
 
     def __init__(self, template, *args, **kwds):
         self.template = template
-        super(TemplateExpressionError, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
