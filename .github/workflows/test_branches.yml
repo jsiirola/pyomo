@@ -105,6 +105,12 @@ jobs:
           TARGET: linux
           PYENV: pip
 
+        - os: ubuntu-latest
+          python: 3.15
+          test_docs: 1
+          TARGET: linux
+          PYENV: pip
+
         - os: macos-latest
           python: 3.12
           test_docs: 1
