@@ -184,6 +184,8 @@ jobs:
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        EXCLUDE="${{matrix.EXCLUDE}}"
+        echo "EXCLUDE=$EXCLUDE" | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
     #  uses: actions/cache@v5
