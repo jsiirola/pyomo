@@ -185,7 +185,8 @@ jobs:
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
         EXCLUDE="${{matrix.EXCLUDE}}"
-        echo "EXCLUDE=$EXCLUDE" | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        echo "EXCLUDE=$EXCLUDE" \
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
     #  uses: actions/cache@v5
@@ -317,6 +318,7 @@ jobs:
         if [[ ${{matrix.python}} == pypy* ]]; then
             EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
         fi
+        echo "EXCLUDE::${EXCLUDE}::EXCLUDE"
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
