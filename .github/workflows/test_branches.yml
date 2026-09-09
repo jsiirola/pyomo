@@ -309,6 +309,7 @@ jobs:
       if: matrix.PYENV == 'pip'
       shell: bash # DO NOT REMOVE: see note above
       run: |
+        set -x
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
         python -m pip install --cache-dir cache/pip --upgrade setuptools
@@ -318,13 +319,14 @@ jobs:
         if [[ ${{matrix.python}} == pypy* ]]; then
             EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
         fi
-        echo "EXCLUDE::${EXCLUDE}::EXCLUDE"
+        echo "EXCLUDE::$EXCLUDE::EXCLUDE"
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
             done
         fi
+        echo "EXCLUDE::$EXCLUDE::EXCLUDE"
         # For windows, cannot use newer setuptools because of APPSI compilation issues
         if test "${{matrix.TARGET}}" == 'win'; then
             PACKAGES="$PACKAGES setuptools<74.0.0"
