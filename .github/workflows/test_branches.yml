@@ -184,8 +184,7 @@ jobs:
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
-        EXCLUDE="${{matrix.EXCLUDE}}"
-        echo "EXCLUDE=$EXCLUDE" \
+        echo "EXCLUDE=${{matrix.EXCLUDE}}" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
@@ -319,14 +318,14 @@ jobs:
         if [[ ${{matrix.python}} == pypy* ]]; then
             EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
         fi
-        echo "EXCLUDE::$EXCLUDE::EXCLUDE"
+        echo "EXCLUDE::$EXCLUDE::$PACKAGES::EXCLUDE"
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
             done
         fi
-        echo "EXCLUDE::$EXCLUDE::EXCLUDE"
+        echo "EXCLUDE::$EXCLUDE::$PACKAGES::EXCLUDE"
         # For windows, cannot use newer setuptools because of APPSI compilation issues
         if test "${{matrix.TARGET}}" == 'win'; then
             PACKAGES="$PACKAGES setuptools<74.0.0"
