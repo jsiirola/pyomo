@@ -181,11 +181,13 @@ jobs:
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
+        echo "EXCLUDE=${{matrix.EXCLUDE}}" \
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        echo "" >> $GITHUB_ENV
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
-        echo "EXCLUDE=${{matrix.EXCLUDE}}" \
-            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        echo "" >> $GITHUB_ENV
 
     #- name: Pip package cache
     #  uses: actions/cache@v5
