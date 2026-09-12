@@ -1277,6 +1277,23 @@ class TestReference(unittest.TestCase):
         finally:
             normalize_index.flatten = _old_flatten
 
+    def test_reference_to_empty_elipsis(self):
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3])
+        m.ref = Reference(m.x[1, ...])
+        self.assertEqual(len(m.ref), 1)
+        self.assertEqual(list(m.ref.keys()), [None])
+        buf = StringIO()
+        m.ref.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+ref : Size=1, Index=UnindexedComponent_ReferenceSet, ReferenceTo=x[1, ...]
+    Key  : Lower : Value : Upper : Fixed : Stale : Domain
+    None :  None :  None :  None : False :  True :  Reals
+""".strip(),
+        )
+
     def test_pprint_nonfinite_sets(self):
         m = ConcreteModel()
         m.v = Var(NonNegativeIntegers, dense=False)

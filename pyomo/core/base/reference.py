@@ -770,14 +770,20 @@ def Reference(reference, ctype=NOTSET):
             )
             # Wildcards is a list of (coordinate, set) tuples.  Coordinate
             # is that within the subsets list, and set is a wildcard set.
-            index = wildcards[0][1]
-            # index is the first wildcard set.
-            if not isinstance(index, SetData):
-                index = SetOf(index)
-            for lvl, idx in wildcards[1:]:
-                if not isinstance(idx, SetData):
-                    idx = SetOf(idx)
-                index = index * idx
+            if wildcards:
+                index = wildcards[0][1]
+                # index is the first wildcard set.
+                if not isinstance(index, SetData):
+                    index = SetOf(index)
+                for lvl, idx in wildcards[1:]:
+                    if not isinstance(idx, SetData):
+                        idx = SetOf(idx)
+                    index = index * idx
+            else:
+                # The slice actually fully-specifies the component data,
+                # but the user still included an elipsis (that matches
+                # nothing)
+                index = UnindexedComponent_ReferenceSet
             # index is now either a single Set, or a SetProduct of the
             # wildcard sets.
     if ctype is NOTSET:
