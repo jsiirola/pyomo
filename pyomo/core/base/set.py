@@ -4272,12 +4272,11 @@ class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
             val = tuple(
                 val[cutPoints[i] : cutPoints[i + 1]] for i in range(len(self._sets))
             )
-        _idx = tuple(s.ord(val[i]) - 1 for i, s in enumerate(self._sets))
-        _len = list(len(_) for _ in self._sets)
+        _len = [len(_) for _ in self._sets]
         _len.append(1)
         ans = 0
-        for pos, n in zip(_idx, _len[1:]):
-            ans += pos
+        for s, v, n in zip(self._sets, val, _len[1:]):
+            ans += s.ord(v) - 1
             ans *= n
         return ans + 1
 
