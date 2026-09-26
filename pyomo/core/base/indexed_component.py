@@ -38,6 +38,11 @@ logger = logging.getLogger('pyomo.core')
 sequence_types = {tuple, list}
 slicer_types = {slice, Ellipsis.__class__, IndexedComponent_slice}
 
+# This is a heuristic tuning parameter.  The exact value is not critical
+# (it only controls how we iterate over "nearly dense" sparse
+# components.
+SPARSE_THRESHOLD = 2500
+
 
 def normalize_index(x):
     """Normalize a component index.
@@ -472,11 +477,11 @@ class IndexedComponent(Component):
                 return iter(tmp_set)
 
         if SortComponents.SORTED_INDICES in sort:
-            ans = self._index_set.sorted_iter()
+            index_iter = self._index_set.sorted_iter
         elif SortComponents.ORDERED_INDICES in sort:
-            ans = self._index_set.ordered_iter()
+            index_iter = self._index_set.ordered_iter
         else:
-            ans = iter(self._index_set)
+            index_iter = self._index_set.__iter__
 
         if self._data.__class__ is not dict:
             # We currently only need to worry about sparse data
@@ -484,13 +489,13 @@ class IndexedComponent(Component):
             # the len() and filter() below is especially important for
             # References (where both can be expensive linear-time
             # operations)
-            pass
-        elif len(self) == len(self._index_set):
-            #
+            return index_iter()
+        self_size = len(self)
+        index_size = len(self._index_set)
+        if self_size == index_size:
             # If the data is dense then return the index iterator.
-            #
-            pass
-        elif not self._data and self._index_set and PyomoOptions.paranoia_level:
+            return index_iter()
+        if not self._data and index_size and PyomoOptions.paranoia_level:
             logger.warning("""Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
 actually been added to the Component.  The iterator will be empty.
@@ -510,22 +515,43 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,))
             return iter(self._data)
-        elif SortComponents.SORTED_INDICES in sort:
+        #
+        # At this point, we know the component is sparse.  We will
+        # (mostly) work directly on the _data dictionary (and NOT use
+        # SetOf) because we actually *don't* want to templatize the loop.
+        #
+        if sort == SortComponents.UNSORTED:
+            # The user did not specify a desired ordering.  For
+            # efficiency reasons, we will just iterate over the raw
+            # _data.  NOTE that this ordering might be different than
+            # the underlying index_set().
+            return iter(self._data)
+        if index_size - self_size < SPARSE_THRESHOLD:
+            # This component is either "small" or "barely sparse".
+            # Instead of being clever, just iterate over the underlying
+            # index and filter out indices that are not in the data.
+            return filter(self._data.__contains__, index_iter())
+        if SortComponents.SORTED_INDICES in sort:
             # We are sorting the indices (and this is a sparse
             # IndexedComponent): we might as well just sort the sparse
             # _data keys instead of iterating over the whole index.
             return iter(sorted_robust(self._data))
-        else:
-            #
-            # Test each element of a sparse _data with an ordered
-            # index set in order.  This is potentially *slow*: if
-            # the component is in fact very sparse, we could be
-            # iterating over a huge (dense) index in order to sort a
-            # small number of indices.  However, this provides a
-            # consistent ordering that the user expects.
-            #
-            ans = filter(self._data.__contains__, ans)
-        return ans
+        if self._index_set.isordered():
+            # This component is "pretty sparse".  If the underlying
+            # index is ordered, then we can make use of the ord() to
+            # sort just the elements in _data.  This is generally more
+            # efficient than iterating over the (dense) underlying index
+            # set to recover the original ordering.
+            _ord = self._index_set.ord
+            return iter(sorted(self._data, key=_ord))
+
+        # Test each element of a sparse _data with an ordered
+        # index set in order.  This is potentially *slow*: if
+        # the component is in fact very sparse, we could be
+        # iterating over a huge (dense) index in order to sort a
+        # small number of indices.  However, this provides a
+        # consistent ordering that the user expects.
+        return filter(self._data.__contains__, index_iter())
 
     def values(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
         """Return an iterator of the component data objects
